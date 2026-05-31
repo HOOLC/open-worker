@@ -114,15 +114,14 @@ More detail lives in:
 
 Open `/admin` to inspect sessions, auth profiles, GitHub author mappings, deployment state, platform health, and sanitized logs.
 
-The admin and chat APIs are platform-aware:
+The admin UI exposes platform health and platform-aware session state. Generic chat APIs are platform-aware:
 
-- platform-aware `Slack/Feishu user -> GitHub author` mappings
-- `GET /admin/api/status?platform=slack|feishu`
-- `POST /admin/api/github-authors`
-- `DELETE /admin/api/github-authors/:userId?platform=slack|feishu`
-- generic platform-aware chat endpoints such as `POST /chat/post-message`, `POST /chat/post-file`, and chat history helpers
+- `POST /chat/post-message`
+- `POST /chat/post-file`
+- chat history helpers
+- broker-managed job callbacks that carry chat coordinates
 
-Invalid `platform` values return 400 `invalid_platform` with allowed values `slack` and `feishu`.
+For generic chat and job APIs, invalid `platform` values return 400 `invalid_platform` with allowed values `slack` and `feishu`.
 
 Legacy Slack aliases such as `channel_id` and `thread_ts` remain for Slack compatibility. Generic chat APIs prefer `conversationId` and `rootMessageId`.
 
@@ -131,9 +130,9 @@ If `BROKER_ADMIN_TOKEN` is set, `/admin/api/*` requires that token via `x-admin-
 <details>
 <summary>Detailed API compatibility contract</summary>
 
-- Admin filters sessions, jobs, and GitHub author mappings to that platform.
+- Platform-aware admin views show Slack and Feishu session state, platform health, and safe coordinates without implying that every admin endpoint accepts a `platform` filter.
 - allowlisted `recentBrokerLogs` remain cross-platform.
-- Platform query/body values must be `slack` or `feishu`; invalid values return 400 `invalid_platform` instead of falling back to Slack.
+- Generic chat/job `platform` query/body values must be `slack` or `feishu`; invalid values return 400 `invalid_platform` instead of falling back to Slack.
 - Generic `/chat/*` JSON/query contracts use canonical `conversationId` and `rootMessageId` fields.
 - Generic chat requests also accepts `conversation_id` and `root_message_id` aliases.
 - Generic file uploads use canonical `filePath` or `contentBase64`.
