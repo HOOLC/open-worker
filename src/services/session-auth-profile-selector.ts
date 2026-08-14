@@ -1,5 +1,5 @@
 import type { AuthProfileSummary, AuthProfilesStatus } from "./auth-profile-service.js";
-import { daysUntilReset, remainingPercent, timestampMs, weightedWeeklyQuotaScore } from "../auth-profile-quota.js";
+import { daysUntilReset, remainingPercent, resolveQuotaWindowRoles, timestampMs, weightedWeeklyQuotaScore } from "../auth-profile-quota.js";
 
 export type AuthProfileUnavailableReason = "profile_not_found" | "account_probe_failed" | "rate_limits_probe_failed" | "primary_quota_exhausted" | "secondary_quota_exhausted" | "credits_exhausted" | "no_usable_auth_profiles";
 
@@ -10,7 +10,10 @@ export interface AuthProfileEvaluation {
   readonly effectiveQuotaScore: number;
   readonly primaryRemainingPercent?: number | undefined;
   readonly secondaryRemainingPercent?: number | undefined;
+  readonly weeklyRemainingPercent?: number | undefined;
+  readonly shortRemainingPercent?: number | undefined;
   readonly secondaryRefreshDays?: number | undefined;
+  readonly weeklyRefreshDays?: number | undefined;
   readonly weightedWeeklyQuotaScore?: number | undefined;
 }
 
@@ -36,14 +39,14 @@ export function selectBestAuthProfile(status: AuthProfilesStatus, options: { rea
         return scoreDelta;
       }
 
-      const secondaryDelta = (right.evaluation.secondaryRemainingPercent ?? 100) - (left.evaluation.secondaryRemainingPercent ?? 100);
-      if (secondaryDelta) {
-        return secondaryDelta;
+      const weeklyDelta = (right.evaluation.weeklyRemainingPercent ?? 100) - (left.evaluation.weeklyRemainingPercent ?? 100);
+      if (weeklyDelta) {
+        return weeklyDelta;
       }
 
-      const primaryDelta = (right.evaluation.primaryRemainingPercent ?? 100) - (left.evaluation.primaryRemainingPercent ?? 100);
-      if (primaryDelta) {
-        return primaryDelta;
+      const shortDelta = (right.evaluation.shortRemainingPercent ?? 100) - (left.evaluation.shortRemainingPercent ?? 100);
+      if (shortDelta) {
+        return shortDelta;
       }
 
       return left.profile.name.localeCompare(right.profile.name);
@@ -68,8 +71,14 @@ export function evaluateAuthProfile(profile: AuthProfileSummary, options: { read
   const limits = profile.rateLimits.rateLimits;
   const primaryRemaining = remainingPercent(limits?.primary?.usedPercent);
   const secondaryRemaining = remainingPercent(limits?.secondary?.usedPercent);
-  const secondaryRefreshDays = daysUntilReset(limits?.secondary?.resetsAt, timestampMs(options.now));
-  const weightedWeeklyQuota = weightedWeeklyQuotaScore(secondaryRemaining, secondaryRefreshDays);
+  const windows = resolveQuotaWindowRoles({
+    primary: limits?.primary,
+    secondary: limits?.secondary,
+  });
+  const weeklyRemaining = remainingPercent(windows.weekly?.usedPercent);
+  const shortRemaining = remainingPercent(windows.short?.usedPercent);
+  const weeklyRefreshDays = daysUntilReset(windows.weekly?.resetsAt, timestampMs(options.now));
+  const weightedWeeklyQuota = weightedWeeklyQuotaScore(weeklyRemaining, weeklyRefreshDays);
   const credits = limits?.credits;
 
   if (primaryRemaining !== undefined && primaryRemaining <= 0) {
@@ -96,10 +105,13 @@ export function evaluateAuthProfile(profile: AuthProfileSummary, options: { read
   return {
     profileName: profile.name,
     usable: true,
-    effectiveQuotaScore: weightedWeeklyQuota ?? (secondaryRemaining !== undefined ? secondaryRemaining / 100 : undefined) ?? (primaryRemaining !== undefined ? primaryRemaining / 100 : undefined) ?? 1,
+    effectiveQuotaScore: weightedWeeklyQuota ?? (weeklyRemaining !== undefined ? weeklyRemaining / 100 : undefined) ?? (shortRemaining !== undefined ? shortRemaining / 100 : undefined) ?? 1,
     primaryRemainingPercent: primaryRemaining,
     secondaryRemainingPercent: secondaryRemaining,
-    secondaryRefreshDays,
+    weeklyRemainingPercent: weeklyRemaining,
+    shortRemainingPercent: shortRemaining,
+    secondaryRefreshDays: daysUntilReset(limits?.secondary?.resetsAt, timestampMs(options.now)),
+    weeklyRefreshDays,
     weightedWeeklyQuotaScore: weightedWeeklyQuota,
   };
 }

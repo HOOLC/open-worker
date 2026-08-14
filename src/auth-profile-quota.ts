@@ -4,6 +4,18 @@ export const MIN_REFRESH_DAYS = 1 / (24 * 60);
 export const DEFAULT_SHORT_WINDOW_MINS = 300;
 export const DEFAULT_WEEKLY_WINDOW_MINS = 10_080;
 export const SHORT_WINDOW_DISPLAY_SCORE_THRESHOLD = 0.5;
+const WEEKLY_WINDOW_DURATION_TOLERANCE = 0.05;
+
+export interface QuotaWindowLike {
+  readonly usedPercent?: unknown;
+  readonly resetsAt?: unknown;
+  readonly windowDurationMins?: unknown;
+}
+
+export interface QuotaWindowRoles<Window extends QuotaWindowLike = QuotaWindowLike> {
+  readonly weekly: Window | null;
+  readonly short: Window | null;
+}
 
 export function remainingPercent(usedPercent: unknown): number | undefined {
   const used = Number(usedPercent);
@@ -79,43 +91,68 @@ export function formatQuotaWindowDisplay(options: { readonly usedPercent: unknow
   return `${formatWindowDuration(windowMins)} ${Math.round(remaining)}% / ${formatWeightedWeeklyQuotaScore(score)}`;
 }
 
-export function formatAuthQuotaDisplay(options: {
-  readonly primary?:
-    | {
-        readonly usedPercent?: unknown;
-        readonly resetsAt?: unknown;
-        readonly windowDurationMins?: unknown;
-      }
-    | null
-    | undefined;
-  readonly secondary?:
-    | {
-        readonly usedPercent?: unknown;
-        readonly resetsAt?: unknown;
-        readonly windowDurationMins?: unknown;
-      }
-    | null
-    | undefined;
+export function resolveQuotaWindowRoles<Window extends QuotaWindowLike>(options: { readonly primary?: Window | null | undefined; readonly secondary?: Window | null | undefined }): QuotaWindowRoles<Window> {
+  const primary = options.primary ?? null;
+  const secondary = options.secondary ?? null;
+  const primaryIsWeekly = isWeeklyQuotaWindow(primary);
+  const secondaryIsWeekly = isWeeklyQuotaWindow(secondary);
+
+  if (primaryIsWeekly !== secondaryIsWeekly) {
+    return primaryIsWeekly
+      ? {
+          weekly: primary,
+          short: secondary,
+        }
+      : {
+          weekly: secondary,
+          short: primary,
+        };
+  }
+
+  return {
+    weekly: secondary,
+    short: primary,
+  };
+}
+
+export function formatAuthQuotaDisplayParts<Window extends QuotaWindowLike>(options: {
+  readonly primary?: Window | null | undefined;
+  readonly secondary?: Window | null | undefined;
   readonly now?: Date | number | string | undefined;
-}): string | null {
-  const weekly = formatQuotaWindowDisplay({
-    usedPercent: options.secondary?.usedPercent,
-    resetsAt: options.secondary?.resetsAt,
-    windowDurationMins: options.secondary?.windowDurationMins,
+}): {
+  readonly fullLabel: string | null;
+  readonly weeklyLabel: string | null;
+  readonly shortLabel: string | null;
+  readonly windows: QuotaWindowRoles<Window>;
+} {
+  const windows = resolveQuotaWindowRoles(options);
+  const weeklyLabel = formatQuotaWindowDisplay({
+    usedPercent: windows.weekly?.usedPercent,
+    resetsAt: windows.weekly?.resetsAt,
+    windowDurationMins: windows.weekly?.windowDurationMins,
     fallbackWindowDurationMins: DEFAULT_WEEKLY_WINDOW_MINS,
     now: options.now,
   });
-  const short = shouldShowShortWindowQuota(options.primary, options.now)
+  const shortLabel = shouldShowShortWindowQuota(windows.short, options.now)
     ? formatQuotaWindowDisplay({
-        usedPercent: options.primary?.usedPercent,
-        resetsAt: options.primary?.resetsAt,
-        windowDurationMins: options.primary?.windowDurationMins,
+        usedPercent: windows.short?.usedPercent,
+        resetsAt: windows.short?.resetsAt,
+        windowDurationMins: windows.short?.windowDurationMins,
         fallbackWindowDurationMins: DEFAULT_SHORT_WINDOW_MINS,
         now: options.now,
       })
     : null;
-  const parts = [weekly, short].filter(Boolean);
-  return parts.length ? parts.join(" | ") : null;
+  const parts = [weeklyLabel, shortLabel].filter(Boolean);
+  return {
+    fullLabel: parts.length ? parts.join(" | ") : null,
+    weeklyLabel,
+    shortLabel,
+    windows,
+  };
+}
+
+export function formatAuthQuotaDisplay(options: { readonly primary?: QuotaWindowLike | null | undefined; readonly secondary?: QuotaWindowLike | null | undefined; readonly now?: Date | number | string | undefined }): string | null {
+  return formatAuthQuotaDisplayParts(options).fullLabel;
 }
 
 export function shouldShowShortWindowQuota(
@@ -168,6 +205,16 @@ export function timestampMs(value: Date | number | string | undefined): number {
 function normalizeWindowDurationMins(value: unknown, fallback: number): number {
   const mins = Number(value);
   return Number.isFinite(mins) && mins > 0 ? mins : fallback;
+}
+
+function isWeeklyQuotaWindow(window: QuotaWindowLike | null): boolean {
+  const minutes = Number(window?.windowDurationMins);
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return false;
+  }
+
+  const tolerance = DEFAULT_WEEKLY_WINDOW_MINS * WEEKLY_WINDOW_DURATION_TOLERANCE;
+  return minutes >= DEFAULT_WEEKLY_WINDOW_MINS - tolerance && minutes <= DEFAULT_WEEKLY_WINDOW_MINS + tolerance;
 }
 
 function formatWindowDuration(windowMins: number): string {

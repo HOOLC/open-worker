@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
-import { formatAuthQuotaDisplay, formatWeightedWeeklyQuotaScore, remainingPercent, weightedWeeklyQuotaScore, daysUntilReset } from "../auth-profile-quota";
+import { formatAuthQuotaDisplayParts, formatWeightedWeeklyQuotaScore, remainingPercent, weightedWeeklyQuotaScore, daysUntilReset } from "../auth-profile-quota";
 
 import { profileAccountLabel, profilePlanLabel, profileTitle } from "./auth-profile-display";
 
@@ -133,23 +133,21 @@ export function profileQuotaSummary(rateLimits: any): ProfileQuotaSummary {
   }
 
   const snapshot = rateLimits.rateLimits || {};
-  const secondary = snapshot.secondary || {};
-  const fullLabel =
-    formatAuthQuotaDisplay({
-      primary: snapshot.primary,
-      secondary,
-    }) || "额度未知";
-  const [weeklyLabel, ...shortParts] = fullLabel.split(" | ");
-  const remaining = remainingPercent(secondary.usedPercent);
-  const score = weightedWeeklyQuotaScore(remaining, daysUntilReset(secondary.resetsAt));
+  const display = formatAuthQuotaDisplayParts({
+    primary: snapshot.primary,
+    secondary: snapshot.secondary,
+  });
+  const weekly = display.windows.weekly;
+  const remaining = remainingPercent(weekly?.usedPercent);
+  const score = weightedWeeklyQuotaScore(remaining, daysUntilReset(weekly?.resetsAt));
   return {
     ok: true,
-    fullLabel,
+    fullLabel: display.fullLabel || "额度未知",
     remainingLabel: remaining === undefined ? "--" : `${Math.round(remaining)}%`,
     scoreLabel: formatWeightedWeeklyQuotaScore(score),
-    resetLabel: formatResetTime(secondary.resetsAt),
-    shortLabel: shortParts.length ? shortParts.join(" | ") : null,
-    tone: quotaTone(remaining ?? 100) || (weeklyLabel ? "" : "warn"),
+    resetLabel: formatResetTime(weekly?.resetsAt),
+    shortLabel: display.shortLabel,
+    tone: quotaTone(remaining ?? 100) || (display.weeklyLabel ? "" : "warn"),
   };
 }
 
@@ -318,16 +316,16 @@ export function authProfileQuotaItems(profiles: readonly Record<string, any>[]):
       const rateLimits = profile.rateLimits || {};
       if (rateLimits.ok === false) return null;
       const limits = rateLimits.rateLimits || {};
-      const secondary = limits.secondary;
-      const label = formatAuthQuotaDisplay({
+      const display = formatAuthQuotaDisplayParts({
         primary: limits.primary,
-        secondary,
+        secondary: limits.secondary,
       });
-      if (!label) return null;
-      const remaining = remainingPercent(secondary?.usedPercent);
-      const score = weightedWeeklyQuotaScore(remaining, daysUntilReset(secondary?.resetsAt));
+      if (!display.fullLabel) return null;
+      const weekly = display.windows.weekly;
+      const remaining = remainingPercent(weekly?.usedPercent);
+      const score = weightedWeeklyQuotaScore(remaining, daysUntilReset(weekly?.resetsAt));
       return {
-        label,
+        label: display.fullLabel,
         title: profileTitle(profile),
         score: score ?? -1,
         remaining: remaining ?? 0,
