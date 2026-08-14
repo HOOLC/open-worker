@@ -1,6 +1,6 @@
 {
   "name": "agent-session-broker-repo",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "private": true,
   "description": "Slack + China Feishu broker that routes chat sessions into Codex app-server sessions with isolated workspaces.",
   "homepage": "https://github.com/HOOLC/slack-codex-broker#readme",
