@@ -1,6 +1,6 @@
 {
   "name": "@agent-session-broker/admin",
-  "version": "0.1.28",
+  "version": "0.1.29",
   "description": "Admin service and UI for the agent session broker.",
   "homepage": "https://github.com/HOOLC/open-worker#readme",
   "bugs": {
@@ -19,6 +19,10 @@
     "dist/admin-ui/",
     "scripts/ops/lib.mjs",
     "scripts/ops/macos-bootstrap.mjs",
+    "scripts/ops/macos-bootstrap-helpers.mjs",
+    "scripts/ops/macos-bootstrap-helpers-1.mjs",
+    "scripts/ops/macos-bootstrap-helpers-2.mjs",
+    "scripts/ops/macos-bootstrap-helpers-3.mjs",
     "scripts/ops/macos-launchd-launcher.mjs",
     "scripts/ops/macos-launchd-restart.mjs",
     "README.md",
@@ -30,7 +34,9 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.66.0",
     "@modelcontextprotocol/sdk": "1.27.1",
+    "marked": "^18.0.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "ws": "^8.18.3"
