@@ -24,8 +24,9 @@ describe("DiskPressureCleanupService", () => {
         SLACK_APP_TOKEN: "xapp-test",
         SLACK_BOT_TOKEN: "xoxb-test",
         DATA_ROOT: dataRoot,
-        DISK_CLEANUP_MIN_FREE_BYTES: "0",
-        DISK_CLEANUP_TARGET_FREE_BYTES: "0",
+        DISK_CLEANUP_MIN_FREE_BYTES: "2000",
+        DISK_CLEANUP_TARGET_FREE_BYTES: "2000",
+        DISK_CLEANUP_INACTIVE_SESSION_MS: String(DAY_MS),
         DISK_CLEANUP_SESSION_CACHE_TTL_MS: String(DAY_MS),
       } as NodeJS.ProcessEnv);
       const stateStore = new StateStore(config.stateDir, config.sessionsRoot);
@@ -42,12 +43,16 @@ describe("DiskPressureCleanupService", () => {
       const nodeModulesPath = path.join(stale.workspacePath, "web/node_modules/pkg/index.js");
       await writeSizedFile(derivedDataPath, 8);
       await writeSizedFile(nodeModulesPath, 9);
+      const processCommandProvider = vi.fn(async () => {
+        throw new Error("dry runs must not inspect processes");
+      });
 
       const cleanup = new DiskPressureCleanupService({
         config,
         sessions,
         now: () => now,
         isDarwin: true,
+        processCommandProvider,
         statFs: async () => ({
           freeBytes: 1000,
           totalBytes: 1000,
@@ -59,6 +64,9 @@ describe("DiskPressureCleanupService", () => {
       expect(result.dryRun).toBe(true);
       expect(result.cacheCandidateCount).toBe(2);
       expect(result.deletedCacheEntryCount).toBe(0);
+      expect(result.deletedSessionCount).toBe(0);
+      expect(processCommandProvider).not.toHaveBeenCalled();
+      expect(sessions.getSessionByKey(stale.key)).toBeDefined();
       expect(await fileExists(path.dirname(derivedDataPath))).toBe(true);
       expect(await fileExists(path.dirname(nodeModulesPath))).toBe(true);
       expect(infoSpy).toHaveBeenCalledWith(
@@ -72,6 +80,303 @@ describe("DiskPressureCleanupService", () => {
       );
     } finally {
       infoSpy.mockRestore();
+      await fs.rm(dataRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("fails closed for session and cache cleanup when running processes cannot be inspected", async () => {
+    const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "slack-codex-cleanup-process-error-"));
+    const warnSpy = vi.spyOn(logger, "warn");
+
+    try {
+      const config = loadConfig({
+        SLACK_APP_TOKEN: "xapp-test",
+        SLACK_BOT_TOKEN: "xoxb-test",
+        DATA_ROOT: dataRoot,
+        DISK_CLEANUP_DRY_RUN: "false",
+        DISK_CLEANUP_MIN_FREE_BYTES: "100",
+        DISK_CLEANUP_TARGET_FREE_BYTES: "100",
+        DISK_CLEANUP_INACTIVE_SESSION_MS: String(DAY_MS),
+        DISK_CLEANUP_OLD_LOG_MS: String(DAY_MS),
+        DISK_CLEANUP_SESSION_CACHE_TTL_MS: String(DAY_MS),
+      } as NodeJS.ProcessEnv);
+      const stateStore = new StateStore(config.stateDir, config.sessionsRoot);
+      const sessions = new SessionManager({ stateStore, sessionsRoot: config.sessionsRoot });
+      await sessions.load();
+
+      const now = new Date("2026-04-25T00:00:00.000Z");
+      const oldAt = new Date(now.getTime() - 8 * DAY_MS).toISOString();
+      const stale = await seedSession(sessions, stateStore, "CPROCESSERROR", "100.000", oldAt);
+      const cachePath = path.join(stale.workspacePath, "web/node_modules/pkg/index.js");
+      const oldLogPath = path.join(config.logDir, "broker", "old.jsonl");
+      await writeSizedFile(cachePath, 9);
+      await writeSizedFile(oldLogPath, 10);
+      await fs.utimes(oldLogPath, new Date(oldAt), new Date(oldAt));
+
+      const processCommandProvider = vi.fn(async () => {
+        throw new Error("ps unavailable");
+      });
+      const cleanup = new DiskPressureCleanupService({
+        config,
+        sessions,
+        now: () => now,
+        processCommandProvider,
+        statFs: async () => ({ freeBytes: 0, totalBytes: 1000 }),
+      });
+
+      const result = await cleanup.runOnce("test");
+
+      expect(processCommandProvider).toHaveBeenCalledTimes(1);
+      expect(result.deletedLogCount).toBe(1);
+      expect(result.cacheCandidateCount).toBe(0);
+      expect(result.deletedCacheEntryCount).toBe(0);
+      expect(result.deletedSessionCount).toBe(0);
+      expect(sessions.getSessionByKey(stale.key)).toBeDefined();
+      expect(await fileExists(path.join(stale.workspacePath, "web/node_modules"))).toBe(true);
+      expect(await fileExists(oldLogPath)).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith("Skipping session cleanup because running processes could not be inspected", {
+        error: "ps unavailable",
+      });
+    } finally {
+      warnSpy.mockRestore();
+      await fs.rm(dataRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("protects session and job roots referenced by running process commands", async () => {
+    const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "slack-codex-cleanup-process-reference-"));
+
+    try {
+      const config = loadConfig({
+        SLACK_APP_TOKEN: "xapp-test",
+        SLACK_BOT_TOKEN: "xoxb-test",
+        DATA_ROOT: dataRoot,
+        DISK_CLEANUP_DRY_RUN: "false",
+        DISK_CLEANUP_MIN_FREE_BYTES: "100",
+        DISK_CLEANUP_TARGET_FREE_BYTES: "100",
+        DISK_CLEANUP_INACTIVE_SESSION_MS: String(DAY_MS),
+        DISK_CLEANUP_SESSION_CACHE_TTL_MS: String(DAY_MS),
+      } as NodeJS.ProcessEnv);
+      const stateStore = new StateStore(config.stateDir, config.sessionsRoot);
+      const sessions = new SessionManager({ stateStore, sessionsRoot: config.sessionsRoot });
+      await sessions.load();
+
+      const now = new Date("2026-04-25T00:00:00.000Z");
+      const oldAt = new Date(now.getTime() - 8 * DAY_MS).toISOString();
+      const sessionReferenced = await seedSession(sessions, stateStore, "CSESSIONREF", "100.000", oldAt);
+      const jobReferenced = await seedSession(sessions, stateStore, "CJOBREF", "200.000", oldAt);
+      const unreferenced = await seedSession(sessions, stateStore, "CUNREFERENCED", "300.000", oldAt);
+      await seedJob(config.jobsRoot, sessions, {
+        id: "job-process-reference",
+        status: "completed",
+        sessionKey: jobReferenced.key,
+        channelId: jobReferenced.channelId,
+        rootThreadTs: jobReferenced.rootThreadTs,
+        workspacePath: jobReferenced.workspacePath,
+        at: oldAt,
+      });
+
+      for (const session of [sessionReferenced, jobReferenced, unreferenced]) {
+        await writeSizedFile(path.join(session.workspacePath, "web/node_modules/pkg/index.js"), 11);
+      }
+
+      const processCommandProvider = vi.fn(async () => [`node ${path.dirname(sessionReferenced.workspacePath)}/runner.js`, `sh ${path.join(config.jobsRoot, "job-process-reference")}/run.sh`, `node ${path.dirname(unreferenced.workspacePath)}-other/runner.js`]);
+      const cleanup = new DiskPressureCleanupService({
+        config,
+        sessions,
+        now: () => now,
+        processCommandProvider,
+        statFs: async () => ({ freeBytes: 0, totalBytes: 1000 }),
+      });
+
+      const result = await cleanup.runOnce("test");
+
+      expect(processCommandProvider).toHaveBeenCalledTimes(1);
+      expect(result.cacheCandidateCount).toBe(1);
+      expect(result.deletedCacheEntryCount).toBe(1);
+      expect(result.deletedSessionCount).toBe(1);
+      expect(sessions.getSessionByKey(sessionReferenced.key)).toBeDefined();
+      expect(sessions.getSessionByKey(jobReferenced.key)).toBeDefined();
+      expect(sessions.getSessionByKey(unreferenced.key)).toBeUndefined();
+      expect(await fileExists(path.join(sessionReferenced.workspacePath, "web/node_modules"))).toBe(true);
+      expect(await fileExists(path.join(jobReferenced.workspacePath, "web/node_modules"))).toBe(true);
+      expect(await fileExists(path.dirname(unreferenced.workspacePath))).toBe(false);
+      expect(await fileExists(path.join(config.jobsRoot, "job-process-reference"))).toBe(true);
+    } finally {
+      await fs.rm(dataRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("bounds per-item cleanup logs and emits complete aggregate summaries", async () => {
+    const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "slack-codex-cleanup-log-sampling-"));
+    const infoSpy = vi.spyOn(logger, "info");
+
+    try {
+      const config = loadConfig({
+        SLACK_APP_TOKEN: "xapp-test",
+        SLACK_BOT_TOKEN: "xoxb-test",
+        DATA_ROOT: dataRoot,
+        DISK_CLEANUP_DRY_RUN: "false",
+        DISK_CLEANUP_MIN_FREE_BYTES: "100",
+        DISK_CLEANUP_TARGET_FREE_BYTES: "100",
+        DISK_CLEANUP_INACTIVE_SESSION_MS: String(DAY_MS),
+        DISK_CLEANUP_OLD_LOG_MS: String(DAY_MS),
+        DISK_CLEANUP_SESSION_CACHE_TTL_MS: String(DAY_MS),
+      } as NodeJS.ProcessEnv);
+      const stateStore = new StateStore(config.stateDir, config.sessionsRoot);
+      const sessions = new SessionManager({ stateStore, sessionsRoot: config.sessionsRoot });
+      await sessions.load();
+
+      const now = new Date("2026-04-25T00:00:00.000Z");
+      const oldAt = new Date(now.getTime() - 8 * DAY_MS).toISOString();
+      for (let index = 0; index < 7; index += 1) {
+        const session = await seedSession(sessions, stateStore, `CSAMPLED${index}`, `${index}.000`, oldAt);
+        await writeSizedFile(path.join(session.workspacePath, "web/node_modules/pkg/index.js"), index + 1);
+        const oldLogPath = path.join(config.logDir, "broker", `old-${index}.jsonl`);
+        await writeSizedFile(oldLogPath, index + 1);
+        await fs.utimes(oldLogPath, new Date(oldAt), new Date(oldAt));
+      }
+
+      const processCommandProvider = vi.fn(async () => []);
+      const cleanup = new DiskPressureCleanupService({
+        config,
+        sessions,
+        now: () => now,
+        processCommandProvider,
+        statFs: async () => ({ freeBytes: 0, totalBytes: 1000 }),
+      });
+      infoSpy.mockClear();
+
+      const result = await cleanup.runOnce("test");
+
+      expect(result.cacheCandidateCount).toBe(7);
+      expect(result.deletedCacheEntryCount).toBe(7);
+      expect(result.deletedLogCount).toBe(7);
+      expect(result.deletedSessionCount).toBe(7);
+      expect(processCommandProvider).toHaveBeenCalledTimes(1);
+      for (const message of ["Disk cleanup session cache candidate", "Disk cleanup session cache deleted", "Disk cleanup old log candidate", "Disk cleanup old log deleted", "Disk cleanup inactive session candidate", "Disk cleanup inactive session deleted"]) {
+        expect(infoSpy.mock.calls.filter(([entry]) => entry === message)).toHaveLength(5);
+      }
+      expect(infoSpy).toHaveBeenCalledWith(
+        "Disk cleanup old logs processed",
+        expect.objectContaining({
+          candidateCount: 7,
+          candidateBytes: 28,
+          sampledCandidateCount: 5,
+          deletedCount: 7,
+          deletedBytes: 28,
+          sampledDeletedCount: 5,
+          failureCount: 0,
+          sampledFailureCount: 0,
+          dryRun: false,
+        }),
+      );
+      expect(infoSpy).toHaveBeenCalledWith(
+        "Disk cleanup session caches processed",
+        expect.objectContaining({
+          candidateCount: 7,
+          candidateBytes: result.cacheReclaimedBytes,
+          sampledCandidateCount: 5,
+          deletedCount: 7,
+          reclaimedBytes: result.cacheReclaimedBytes,
+          sampledDeletedCount: 5,
+          failureCount: 0,
+          sampledFailureCount: 0,
+          dryRun: false,
+        }),
+      );
+      expect(infoSpy).toHaveBeenCalledWith(
+        "Disk cleanup inactive sessions processed",
+        expect.objectContaining({
+          candidateCount: 7,
+          candidateBytes: expect.any(Number),
+          sampledCandidateCount: 5,
+          deletedCount: 7,
+          deletedBytes: expect.any(Number),
+          sampledDeletedCount: 5,
+          failureCount: 0,
+          sampledFailureCount: 0,
+          dryRun: false,
+        }),
+      );
+      const sessionSummary = infoSpy.mock.calls.find(([entry]) => entry === "Disk cleanup inactive sessions processed")?.[1] as { readonly candidateBytes?: number; readonly deletedBytes?: number } | undefined;
+      expect(sessionSummary?.candidateBytes).toBeGreaterThan(0);
+      expect(sessionSummary?.deletedBytes).toBe(sessionSummary?.candidateBytes);
+    } finally {
+      infoSpy.mockRestore();
+      await fs.rm(dataRoot, { force: true, recursive: true });
+    }
+  });
+
+  it("bounds cleanup failure details while preserving aggregate failure counts", async () => {
+    const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "slack-codex-cleanup-failure-sampling-"));
+    const infoSpy = vi.spyOn(logger, "info");
+    const warnSpy = vi.spyOn(logger, "warn");
+    const remove = fs.rm.bind(fs);
+    let removeSpy: { mockRestore(): void } | undefined;
+
+    try {
+      const config = loadConfig({
+        SLACK_APP_TOKEN: "xapp-test",
+        SLACK_BOT_TOKEN: "xoxb-test",
+        DATA_ROOT: dataRoot,
+        DISK_CLEANUP_DRY_RUN: "false",
+        DISK_CLEANUP_MIN_FREE_BYTES: "100",
+        DISK_CLEANUP_TARGET_FREE_BYTES: "100",
+        DISK_CLEANUP_OLD_LOG_MS: String(DAY_MS),
+      } as NodeJS.ProcessEnv);
+      const stateStore = new StateStore(config.stateDir, config.sessionsRoot);
+      const sessions = new SessionManager({ stateStore, sessionsRoot: config.sessionsRoot });
+      await sessions.load();
+
+      const now = new Date("2026-04-25T00:00:00.000Z");
+      const oldAt = new Date(now.getTime() - 8 * DAY_MS).toISOString();
+      const failedPaths = new Set<string>();
+      for (let index = 0; index < 7; index += 1) {
+        const oldLogPath = path.join(config.logDir, "broker", `fail-${index}.jsonl`);
+        await writeSizedFile(oldLogPath, index + 1);
+        await fs.utimes(oldLogPath, new Date(oldAt), new Date(oldAt));
+        failedPaths.add(path.resolve(oldLogPath));
+      }
+
+      removeSpy = vi.spyOn(fs, "rm").mockImplementation(async (targetPath, options) => {
+        if (failedPaths.has(path.resolve(String(targetPath)))) {
+          throw new Error("rm denied");
+        }
+        return remove(targetPath, options);
+      });
+      const cleanup = new DiskPressureCleanupService({
+        config,
+        sessions,
+        processCommandProvider: async () => [],
+        now: () => now,
+        statFs: async () => ({ freeBytes: 0, totalBytes: 1000 }),
+      });
+      infoSpy.mockClear();
+      warnSpy.mockClear();
+
+      const result = await cleanup.runOnce("test");
+
+      expect(result.deletedLogCount).toBe(0);
+      expect(warnSpy.mock.calls.filter(([entry]) => entry === "Failed to delete log during disk cleanup")).toHaveLength(5);
+      expect(infoSpy).toHaveBeenCalledWith(
+        "Disk cleanup old logs processed",
+        expect.objectContaining({
+          candidateCount: 7,
+          candidateBytes: 28,
+          sampledCandidateCount: 5,
+          deletedCount: 0,
+          deletedBytes: 0,
+          sampledDeletedCount: 0,
+          failureCount: 7,
+          sampledFailureCount: 5,
+          dryRun: false,
+        }),
+      );
+    } finally {
+      removeSpy?.mockRestore();
+      infoSpy.mockRestore();
+      warnSpy.mockRestore();
       await fs.rm(dataRoot, { force: true, recursive: true });
     }
   });
@@ -129,6 +434,7 @@ describe("DiskPressureCleanupService", () => {
         sessions,
         now: () => now,
         isDarwin: true,
+        processCommandProvider: async () => [],
         statFs: async () => ({
           freeBytes: 1000,
           totalBytes: 1000,
@@ -191,6 +497,7 @@ describe("DiskPressureCleanupService", () => {
         sessions,
         now: () => now,
         isDarwin: false,
+        processCommandProvider: async () => [],
         statFs: async () => ({
           freeBytes: 1000,
           totalBytes: 1000,
@@ -311,6 +618,7 @@ describe("DiskPressureCleanupService", () => {
         sessions,
         jobTerminator: { cancelJob },
         now: () => now,
+        processCommandProvider: async () => [],
         statFs: async () => ({
           freeBytes: sessions.listSessions().length <= 2 ? 100 : 0,
           totalBytes: 1000,
@@ -381,6 +689,7 @@ describe("DiskPressureCleanupService", () => {
         config,
         sessions,
         now: () => now,
+        processCommandProvider: async () => [],
         statFs: async (targetPath) => {
           const isLogRoot = path.resolve(targetPath) === path.resolve(config.logDir);
           return {
