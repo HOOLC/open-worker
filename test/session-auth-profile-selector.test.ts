@@ -103,6 +103,29 @@ describe("session auth profile selector", () => {
     ).toBeCloseTo(2);
   });
 
+  it("weights and selects a single weekly window returned in primary", () => {
+    const halfWeek = Math.floor((now.getTime() + 3.5 * 24 * 60 * 60 * 1000) / 1000);
+    const fullWeek = Math.floor((now.getTime() + 7 * 24 * 60 * 60 * 1000) / 1000);
+    const status = profileStatus([
+      profile("single-weekly-primary", {
+        primaryUsed: 52,
+        primaryDurationMins: 10_080,
+        primaryResetsAt: halfWeek,
+        secondaryUsed: null,
+      }),
+      profile("legacy-weekly-secondary", {
+        primaryUsed: 0,
+        secondaryUsed: 40,
+        secondaryResetsAt: fullWeek,
+      }),
+    ]);
+
+    const singleWeekly = evaluateAuthProfile(status.profiles[0]!, { now });
+    expect(singleWeekly.weightedWeeklyQuotaScore).toBeCloseTo(0.96);
+    expect(singleWeekly.effectiveQuotaScore).toBeCloseTo(0.96);
+    expect(selectBestAuthProfile(status, { now })?.name).toBe("single-weekly-primary");
+  });
+
   it("marks a profile unavailable when either quota window is exhausted", () => {
     expect(
       evaluateAuthProfile(
@@ -142,7 +165,10 @@ function profile(
   name: string,
   options: {
     readonly primaryUsed?: number | undefined;
-    readonly secondaryUsed?: number | undefined;
+    readonly primaryDurationMins?: number | undefined;
+    readonly primaryResetsAt?: number | undefined;
+    readonly secondaryUsed?: number | null | undefined;
+    readonly secondaryDurationMins?: number | undefined;
     readonly secondaryResetsAt?: number | undefined;
     readonly rateLimitsOk?: boolean | undefined;
   } = {},
@@ -170,14 +196,17 @@ function profile(
             limitName: "Codex",
             primary: {
               usedPercent: options.primaryUsed ?? 0,
-              windowDurationMins: 300,
-              resetsAt: 1_779_000_000,
+              windowDurationMins: options.primaryDurationMins ?? 300,
+              resetsAt: options.primaryResetsAt ?? 1_779_000_000,
             },
-            secondary: {
-              usedPercent: options.secondaryUsed ?? 0,
-              windowDurationMins: 10_080,
-              resetsAt: options.secondaryResetsAt ?? 1_780_000_000,
-            },
+            secondary:
+              options.secondaryUsed === null
+                ? null
+                : {
+                    usedPercent: options.secondaryUsed ?? 0,
+                    windowDurationMins: options.secondaryDurationMins ?? 10_080,
+                    resetsAt: options.secondaryResetsAt ?? 1_780_000_000,
+                  },
             credits: null,
             planType: "pro",
           },
