@@ -22,6 +22,7 @@ describe("npm package deployment contract", () => {
       readonly bugs?: { readonly url?: string };
       readonly homepage?: string;
       readonly scripts?: Record<string, string>;
+      readonly dependencies?: Record<string, string>;
     };
     const adminPackageJson = JSON.parse(await fs.readFile(new URL("../packages/admin/package.json", import.meta.url), "utf8")) as {
       readonly name?: string;
@@ -31,6 +32,7 @@ describe("npm package deployment contract", () => {
       readonly publishConfig?: Record<string, string>;
       readonly files?: readonly string[];
       readonly bin?: Record<string, string>;
+      readonly dependencies?: Record<string, string>;
     };
     const workerPackageJson = JSON.parse(await fs.readFile(new URL("../packages/worker/package.json", import.meta.url), "utf8")) as {
       readonly name?: string;
@@ -39,6 +41,7 @@ describe("npm package deployment contract", () => {
       readonly homepage?: string;
       readonly publishConfig?: Record<string, string>;
       readonly files?: readonly string[];
+      readonly dependencies?: Record<string, string>;
     };
 
     expect(packageJson).toMatchObject({
@@ -59,6 +62,14 @@ describe("npm package deployment contract", () => {
     expect(workerPackageJson).toMatchObject({
       name: "@agent-session-broker/worker",
     });
+    const serverRuntimeDependencies = {
+      "@larksuiteoapi/node-sdk": packageJson.dependencies?.["@larksuiteoapi/node-sdk"],
+      "@modelcontextprotocol/sdk": packageJson.dependencies?.["@modelcontextprotocol/sdk"],
+      marked: packageJson.dependencies?.marked,
+      ws: packageJson.dependencies?.ws,
+    };
+    expect(adminPackageJson.dependencies).toMatchObject(serverRuntimeDependencies);
+    expect(workerPackageJson.dependencies).toMatchObject(serverRuntimeDependencies);
     expect(adminPackageJson.publishConfig).toMatchObject({
       access: "public",
       registry: "https://registry.npmjs.org/",
@@ -67,7 +78,20 @@ describe("npm package deployment contract", () => {
       access: "public",
       registry: "https://registry.npmjs.org/",
     });
-    expect(adminPackageJson.files).toEqual(expect.arrayContaining(["dist/src/", "dist/admin-ui/", "scripts/ops/lib.mjs", "scripts/ops/macos-bootstrap.mjs", "scripts/ops/macos-launchd-launcher.mjs", "scripts/ops/macos-launchd-restart.mjs"]));
+    expect(adminPackageJson.files).toEqual(
+      expect.arrayContaining([
+        "dist/src/",
+        "dist/admin-ui/",
+        "scripts/ops/lib.mjs",
+        "scripts/ops/macos-bootstrap.mjs",
+        "scripts/ops/macos-bootstrap-helpers.mjs",
+        "scripts/ops/macos-bootstrap-helpers-1.mjs",
+        "scripts/ops/macos-bootstrap-helpers-2.mjs",
+        "scripts/ops/macos-bootstrap-helpers-3.mjs",
+        "scripts/ops/macos-launchd-launcher.mjs",
+        "scripts/ops/macos-launchd-restart.mjs",
+      ]),
+    );
     expect(workerPackageJson.files).toEqual(expect.arrayContaining(["dist/src/", "scripts/ops/macos-launchd-launcher.mjs", "scripts/ops/macos-launchd-restart.mjs"]));
     expect(workerPackageJson.files).not.toEqual(expect.arrayContaining(["dist/admin-ui/"]));
     expect(adminPackageJson.files).not.toEqual(expect.arrayContaining(["src/", "test/", "dist/test/", ".data/", ".data-agent-trace-preview/"]));
@@ -82,6 +106,10 @@ describe("npm package deployment contract", () => {
     const stageScript = await fs.readFile(new URL("../scripts/build/stage-npm-packages.mjs", import.meta.url), "utf8");
     expect(stageScript).toContain('"lib.mjs"');
     expect(stageScript).toContain('"macos-bootstrap.mjs"');
+    expect(stageScript).toContain('"macos-bootstrap-helpers.mjs"');
+    expect(stageScript).toContain('"macos-bootstrap-helpers-1.mjs"');
+    expect(stageScript).toContain('"macos-bootstrap-helpers-2.mjs"');
+    expect(stageScript).toContain('"macos-bootstrap-helpers-3.mjs"');
   });
 
   it("makes CI produce the same packed artifacts that deployment consumes", async () => {

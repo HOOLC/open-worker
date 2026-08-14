@@ -12,7 +12,7 @@ const packageTargets = [
     source: path.join(repoRoot, "packages", "admin"),
     destination: path.join(stageRoot, "admin"),
     includeAdminUi: true,
-    scripts: ["lib.mjs", "macos-bootstrap.mjs", "macos-launchd-launcher.mjs", "macos-launchd-restart.mjs"],
+    scripts: ["lib.mjs", "macos-bootstrap.mjs", "macos-bootstrap-helpers.mjs", "macos-bootstrap-helpers-1.mjs", "macos-bootstrap-helpers-2.mjs", "macos-bootstrap-helpers-3.mjs", "macos-launchd-launcher.mjs", "macos-launchd-restart.mjs"],
   },
   {
     source: path.join(repoRoot, "packages", "worker"),
