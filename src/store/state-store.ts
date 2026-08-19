@@ -1747,19 +1747,7 @@ export class StateStore {
   }
 
   #writeAgentSessionTraceSummary(summary: PersistedAgentSessionTraceSummary): void {
-    this.#databaseRequired()
-      .prepare(`
-      INSERT INTO agent_session_trace_summaries (
-        session_key, event_count, model_request_count, categories, sources, updated_at
-      ) VALUES (${placeholders(6)})
-      ON CONFLICT(session_key) DO UPDATE SET
-        event_count = excluded.event_count,
-        model_request_count = excluded.model_request_count,
-        categories = excluded.categories,
-        sources = excluded.sources,
-        updated_at = excluded.updated_at
-    `)
-      .run(summary.sessionKey, summary.eventCount, summary.modelRequestCount, JSON.stringify(summary.categories), JSON.stringify(summary.sources), summary.updatedAt);
+    upsertAgentSessionTraceSummaryRow(this.#databaseRequired(), summary);
   }
 
   #maybeAppendTraceSummarySnapshot(event: PersistedAgentTraceEvent): void {
@@ -1788,67 +1776,7 @@ export class StateStore {
   }
 
   #rebuildSessionTraceSummaryFromJsonl(sessionKey: string): PersistedAgentSessionTraceSummary | undefined {
-    const records = [...this.#traces.iterateRecords(sessionKey)];
-    let lastSnapshotIndex = -1;
-    let lastSnapshot: TraceSummarySnapshotRecord | undefined;
-    for (let index = 0; index < records.length; index += 1) {
-      const record = records[index];
-      if (record?.kind === "snapshot") {
-        lastSnapshotIndex = index;
-        lastSnapshot = record.snapshot;
-      }
-    }
-
-    const eventsById = new Map<string, PersistedAgentTraceEvent>();
-    let updatedAt = "";
-    for (let index = 0; index <= lastSnapshotIndex; index += 1) {
-      const record = records[index];
-      if (record?.kind !== "event") {
-        continue;
-      }
-      eventsById.set(record.event.id, record.event);
-      if (record.event.updatedAt > updatedAt) {
-        updatedAt = record.event.updatedAt;
-      }
-    }
-
-    const summaryState: TraceSummaryContribution = lastSnapshot
-      ? {
-          eventCount: lastSnapshot.summary.eventCount,
-          modelRequestCount: lastSnapshot.summary.modelRequestCount,
-          categories: { ...lastSnapshot.summary.categories },
-          sources: { ...lastSnapshot.summary.sources },
-        }
-      : emptyTraceSummaryContribution();
-
-    for (let index = lastSnapshotIndex + 1; index < records.length; index += 1) {
-      const record = records[index];
-      if (record?.kind !== "event") {
-        continue;
-      }
-      const delta = replayTraceEventSummaryDelta(eventsById, record.event);
-      applyTraceSummaryDelta(summaryState, delta, 1);
-      if (record.event.updatedAt > updatedAt) {
-        updatedAt = record.event.updatedAt;
-      }
-    }
-
-    const categories = mergeCountMaps({}, summaryState.categories);
-    const sources = mergeCountMaps({}, summaryState.sources);
-    const eventCount = Math.max(0, summaryState.eventCount);
-    const modelRequestCount = Math.max(0, summaryState.modelRequestCount);
-    if (eventCount === 0 && modelRequestCount === 0 && !Object.keys(categories).length && !Object.keys(sources).length) {
-      return undefined;
-    }
-
-    return {
-      sessionKey,
-      eventCount,
-      modelRequestCount,
-      categories,
-      sources,
-      updatedAt: updatedAt || new Date().toISOString(),
-    };
+    return rebuildSessionTraceSummaryFromJsonl(this.#traces, sessionKey);
   }
 
   #appendAdminEvent(
@@ -2502,10 +2430,12 @@ function migrateAgentTraceEventsToJsonl(database: DatabaseSync, traces: TraceJso
 
   const countRow = database.prepare("SELECT COUNT(*) AS count FROM agent_trace_events").get() as { count?: number | bigint } | undefined;
   const count = Number(countRow?.count ?? 0);
+  const migratedSessionKeys: string[] = [];
   if (count > 0) {
     const sessionRows = database.prepare("SELECT DISTINCT session_key FROM agent_trace_events").all() as SqlRow[];
     for (const sessionRow of sessionRows) {
       const sessionKey = stringColumn(sessionRow, "session_key");
+      migratedSessionKeys.push(sessionKey);
       traces.deleteSession(sessionKey);
       const rows = database
         .prepare(`
@@ -2520,7 +2450,39 @@ function migrateAgentTraceEventsToJsonl(database: DatabaseSync, traces: TraceJso
     }
   }
 
-  database.exec("DROP TABLE IF EXISTS agent_trace_events");
+  database.exec(`
+    DROP TABLE IF EXISTS agent_trace_events;
+    DROP INDEX IF EXISTS idx_agent_trace_events_session_sequence;
+    DROP INDEX IF EXISTS idx_agent_trace_events_session_at;
+    DROP INDEX IF EXISTS idx_agent_trace_events_turn;
+  `);
+
+  // The summary cache is derived state; refill it from the new JSONL SSOT so
+  // counts survive the migration instead of waiting for the next rebuild.
+  for (const sessionKey of new Set([...migratedSessionKeys, ...traces.listSessionKeys()])) {
+    const summary = rebuildSessionTraceSummaryFromJsonl(traces, sessionKey);
+    if (summary) {
+      upsertAgentSessionTraceSummaryRow(database, summary);
+    } else {
+      database.prepare("DELETE FROM agent_session_trace_summaries WHERE session_key = ?").run(sessionKey);
+    }
+  }
+}
+
+function upsertAgentSessionTraceSummaryRow(database: DatabaseSync, summary: PersistedAgentSessionTraceSummary): void {
+  database
+    .prepare(`
+    INSERT INTO agent_session_trace_summaries (
+      session_key, event_count, model_request_count, categories, sources, updated_at
+    ) VALUES (${placeholders(6)})
+    ON CONFLICT(session_key) DO UPDATE SET
+      event_count = excluded.event_count,
+      model_request_count = excluded.model_request_count,
+      categories = excluded.categories,
+      sources = excluded.sources,
+      updated_at = excluded.updated_at
+  `)
+    .run(summary.sessionKey, summary.eventCount, summary.modelRequestCount, JSON.stringify(summary.categories), JSON.stringify(summary.sources), summary.updatedAt);
 }
 
 function sqlRowToAgentTraceEvent(row: SqlRow): PersistedAgentTraceEvent {
@@ -2557,6 +2519,72 @@ function rebuildAllAgentSessionTraceSummaries(database: DatabaseSync): void {
   for (const row of rows) {
     rebuildAgentSessionTraceSummary(database, stringColumn(row, "session_key"));
   }
+}
+
+// Rebuilds a session's SQLite summary cache from the JSONL SSOT: restore the
+// last summary_snapshot, then replay every event after it.
+function rebuildSessionTraceSummaryFromJsonl(traces: TraceJsonlStore, sessionKey: string): PersistedAgentSessionTraceSummary | undefined {
+  const records = [...traces.iterateRecords(sessionKey)];
+  let lastSnapshotIndex = -1;
+  let lastSnapshot: TraceSummarySnapshotRecord | undefined;
+  for (let index = 0; index < records.length; index += 1) {
+    const record = records[index];
+    if (record?.kind === "snapshot") {
+      lastSnapshotIndex = index;
+      lastSnapshot = record.snapshot;
+    }
+  }
+
+  const eventsById = new Map<string, PersistedAgentTraceEvent>();
+  let updatedAt = "";
+  for (let index = 0; index <= lastSnapshotIndex; index += 1) {
+    const record = records[index];
+    if (record?.kind !== "event") {
+      continue;
+    }
+    eventsById.set(record.event.id, record.event);
+    if (record.event.updatedAt > updatedAt) {
+      updatedAt = record.event.updatedAt;
+    }
+  }
+
+  const summaryState: TraceSummaryContribution = lastSnapshot
+    ? {
+        eventCount: lastSnapshot.summary.eventCount,
+        modelRequestCount: lastSnapshot.summary.modelRequestCount,
+        categories: { ...lastSnapshot.summary.categories },
+        sources: { ...lastSnapshot.summary.sources },
+      }
+    : emptyTraceSummaryContribution();
+
+  for (let index = lastSnapshotIndex + 1; index < records.length; index += 1) {
+    const record = records[index];
+    if (record?.kind !== "event") {
+      continue;
+    }
+    const delta = replayTraceEventSummaryDelta(eventsById, record.event);
+    applyTraceSummaryDelta(summaryState, delta, 1);
+    if (record.event.updatedAt > updatedAt) {
+      updatedAt = record.event.updatedAt;
+    }
+  }
+
+  const categories = mergeCountMaps({}, summaryState.categories);
+  const sources = mergeCountMaps({}, summaryState.sources);
+  const eventCount = Math.max(0, summaryState.eventCount);
+  const modelRequestCount = Math.max(0, summaryState.modelRequestCount);
+  if (eventCount === 0 && modelRequestCount === 0 && !Object.keys(categories).length && !Object.keys(sources).length) {
+    return undefined;
+  }
+
+  return {
+    sessionKey,
+    eventCount,
+    modelRequestCount,
+    categories,
+    sources,
+    updatedAt: updatedAt || new Date().toISOString(),
+  };
 }
 
 interface TraceSummaryContribution {

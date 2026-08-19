@@ -225,6 +225,52 @@ describe.sequential("dynamic tools e2e", () => {
     90_000,
   );
 
+  it.skipIf(!brokerToolWiringPresent)(
+    "thread/resume never resends dynamicTools and keeps the same thread",
+    async () => {
+      const harness = await startBrokerHarness(cleanups);
+      const threadTs = "937.220";
+      await mention(harness, threadTs);
+      const start = harness.mockCodex.threadStarts[0];
+      expect(start).toBeTruthy();
+      expect(start?.params).toHaveProperty("dynamicTools");
+      expect(readDeclaredNamespaces(harness.mockCodex.dynamicTools).map((namespace) => namespace.name)).toEqual(expect.arrayContaining([...EXPECTED_NAMESPACES]));
+
+      // A live broker short-circuits already-loaded threads in-process, so a wire
+      // thread/resume only happens after a broker restart resumes the persisted session.
+      await harness.mockSlack.sendEvent(`evt-dynamic-tools-followup-${threadTs}`, {
+        type: "app_mention",
+        user: "U123",
+        channel: "C123",
+        thread_ts: threadTs,
+        ts: `${threadTs}1`,
+        text: "<@UBOT> continue after restart",
+      });
+      await waitFor(() => harness.mockCodex.turnsStarted.length >= 2, "second turn before restart");
+      await waitForSessionIdle(harness.tempRoot, `C123:${threadTs}`);
+
+      expect(harness.mockCodex.threadResumes).toHaveLength(0);
+      expect(harness.mockCodex.threadStarts).toHaveLength(1);
+
+      await harness.restart();
+      await harness.mockSlack.sendEvent(`evt-dynamic-tools-followup-2-${threadTs}`, {
+        type: "app_mention",
+        user: "U123",
+        channel: "C123",
+        thread_ts: threadTs,
+        ts: `${threadTs}2`,
+        text: "<@UBOT> continue after resume",
+      });
+      await waitFor(() => harness.mockCodex.threadResumes.length >= 1, "codex thread/resume");
+      await waitForSessionIdle(harness.tempRoot, `C123:${threadTs}`);
+
+      for (const resume of harness.mockCodex.threadResumes) {
+        expect(resume.params).not.toHaveProperty("dynamicTools");
+      }
+      expect(harness.mockCodex.threadStarts).toHaveLength(1);
+    },
+    90_000,
+  );
 });
 
 async function startClientHarness(
@@ -267,10 +313,11 @@ async function startBrokerHarness(
   cleanups: Array<() => Promise<void>>,
   options?: { readonly extraEnv?: Record<string, string> },
 ): Promise<{
-  readonly baseUrl: string;
+  baseUrl: string;
   readonly tempRoot: string;
   readonly mockCodex: MockCodexAppServer;
   readonly mockSlack: MockSlackServer;
+  readonly restart: () => Promise<void>;
 }> {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "dynamic-tools-broker-"));
   cleanups.push(async () => {
@@ -287,21 +334,34 @@ async function startBrokerHarness(
     await mockCodex.stop();
     await mockSlack.stop();
   });
-  const extraEnv = { ...brokerDynamicToolsEnv(), ...options?.extraEnv };
   const broker = await startBrokerProcess({
     port: await getFreePort(),
     slackPort,
     codexUrl,
     tempRoot,
-    ...(Object.keys(extraEnv).length > 0 ? { extraEnv } : {}),
+    ...(options?.extraEnv ? { extraEnv: options.extraEnv } : {}),
   });
   cleanups.push(() => broker.stop());
-  return {
+  const restart = async (): Promise<void> => {
+    await broker.stop();
+    const next = await startBrokerProcess({
+      port: await getFreePort(),
+      slackPort,
+      codexUrl,
+      tempRoot,
+      ...(options?.extraEnv ? { extraEnv: options.extraEnv } : {}),
+    });
+    cleanups.push(() => next.stop());
+    harness.baseUrl = next.baseUrl;
+  };
+  const harness = {
     baseUrl: broker.baseUrl,
     tempRoot,
     mockCodex,
     mockSlack,
+    restart,
   };
+  return harness;
 }
 
 async function mention(
@@ -462,10 +522,10 @@ function readRepoSource(rel: string): string {
   }
 }
 
-function brokerDynamicToolsEnv(): Record<string, string> {
-  const configSrc = readRepoSource("src/config.ts");
-  if (configSrc.includes("AGENT_DYNAMIC_TOOLS") || configSrc.includes("agentDynamicTools")) {
-    return { AGENT_DYNAMIC_TOOLS: "true" };
-  }
-  return {};
+// Slack thread timestamps look like "937.220"; a later message in the same
+// thread bumps the fractional part.
+function nextThreadTs(threadTs: string): string {
+  const [whole, fraction = "0"] = threadTs.split(".");
+  const next = Number(fraction) + 1;
+  return `${whole}.${String(Number.isFinite(next) ? next : 0).padStart(fraction.length, "0")}`;
 }

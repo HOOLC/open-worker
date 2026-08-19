@@ -383,15 +383,18 @@ describe("agent trace jsonl store e2e", () => {
         updated_at TEXT NOT NULL
       );
     `);
-    database
-      .prepare(`
+    const insertLegacy = database.prepare(`
         INSERT INTO agent_trace_events (
           id, session_key, source, type, at, sequence, title, summary, detail,
           status, role, tool_name, call_id, turn_id, detail_truncated,
           detail_original_chars, metadata, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      .run("legacy-1", sessionKey, "agent_runtime", "agent_assistant_message", "2026-03-19T00:00:01.000Z", 1, "legacy title", "legacy summary", "legacy detail", "completed", "assistant", null, null, "turn-1", 0, null, null, "2026-03-19T00:00:01.000Z", "2026-03-19T00:00:01.000Z");
+      `);
+    // Inserted out of sequence order; the migration must stream oldest-first
+    // so the newest row lands in the active segment.
+    insertLegacy.run("legacy-newest", sessionKey, "agent_runtime", "agent_assistant_message", "2026-03-19T00:00:03.000Z", 3, "legacy newest", "legacy newest summary", "legacy newest detail", "completed", "assistant", null, null, "turn-1", 0, null, null, "2026-03-19T00:00:03.000Z", "2026-03-19T00:00:03.000Z");
+    insertLegacy.run("legacy-1", sessionKey, "agent_runtime", "agent_assistant_message", "2026-03-19T00:00:01.000Z", 1, "legacy title", "legacy summary", "legacy detail", "completed", "assistant", null, null, "turn-1", 0, null, null, "2026-03-19T00:00:01.000Z", "2026-03-19T00:00:01.000Z");
+    insertLegacy.run("legacy-middle", sessionKey, "agent_runtime", "agent_token_count", "2026-03-19T00:00:02.000Z", 2, "legacy middle", "legacy middle summary", null, "completed", "assistant", null, null, "turn-1", 0, null, null, "2026-03-19T00:00:02.000Z", "2026-03-19T00:00:02.000Z");
     database.prepare("DELETE FROM schema_migrations WHERE version = 18").run();
     database.close();
 
@@ -408,16 +411,128 @@ describe("agent trace jsonl store e2e", () => {
         summary: "legacy summary",
         sequence: 1,
       }),
+      expect.objectContaining({
+        id: "legacy-middle",
+        sequence: 2,
+      }),
+      expect.objectContaining({
+        id: "legacy-newest",
+        sequence: 3,
+      }),
     ]);
     const lines = readTraceLines(storeStateDir(store), sessionKey);
     expect(lines.some((line) => line.includes("legacy-1"))).toBe(true);
+    // Rows were streamed oldest-first, so the newest row is the last JSONL line.
+    expect(lines.at(-1)).toContain("legacy-newest");
+    expect(lines.findIndex((line) => line.includes("legacy-1"))).toBeLessThan(lines.findIndex((line) => line.includes("legacy-newest")));
+
+    // The SQLite summary cache is derived state and must be refilled from the
+    // migrated JSONL without waiting for a manual rebuild.
+    expect(migrated.getAgentSessionTraceSummary(sessionKey)).toEqual(
+      expect.objectContaining({
+        sessionKey,
+        eventCount: 2,
+        modelRequestCount: 1,
+        categories: {
+          agent_assistant_message: 2,
+        },
+      }),
+    );
 
     const verify = new DatabaseSync(path.join(storeStateDir(store), STATE_DATABASE_FILENAME));
     try {
       expect(verify.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'agent_trace_events'").get()).toBeUndefined();
+      expect(verify.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_agent_trace_events%'").all()).toEqual([]);
     } finally {
       verify.close();
     }
+  });
+
+  it("leaves the newest migrated rows in the active segment when sealing forces multiple segments", async () => {
+    const stateRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), "agent-trace-migrate-seal-"));
+    cleanups.push(async () => {
+      await fs.promises.rm(stateRoot, { recursive: true, force: true });
+    });
+    const stateDir = path.join(stateRoot, "state");
+    const sessionsRoot = path.join(stateRoot, "sessions");
+    const sessionKey = "C123:111.222";
+
+    const seed = new StateStore(stateDir, sessionsRoot, { traceSegmentMaxBytes: 300 });
+    await seed.load();
+    storeRoots.set(seed, { stateDir, sessionsRoot });
+    await seedStoreSession(seed, sessionKey);
+    seed.close();
+
+    const database = new DatabaseSync(path.join(stateDir, STATE_DATABASE_FILENAME));
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS agent_trace_events (
+        id TEXT PRIMARY KEY,
+        session_key TEXT NOT NULL REFERENCES sessions(key) ON DELETE CASCADE,
+        source TEXT NOT NULL,
+        type TEXT NOT NULL,
+        at TEXT NOT NULL,
+        sequence INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        detail TEXT,
+        status TEXT,
+        role TEXT,
+        tool_name TEXT,
+        call_id TEXT,
+        turn_id TEXT,
+        detail_truncated INTEGER NOT NULL DEFAULT 0,
+        detail_original_chars INTEGER,
+        metadata TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    const insertLegacy = database.prepare(`
+        INSERT INTO agent_trace_events (
+          id, session_key, source, type, at, sequence, title, summary, detail,
+          status, role, tool_name, call_id, turn_id, detail_truncated,
+          detail_original_chars, metadata, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+    for (let sequence = 1; sequence <= 8; sequence += 1) {
+      const at = new Date(Date.UTC(2026, 2, 19, 0, 0, sequence)).toISOString();
+      insertLegacy.run(`legacy-${sequence}`, sessionKey, "agent_runtime", "agent_assistant_message", at, sequence, `legacy title ${sequence}`, `legacy summary ${sequence}`, `legacy detail ${sequence} ${"x".repeat(120)}`, "completed", "assistant", null, null, null, 0, null, null, at, at);
+    }
+    database.prepare("DELETE FROM schema_migrations WHERE version = 18").run();
+    database.close();
+
+    const migrated = new StateStore(stateDir, sessionsRoot, { traceSegmentMaxBytes: 300 });
+    await migrated.load();
+    cleanups.push(async () => {
+      migrated.close();
+    });
+
+    const files = listTraceSegmentFiles(stateDir, sessionKey);
+    expect(files.length).toBeGreaterThan(1);
+    if (isZstdAvailable()) {
+      expect(files.some((name) => name.endsWith(".jsonl.zst"))).toBe(true);
+    }
+
+    // Last-write-wins reads and reverse pagination still work across the
+    // migrated segments.
+    expect(migrated.listAgentTraceEvents(sessionKey).map((event) => event.id)).toEqual(Array.from({ length: 8 }, (_, index) => `legacy-${index + 1}`));
+    const page = migrated.listAgentTraceEventsPage(sessionKey, { limit: 3 });
+    expect(page.events.map((event) => event.sequence)).toEqual([6, 7, 8]);
+    expect(page.hasMore).toBe(true);
+    expect(page.nextBeforeSequence).toBe(6);
+    expect(migrated.getAgentSessionTraceSummary(sessionKey)).toEqual(
+      expect.objectContaining({
+        eventCount: 8,
+      }),
+    );
+
+    // The active (uncompressed, highest-index) segment holds the newest rows.
+    const activeSegment = files.filter((name) => name.endsWith(".jsonl")).at(-1);
+    expect(activeSegment).toBeTruthy();
+    const activeLines = readTraceSegmentLines(stateDir, sessionKey, activeSegment!);
+    expect(activeLines.length).toBeGreaterThan(0);
+    expect(activeLines.at(-1)).toContain("legacy-8");
+    expect(activeLines.some((line) => line.includes("legacy-1"))).toBe(false);
   });
 
   it("seals oversized segments and reads them back, compressing with zstd when available", async () => {
@@ -559,4 +674,13 @@ function listTraceSegmentFiles(stateDir: string, sessionKey: string): string[] {
     return [];
   }
   return fs.readdirSync(directory).sort();
+}
+
+function readTraceSegmentLines(stateDir: string, sessionKey: string, segmentName: string): string[] {
+  const directory = path.join(stateDir, TRACE_DIRECTORY_NAME, path.basename(traceSessionDirectory(stateDir, sessionKey)));
+  const text = fs.readFileSync(path.join(directory, segmentName), "utf8");
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
