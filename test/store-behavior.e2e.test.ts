@@ -225,7 +225,8 @@ function expectedSchemaMigrations(): Array<{ version: number; name: string }> {
     { version: 14, name: "agent_session_derived_summaries" },
     { version: 15, name: "slack_event_retention_indexes" },
     { version: 16, name: "inbound_mention_backfill_indexes" },
-    { version: CURRENT_STATE_SCHEMA_VERSION, name: "chat_platform_columns" },
+    { version: 17, name: "chat_platform_columns" },
+    { version: CURRENT_STATE_SCHEMA_VERSION, name: "trace_jsonl_ssot" },
   ];
 }
 

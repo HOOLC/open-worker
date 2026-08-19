@@ -5,6 +5,9 @@ import WebSocket from "ws";
 import { logger } from "../../logger.js";
 import type { AgentTurnTokenUsage, GeneratedImageArtifact, JsonLike, SlackUserIdentity } from "../../types.js";
 import { buildSlackThreadBaseInstructions } from "./slack-thread-base-instructions.js";
+import { toDynamicToolDeclarationsJson, type DynamicToolBackend, type ThreadCoordinates } from "./dynamic-tools.js";
+
+export type { ThreadCoordinates } from "./dynamic-tools.js";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -69,6 +72,7 @@ interface PromptSessionCoordinates {
   readonly conversationKind?: string | undefined;
   readonly rootMessageId?: string | undefined;
   readonly platformThreadId?: string | undefined;
+  readonly sessionKey?: string | undefined;
   readonly channelId: string;
   readonly rootThreadTs: string;
   readonly workspacePath: string;
@@ -205,6 +209,17 @@ export class AppServerClientLayer1 extends AppServerClientBase {
     this.privateSlackBotIdentity = identity;
   }
 
+  // Dynamic tools are declared on thread/start only; declarations persist
+  // across thread/resume and are never resent. Pass undefined to clear the
+  // backend.
+  setDynamicToolBackend(backend: DynamicToolBackend | undefined): void {
+    this.privateDynamicToolBackend = backend;
+  }
+
+  readThreadCoordinates(threadId: string): ThreadCoordinates | undefined {
+    return this.privateThreadCoordinates.get(threadId);
+  }
+
   async close(): Promise<void> {
     if (!this.privateSocket) {
       this.privateHandleDisconnect(new Error("Codex app-server websocket closed"));
@@ -302,11 +317,17 @@ export class AppServerClientLayer1 extends AppServerClientBase {
       };
 
       this.privateRememberThreadRuntimeDefaults(result.thread.id, result);
+      // dynamicTools declarations persist server-side across resume, so resume
+      // never resends them.
+      this.privateRememberThreadCoordinates(result.thread.id, session);
       return result.thread.id;
     }
 
     const baseInstructions = await this.privateBuildBaseInstructions(session);
-    const result = (await this.request("thread/start", {
+    // Declarations are attached to thread/start only; the app-server persists
+    // them across thread/resume, so resume must not resend them.
+    const dynamicTools = toDynamicToolDeclarationsJson(this.privateDynamicToolBackend?.listDeclarations());
+    const threadStartParams: Record<string, JsonLike> = {
       cwd: session.workspacePath,
       approvalPolicy: "never",
       sandbox: "danger-full-access",
@@ -320,7 +341,12 @@ export class AppServerClientLayer1 extends AppServerClientBase {
       ephemeral: false,
       experimentalRawEvents: true,
       persistExtendedHistory: true,
-    })) as {
+    };
+    if (dynamicTools) {
+      threadStartParams.dynamicTools = dynamicTools;
+    }
+
+    const result = (await this.request("thread/start", threadStartParams)) as {
       thread: { id: string };
       model?: unknown;
       reasoningEffort?: unknown;
@@ -328,6 +354,7 @@ export class AppServerClientLayer1 extends AppServerClientBase {
       effort?: unknown;
     };
     this.privateRememberThreadRuntimeDefaults(result.thread.id, result);
+    this.privateRememberThreadCoordinates(result.thread.id, session);
     this.emit("notification", "broker/system_prompt", {
       threadId: result.thread.id,
       cwd: session.workspacePath,
@@ -420,11 +447,28 @@ export class AppServerClientLayer1 extends AppServerClientBase {
     });
   }
 
+  privateRememberThreadCoordinates(threadId: string, session: PromptSessionCoordinates): void {
+    // Coordinates are recorded on both thread/start and thread/resume because
+    // the app-server keeps sending item/tool/call for a resumed thread and the
+    // broker restarts lose the in-memory map otherwise.
+    this.privateThreadCoordinates.set(threadId, {
+      threadId,
+      platform: session.platform,
+      channelId: session.channelId,
+      conversationId: session.conversationId,
+      conversationKind: session.conversationKind,
+      rootThreadTs: session.rootThreadTs,
+      rootMessageId: session.rootMessageId,
+      platformThreadId: session.platformThreadId,
+      workspacePath: session.workspacePath,
+      sessionKey: session.sessionKey,
+    });
+  }
+
   async privateBuildBaseInstructions(session: PromptSessionCoordinates): Promise<string> {
     const personalMemory = await this.privateReadPersonalMemory();
     return await buildSlackThreadBaseInstructions({
       platform: session.platform,
-      brokerHttpBaseUrl: this.options.brokerHttpBaseUrl,
       channelId: session.channelId,
       rootThreadTs: session.rootThreadTs,
       conversationId: session.conversationId,
@@ -559,7 +603,7 @@ export class AppServerClientLayer1 extends AppServerClientBase {
 
   privateHandleMessage(raw: string): void {
     const message = JSON.parse(raw) as {
-      readonly id?: string;
+      readonly id?: string | number;
       readonly result?: JsonValue;
       readonly error?: { readonly message: string };
       readonly method?: string;
@@ -577,13 +621,38 @@ export class AppServerClientLayer1 extends AppServerClientBase {
       },
     );
 
-    if (message.id) {
-      const pending = this.privatePendingRequests.get(message.id);
+    const hasId = message.id !== undefined && message.id !== null;
+
+    if (hasId && message.method) {
+      // JSON-RPC request from the app-server to us (e.g. item/tool/call).
+      const handler = this.privateServerRequestHandlers.get(message.method);
+      if (!handler) {
+        this.sendServerError(message.id, -32601, `Method not found: ${message.method}`);
+        return;
+      }
+
+      void handler(message.params ?? {})
+        .then((result) => {
+          this.sendServerResponse(message.id!, result);
+        })
+        .catch((error: unknown) => {
+          logger.warn("App-server request handler failed", {
+            method: message.method,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          this.sendServerError(message.id!, -32000, error instanceof Error ? error.message : String(error));
+        });
+      return;
+    }
+
+    if (hasId) {
+      const requestId = String(message.id);
+      const pending = this.privatePendingRequests.get(requestId);
       if (!pending) {
         return;
       }
 
-      this.privatePendingRequests.delete(message.id);
+      this.privatePendingRequests.delete(requestId);
       if (message.error) {
         pending.reject(new Error(message.error.message));
         return;
@@ -591,7 +660,7 @@ export class AppServerClientLayer1 extends AppServerClientBase {
 
       pending.resolve(message.result ?? null);
       logger.debug("App-server response", {
-        requestId: message.id,
+        requestId,
       });
       return;
     }

@@ -20,9 +20,11 @@ import type {
   SlackSessionRecord,
 } from "../types.js";
 import { ensureDir } from "../utils/fs.js";
+import { DEFAULT_TRACE_SEGMENT_MAX_BYTES, TraceJsonlStore, traceToolEventKey, type TraceSummarySnapshotRecord } from "./trace-jsonl-store.js";
 
 export const STATE_DATABASE_FILENAME = "broker.sqlite";
-export const CURRENT_STATE_SCHEMA_VERSION = 17;
+export const CURRENT_STATE_SCHEMA_VERSION = 18;
+export const TRACE_SUMMARY_SNAPSHOT_INTERVAL = 200;
 export const STATE_STORE_BUSY_TIMEOUT_MS = 5_000;
 const ADMIN_EVENT_RETENTION_LIMIT = 20_000;
 const ADMIN_EVENT_PRUNE_INTERVAL = 500;
@@ -34,10 +36,19 @@ const SLACK_DONE_EVENT_PRUNE_INTERVAL = 500;
 type SqlValue = string | number | bigint | null;
 type SqlRow = Record<string, unknown>;
 
+export interface StateStoreOptions {
+  readonly traceSegmentMaxBytes?: number | undefined;
+  readonly traceSummarySnapshotInterval?: number | undefined;
+}
+
+interface StateMigrationContext {
+  readonly traces: TraceJsonlStore;
+}
+
 interface StateMigration {
   readonly version: number;
   readonly name: string;
-  readonly up: (database: DatabaseSync) => void;
+  readonly up: (database: DatabaseSync, context: StateMigrationContext) => void;
 }
 
 const STATE_MIGRATIONS: readonly StateMigration[] = [
@@ -362,6 +373,13 @@ const STATE_MIGRATIONS: readonly StateMigration[] = [
       repairChatPlatformSchema(database);
     },
   },
+  {
+    version: 18,
+    name: "trace_jsonl_ssot",
+    up(database, context) {
+      migrateAgentTraceEventsToJsonl(database, context.traces);
+    },
+  },
 ];
 
 function createAgentSessionDerivedSummarySchema(database: DatabaseSync): void {
@@ -666,17 +684,25 @@ function tableColumns(database: DatabaseSync, tableName: string): Set<string> {
 export class StateStore {
   readonly #stateDir: string;
   readonly #sessionsRoot: string;
+  readonly #traces: TraceJsonlStore;
+  readonly #traceSummarySnapshotInterval: number;
   #database: DatabaseSync | undefined;
   #loaded = false;
   #doneSlackEventPruneCounter = 0;
 
-  constructor(stateDir: string, sessionsRoot: string) {
+  constructor(stateDir: string, sessionsRoot: string, options?: StateStoreOptions) {
     this.#stateDir = stateDir;
     this.#sessionsRoot = sessionsRoot;
+    this.#traceSummarySnapshotInterval = options?.traceSummarySnapshotInterval ?? TRACE_SUMMARY_SNAPSHOT_INTERVAL;
+    this.#traces = new TraceJsonlStore({
+      stateDir,
+      segmentMaxBytes: options?.traceSegmentMaxBytes ?? DEFAULT_TRACE_SEGMENT_MAX_BYTES,
+    });
   }
 
   async load(): Promise<void> {
     await ensureDir(this.#stateDir);
+    this.#traces.ensureLayout();
     if (this.#loaded) {
       return;
     }
@@ -689,6 +715,7 @@ export class StateStore {
     this.#database?.close();
     this.#database = undefined;
     this.#loaded = false;
+    this.#traces.clearCache();
   }
 
   listSessions(): SlackSessionRecord[] {
@@ -719,7 +746,7 @@ export class StateStore {
   }
 
   async deleteSession(key: string): Promise<boolean> {
-    return this.#transaction(() => {
+    const deleted = this.#transaction(() => {
       const existing = this.#databaseRequired().prepare("SELECT key FROM sessions WHERE key = ?").get(key);
       if (!existing) {
         return false;
@@ -736,6 +763,10 @@ export class StateStore {
       });
       return true;
     });
+    if (deleted) {
+      this.#traces.deleteSession(key);
+    }
+    return deleted;
   }
 
   async patchSession(key: string, patch: Partial<SlackSessionRecord> | ((current: SlackSessionRecord) => Partial<SlackSessionRecord>)): Promise<SlackSessionRecord> {
@@ -1210,20 +1241,11 @@ export class StateStore {
   }
 
   listAgentTraceEvents(sessionKey: string, limit = 1000): PersistedAgentTraceEvent[] {
-    return this.#databaseRequired()
-      .prepare(`
-        SELECT * FROM agent_trace_events
-        WHERE session_key = ?
-        ORDER BY sequence ASC, at ASC, id ASC
-        LIMIT ?
-      `)
-      .all(sessionKey, limit)
-      .map((row) => this.#rowToAgentTraceEvent(row as SqlRow));
+    return this.#traces.listAgentTraceEvents(sessionKey, limit);
   }
 
   getAgentTraceEvent(sessionKey: string, id: string): PersistedAgentTraceEvent | undefined {
-    const row = this.#databaseRequired().prepare("SELECT * FROM agent_trace_events WHERE session_key = ? AND id = ?").get(sessionKey, id) as SqlRow | undefined;
-    return row ? this.#rowToAgentTraceEvent(row) : undefined;
+    return this.#traces.getAgentTraceEvent(sessionKey, id);
   }
 
   listAgentTraceEventsPage(
@@ -1237,32 +1259,7 @@ export class StateStore {
     readonly hasMore: boolean;
     readonly nextBeforeSequence: number | null;
   } {
-    const limit = clampPositiveInteger(options?.limit ?? 100, 1, 500);
-    const params: SqlValue[] = [sessionKey];
-    const where = ["session_key = ?"];
-    const beforeSequence = Number(options?.beforeSequence ?? 0);
-    if (Number.isFinite(beforeSequence) && beforeSequence > 0) {
-      where.push("sequence < ?");
-      params.push(Math.floor(beforeSequence));
-    }
-    params.push(limit + 1);
-    const rows = this.#databaseRequired()
-      .prepare(`
-        SELECT * FROM agent_trace_events
-        WHERE ${where.join(" AND ")}
-        ORDER BY sequence DESC, at DESC, id DESC
-        LIMIT ?
-      `)
-      .all(...params)
-      .map((row) => this.#rowToAgentTraceEvent(row as SqlRow));
-    const pageRows = rows.slice(0, limit);
-    const events = pageRows.slice().reverse();
-    const nextBeforeSequence = events.length ? Math.min(...events.map((event) => event.sequence)) : null;
-    return {
-      events,
-      hasMore: rows.length > limit,
-      nextBeforeSequence,
-    };
+    return this.#traces.listAgentTraceEventsPage(sessionKey, options);
   }
 
   getAgentSessionTraceSummary(sessionKey: string): PersistedAgentSessionTraceSummary | undefined {
@@ -1270,24 +1267,37 @@ export class StateStore {
     return row ? this.#rowToAgentSessionTraceSummary(row) : undefined;
   }
 
+  rebuildTraceSummaries(): void {
+    this.#transaction(() => {
+      this.#databaseRequired().prepare("DELETE FROM agent_session_trace_summaries").run();
+      for (const sessionKey of this.#traces.listSessionKeys()) {
+        const summary = this.#rebuildSessionTraceSummaryFromJsonl(sessionKey);
+        if (summary) {
+          this.#writeAgentSessionTraceSummary(summary);
+        }
+      }
+    });
+  }
+
   async upsertAgentTraceEvent(record: PersistedAgentTraceEvent): Promise<void> {
     const normalized = this.#normalizeAgentTraceEvent(record);
     this.#transaction(() => {
-      const previous = this.#getAgentTraceEventById(normalized.id);
-      const previousContribution = previous ? traceSummaryContribution(previous, this.#hasCompletedToolResultForToolCall(previous, normalized.id)) : emptyTraceSummaryContribution();
-      const toolCallHiddenByNewResult = normalized.type === "agent_tool_result" && previous?.type !== "agent_tool_result" ? this.#getMatchingToolCallForResult(normalized) : undefined;
-      const oldResultStopsHidingToolCall = previous?.type === "agent_tool_result" && (normalized.type !== "agent_tool_result" || traceToolEventKey(previous) !== traceToolEventKey(normalized)) ? this.#getMatchingToolCallForResult(previous) : undefined;
+      const previous = this.#traces.getAgentTraceEvent(normalized.sessionKey, normalized.id);
+      const previousContribution = previous ? traceSummaryContribution(previous, this.#traces.hasCompletedToolResultForToolCall(previous, normalized.id)) : emptyTraceSummaryContribution();
+      const toolCallHiddenByNewResult = normalized.type === "agent_tool_result" && previous?.type !== "agent_tool_result" ? this.#traces.getMatchingToolCallForResult(normalized) : undefined;
+      const oldResultStopsHidingToolCall = previous?.type === "agent_tool_result" && (normalized.type !== "agent_tool_result" || traceToolEventKey(previous) !== traceToolEventKey(normalized)) ? this.#traces.getMatchingToolCallForResult(previous) : undefined;
 
-      this.#upsertAgentTraceEvent(normalized);
-      const nextContribution = traceSummaryContribution(normalized, this.#hasCompletedToolResultForToolCall(normalized));
+      this.#traces.appendEvent(normalized);
+      const nextContribution = traceSummaryContribution(normalized, this.#traces.hasCompletedToolResultForToolCall(normalized));
       const delta = subtractTraceSummaryContribution(nextContribution, previousContribution);
-      if (toolCallHiddenByNewResult && !this.#hasCompletedToolResultForToolCall(toolCallHiddenByNewResult, normalized.id)) {
+      if (toolCallHiddenByNewResult && !this.#traces.hasCompletedToolResultForToolCall(toolCallHiddenByNewResult, normalized.id)) {
         applyTraceSummaryDelta(delta, traceSummaryContribution(toolCallHiddenByNewResult, false), -1);
       }
-      if (oldResultStopsHidingToolCall && !this.#hasCompletedToolResultForToolCall(oldResultStopsHidingToolCall)) {
+      if (oldResultStopsHidingToolCall && !this.#traces.hasCompletedToolResultForToolCall(oldResultStopsHidingToolCall)) {
         applyTraceSummaryDelta(delta, traceSummaryContribution(oldResultStopsHidingToolCall, false), 1);
       }
       this.#applyAgentTraceSummaryDelta(normalized.sessionKey, delta, normalized.updatedAt);
+      this.#maybeAppendTraceSummarySnapshot(normalized);
       this.#appendAdminEvent({
         kind: "trace.append",
         scope: "session",
@@ -1347,7 +1357,7 @@ export class StateStore {
 
       for (const migration of STATE_MIGRATIONS) {
         if (!appliedVersions.has(migration.version)) {
-          migration.up(database);
+          migration.up(database, { traces: this.#traces });
           database.prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)").run(migration.version, migration.name, new Date().toISOString());
           continue;
         }
@@ -1713,127 +1723,6 @@ export class StateStore {
       );
   }
 
-  #upsertAgentTraceEvent(record: PersistedAgentTraceEvent): void {
-    this.#databaseRequired()
-      .prepare(`
-      INSERT INTO agent_trace_events (
-        id, session_key, source, type, at, sequence, title, summary, detail,
-        status, role, tool_name, call_id, turn_id, detail_truncated,
-        detail_original_chars, metadata, created_at, updated_at
-      ) VALUES (${placeholders(19)})
-      ON CONFLICT(id) DO UPDATE SET
-        session_key = excluded.session_key,
-        source = excluded.source,
-        type = excluded.type,
-        at = excluded.at,
-        sequence = excluded.sequence,
-        title = excluded.title,
-        summary = excluded.summary,
-        detail = excluded.detail,
-        status = excluded.status,
-        role = excluded.role,
-        tool_name = excluded.tool_name,
-        call_id = excluded.call_id,
-        turn_id = excluded.turn_id,
-        detail_truncated = excluded.detail_truncated,
-        detail_original_chars = excluded.detail_original_chars,
-        metadata = excluded.metadata,
-        updated_at = excluded.updated_at
-    `)
-      .run(
-        record.id,
-        record.sessionKey,
-        record.source,
-        record.type,
-        record.at,
-        record.sequence,
-        record.title,
-        record.summary,
-        record.detail ?? null,
-        record.status ?? null,
-        record.role ?? null,
-        record.toolName ?? null,
-        record.callId ?? null,
-        record.turnId ?? null,
-        record.detailTruncated ? 1 : 0,
-        record.detailOriginalChars ?? null,
-        jsonOrNull(record.metadata),
-        record.createdAt,
-        record.updatedAt,
-      );
-  }
-
-  #getAgentTraceEventById(id: string): PersistedAgentTraceEvent | undefined {
-    const row = this.#databaseRequired().prepare("SELECT * FROM agent_trace_events WHERE id = ?").get(id) as SqlRow | undefined;
-    return row ? this.#rowToAgentTraceEvent(row) : undefined;
-  }
-
-  #getMatchingToolCallForResult(record: PersistedAgentTraceEvent): PersistedAgentTraceEvent | undefined {
-    const key = traceToolEventKeyParts(record);
-    if (!key) {
-      return undefined;
-    }
-    const row = key.callId
-      ? (this.#databaseRequired()
-          .prepare(`
-          SELECT * FROM agent_trace_events
-          WHERE session_key = ?
-            AND type = 'agent_tool_call'
-            AND COALESCE(turn_id, '') = ?
-            AND call_id = ?
-          ORDER BY sequence DESC, at DESC, id DESC
-          LIMIT 1
-        `)
-          .get(record.sessionKey, key.turnId, key.callId) as SqlRow | undefined)
-      : (this.#databaseRequired()
-          .prepare(`
-          SELECT * FROM agent_trace_events
-          WHERE session_key = ?
-            AND type = 'agent_tool_call'
-            AND COALESCE(turn_id, '') = ?
-            AND COALESCE(tool_name, '') = ?
-          ORDER BY sequence DESC, at DESC, id DESC
-          LIMIT 1
-        `)
-          .get(record.sessionKey, key.turnId, key.toolName ?? "") as SqlRow | undefined);
-    return row ? this.#rowToAgentTraceEvent(row) : undefined;
-  }
-
-  #hasCompletedToolResultForToolCall(record: PersistedAgentTraceEvent, excludeEventId?: string | undefined): boolean {
-    if (record.type !== "agent_tool_call" && record.type !== "agent_tool_result") {
-      return false;
-    }
-    const key = traceToolEventKeyParts(record);
-    if (!key) {
-      return false;
-    }
-    const excludeClause = excludeEventId ? "AND id != ?" : "";
-    const row = key.callId
-      ? (this.#databaseRequired()
-          .prepare(`
-          SELECT 1 FROM agent_trace_events
-          WHERE session_key = ?
-            AND type = 'agent_tool_result'
-            AND COALESCE(turn_id, '') = ?
-            AND call_id = ?
-            ${excludeClause}
-          LIMIT 1
-        `)
-          .get(record.sessionKey, key.turnId, key.callId, ...(excludeEventId ? [excludeEventId] : [])) as SqlRow | undefined)
-      : (this.#databaseRequired()
-          .prepare(`
-          SELECT 1 FROM agent_trace_events
-          WHERE session_key = ?
-            AND type = 'agent_tool_result'
-            AND COALESCE(turn_id, '') = ?
-            AND COALESCE(tool_name, '') = ?
-            ${excludeClause}
-          LIMIT 1
-        `)
-          .get(record.sessionKey, key.turnId, key.toolName ?? "", ...(excludeEventId ? [excludeEventId] : [])) as SqlRow | undefined);
-    return Boolean(row);
-  }
-
   #applyAgentTraceSummaryDelta(sessionKey: string, delta: TraceSummaryContribution, updatedAt: string): void {
     const existing = this.getAgentSessionTraceSummary(sessionKey);
     const eventCount = Math.max(0, (existing?.eventCount ?? 0) + delta.eventCount);
@@ -1847,6 +1736,17 @@ export class StateStore {
       return;
     }
 
+    this.#writeAgentSessionTraceSummary({
+      sessionKey,
+      eventCount,
+      modelRequestCount,
+      categories,
+      sources,
+      updatedAt: nextUpdatedAt,
+    });
+  }
+
+  #writeAgentSessionTraceSummary(summary: PersistedAgentSessionTraceSummary): void {
     this.#databaseRequired()
       .prepare(`
       INSERT INTO agent_session_trace_summaries (
@@ -1859,7 +1759,96 @@ export class StateStore {
         sources = excluded.sources,
         updated_at = excluded.updated_at
     `)
-      .run(sessionKey, eventCount, modelRequestCount, JSON.stringify(categories), JSON.stringify(sources), nextUpdatedAt);
+      .run(summary.sessionKey, summary.eventCount, summary.modelRequestCount, JSON.stringify(summary.categories), JSON.stringify(summary.sources), summary.updatedAt);
+  }
+
+  #maybeAppendTraceSummarySnapshot(event: PersistedAgentTraceEvent): void {
+    if (this.#traceSummarySnapshotInterval <= 0) {
+      return;
+    }
+    if (this.#traces.eventAppendCount(event.sessionKey) % this.#traceSummarySnapshotInterval !== 0) {
+      return;
+    }
+    const summary = this.getAgentSessionTraceSummary(event.sessionKey);
+    if (!summary) {
+      return;
+    }
+    const snapshot: TraceSummarySnapshotRecord = {
+      type: "summary_snapshot",
+      sessionKey: event.sessionKey,
+      sequence: event.sequence,
+      summary: {
+        eventCount: summary.eventCount,
+        modelRequestCount: summary.modelRequestCount,
+        categories: summary.categories,
+        sources: summary.sources,
+      },
+    };
+    this.#traces.appendSummarySnapshot(snapshot);
+  }
+
+  #rebuildSessionTraceSummaryFromJsonl(sessionKey: string): PersistedAgentSessionTraceSummary | undefined {
+    const records = [...this.#traces.iterateRecords(sessionKey)];
+    let lastSnapshotIndex = -1;
+    let lastSnapshot: TraceSummarySnapshotRecord | undefined;
+    for (let index = 0; index < records.length; index += 1) {
+      const record = records[index];
+      if (record?.kind === "snapshot") {
+        lastSnapshotIndex = index;
+        lastSnapshot = record.snapshot;
+      }
+    }
+
+    const eventsById = new Map<string, PersistedAgentTraceEvent>();
+    let updatedAt = "";
+    for (let index = 0; index <= lastSnapshotIndex; index += 1) {
+      const record = records[index];
+      if (record?.kind !== "event") {
+        continue;
+      }
+      eventsById.set(record.event.id, record.event);
+      if (record.event.updatedAt > updatedAt) {
+        updatedAt = record.event.updatedAt;
+      }
+    }
+
+    const summaryState: TraceSummaryContribution = lastSnapshot
+      ? {
+          eventCount: lastSnapshot.summary.eventCount,
+          modelRequestCount: lastSnapshot.summary.modelRequestCount,
+          categories: { ...lastSnapshot.summary.categories },
+          sources: { ...lastSnapshot.summary.sources },
+        }
+      : emptyTraceSummaryContribution();
+
+    for (let index = lastSnapshotIndex + 1; index < records.length; index += 1) {
+      const record = records[index];
+      if (record?.kind !== "event") {
+        continue;
+      }
+      const delta = replayTraceEventSummaryDelta(eventsById, record.event);
+      applyTraceSummaryDelta(summaryState, delta, 1);
+      if (record.event.updatedAt > updatedAt) {
+        updatedAt = record.event.updatedAt;
+      }
+    }
+
+    const categories = mergeCountMaps({}, summaryState.categories);
+    const sources = mergeCountMaps({}, summaryState.sources);
+    const eventCount = Math.max(0, summaryState.eventCount);
+    const modelRequestCount = Math.max(0, summaryState.modelRequestCount);
+    if (eventCount === 0 && modelRequestCount === 0 && !Object.keys(categories).length && !Object.keys(sources).length) {
+      return undefined;
+    }
+
+    return {
+      sessionKey,
+      eventCount,
+      modelRequestCount,
+      categories,
+      sources,
+      updatedAt: updatedAt || new Date().toISOString(),
+    };
   }
 
   #appendAdminEvent(
@@ -2140,30 +2129,6 @@ export class StateStore {
       model: optionalStringColumn(row, "model"),
       effort: optionalStringColumn(row, "effort"),
     };
-  }
-
-  #rowToAgentTraceEvent(row: SqlRow): PersistedAgentTraceEvent {
-    return this.#normalizeAgentTraceEvent({
-      id: stringColumn(row, "id"),
-      sessionKey: stringColumn(row, "session_key"),
-      source: stringColumn(row, "source") as PersistedAgentTraceEvent["source"],
-      type: stringColumn(row, "type"),
-      at: stringColumn(row, "at"),
-      sequence: optionalNumberColumn(row, "sequence") ?? 0,
-      title: stringColumn(row, "title"),
-      summary: stringColumn(row, "summary"),
-      detail: optionalStringColumn(row, "detail"),
-      status: optionalStringColumn(row, "status"),
-      role: optionalStringColumn(row, "role"),
-      toolName: optionalStringColumn(row, "tool_name"),
-      callId: optionalStringColumn(row, "call_id"),
-      turnId: optionalStringColumn(row, "turn_id"),
-      detailTruncated: booleanColumn(row, "detail_truncated", false),
-      detailOriginalChars: optionalNumberColumn(row, "detail_original_chars"),
-      metadata: readJsonColumn<JsonLike | undefined>(row, "metadata", undefined),
-      createdAt: stringColumn(row, "created_at"),
-      updatedAt: stringColumn(row, "updated_at"),
-    });
   }
 
   #rowToAgentSessionTraceSummary(row: SqlRow): PersistedAgentSessionTraceSummary {
@@ -2529,6 +2494,61 @@ function rebuildAgentSessionUsageSummary(database: DatabaseSync, sessionKey: str
     );
 }
 
+function migrateAgentTraceEventsToJsonl(database: DatabaseSync, traces: TraceJsonlStore): void {
+  traces.ensureLayout();
+  if (!tableExists(database, "agent_trace_events")) {
+    return;
+  }
+
+  const countRow = database.prepare("SELECT COUNT(*) AS count FROM agent_trace_events").get() as { count?: number | bigint } | undefined;
+  const count = Number(countRow?.count ?? 0);
+  if (count > 0) {
+    const sessionRows = database.prepare("SELECT DISTINCT session_key FROM agent_trace_events").all() as SqlRow[];
+    for (const sessionRow of sessionRows) {
+      const sessionKey = stringColumn(sessionRow, "session_key");
+      traces.deleteSession(sessionKey);
+      const rows = database
+        .prepare(`
+          SELECT * FROM agent_trace_events
+          WHERE session_key = ?
+          ORDER BY sequence ASC, at ASC, id ASC
+        `)
+        .all(sessionKey) as SqlRow[];
+      for (const row of rows) {
+        traces.appendEvent(sqlRowToAgentTraceEvent(row));
+      }
+    }
+  }
+
+  database.exec("DROP TABLE IF EXISTS agent_trace_events");
+}
+
+function sqlRowToAgentTraceEvent(row: SqlRow): PersistedAgentTraceEvent {
+  const now = new Date().toISOString();
+  const at = stringColumn(row, "at");
+  return {
+    id: stringColumn(row, "id"),
+    sessionKey: stringColumn(row, "session_key"),
+    source: stringColumn(row, "source") as PersistedAgentTraceEvent["source"],
+    type: stringColumn(row, "type"),
+    at,
+    sequence: optionalNumberColumn(row, "sequence") ?? timestampSequence(at),
+    title: stringColumn(row, "title"),
+    summary: stringColumn(row, "summary"),
+    detail: optionalStringColumn(row, "detail"),
+    status: optionalStringColumn(row, "status"),
+    role: optionalStringColumn(row, "role"),
+    toolName: optionalStringColumn(row, "tool_name"),
+    callId: optionalStringColumn(row, "call_id"),
+    turnId: optionalStringColumn(row, "turn_id"),
+    detailTruncated: booleanColumn(row, "detail_truncated", false),
+    detailOriginalChars: optionalNumberColumn(row, "detail_original_chars"),
+    metadata: readJsonColumn<JsonLike | undefined>(row, "metadata", undefined),
+    createdAt: optionalStringColumn(row, "created_at") ?? now,
+    updatedAt: optionalStringColumn(row, "updated_at") ?? optionalStringColumn(row, "created_at") ?? now,
+  };
+}
+
 function rebuildAllAgentSessionTraceSummaries(database: DatabaseSync): void {
   if (!tableExists(database, "agent_trace_events")) {
     return;
@@ -2659,6 +2679,61 @@ function rebuildAgentSessionTraceSummary(database: DatabaseSync, sessionKey: str
     .run(sessionKey, eventCount, modelRequestCount, JSON.stringify(categories), JSON.stringify(sources), updatedAt);
 }
 
+function replayTraceEventSummaryDelta(eventsById: Map<string, PersistedAgentTraceEvent>, event: PersistedAgentTraceEvent): TraceSummaryContribution {
+  const previous = eventsById.get(event.id);
+  const previousContribution = previous ? traceSummaryContribution(previous, mapHasCompletedToolResult(eventsById, previous, event.id)) : emptyTraceSummaryContribution();
+  const toolCallHiddenByNewResult = event.type === "agent_tool_result" && previous?.type !== "agent_tool_result" ? mapGetMatchingToolCall(eventsById, event) : undefined;
+  const oldResultStopsHidingToolCall = previous?.type === "agent_tool_result" && (event.type !== "agent_tool_result" || traceToolEventKey(previous) !== traceToolEventKey(event)) ? mapGetMatchingToolCall(eventsById, previous) : undefined;
+
+  eventsById.set(event.id, event);
+  const nextContribution = traceSummaryContribution(event, mapHasCompletedToolResult(eventsById, event));
+  const delta = subtractTraceSummaryContribution(nextContribution, previousContribution);
+  if (toolCallHiddenByNewResult && !mapHasCompletedToolResult(eventsById, toolCallHiddenByNewResult, event.id)) {
+    applyTraceSummaryDelta(delta, traceSummaryContribution(toolCallHiddenByNewResult, false), -1);
+  }
+  if (oldResultStopsHidingToolCall && !mapHasCompletedToolResult(eventsById, oldResultStopsHidingToolCall)) {
+    applyTraceSummaryDelta(delta, traceSummaryContribution(oldResultStopsHidingToolCall, false), 1);
+  }
+  return delta;
+}
+
+function mapGetMatchingToolCall(eventsById: Map<string, PersistedAgentTraceEvent>, record: PersistedAgentTraceEvent): PersistedAgentTraceEvent | undefined {
+  const key = traceToolEventKey(record);
+  if (!key) {
+    return undefined;
+  }
+  const matches = [...eventsById.values()].filter((event) => event.type === "agent_tool_call" && traceToolEventKey(event) === key);
+  matches.sort((left, right) => {
+    if (left.sequence !== right.sequence) {
+      return right.sequence - left.sequence;
+    }
+    if (left.at !== right.at) {
+      return left.at < right.at ? 1 : -1;
+    }
+    if (left.id === right.id) {
+      return 0;
+    }
+    return left.id < right.id ? 1 : -1;
+  });
+  return matches[0];
+}
+
+function mapHasCompletedToolResult(eventsById: Map<string, PersistedAgentTraceEvent>, record: PersistedAgentTraceEvent, excludeEventId?: string | undefined): boolean {
+  if (record.type !== "agent_tool_call" && record.type !== "agent_tool_result") {
+    return false;
+  }
+  const key = traceToolEventKey(record);
+  if (!key) {
+    return false;
+  }
+  for (const event of eventsById.values()) {
+    if (event.type === "agent_tool_result" && event.id !== excludeEventId && traceToolEventKey(event) === key) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function traceToolRowKey(row: SqlRow): string {
   const callId = optionalStringColumn(row, "call_id");
   const turnId = optionalStringColumn(row, "turn_id") ?? "";
@@ -2670,37 +2745,6 @@ function traceToolRowKey(row: SqlRow): string {
     return "";
   }
   return [turnId, toolName ?? ""].join("\u001f");
-}
-
-function traceToolEventKeyParts(event: PersistedAgentTraceEvent):
-  | {
-      readonly turnId: string;
-      readonly callId?: string | undefined;
-      readonly toolName?: string | undefined;
-    }
-  | undefined {
-  const turnId = event.turnId ?? "";
-  if (event.callId) {
-    return {
-      turnId,
-      callId: event.callId,
-    };
-  }
-  if (!turnId && !event.toolName) {
-    return undefined;
-  }
-  return {
-    turnId,
-    toolName: event.toolName ?? "",
-  };
-}
-
-function traceToolEventKey(event: PersistedAgentTraceEvent): string {
-  const key = traceToolEventKeyParts(event);
-  if (!key) {
-    return "";
-  }
-  return key.callId ? [key.turnId, key.callId].join("\u001f") : [key.turnId, key.toolName ?? ""].join("\u001f");
 }
 
 function isVisibleTraceSummaryRow(type: string, status?: string | undefined): boolean {
@@ -2723,14 +2767,6 @@ function usageRowTimestampMs(row: SqlRow): number {
 function timestampMs(value: unknown): number {
   const parsed = typeof value === "string" ? Date.parse(value) : NaN;
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function clampPositiveInteger(value: unknown, min: number, max: number): number {
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return min;
-  }
-  return Math.max(min, Math.min(max, Math.floor(number)));
 }
 
 function placeholders(count: number): string {

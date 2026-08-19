@@ -48,10 +48,15 @@ describe.sequential("codex runtime e2e", () => {
     expect(baseInstructions).toContain("~/.codex/AGENT.md");
     expect(baseInstructions).toContain("remember this");
     expect(baseInstructions).toContain("BROKER_JOB_HELPER");
-    expect(baseInstructions).toContain("/slack/post-state");
     expect(baseInstructions).toContain("Turn stopping contract");
     expect(baseInstructions).toContain("Git commit co-author contract");
-    expect(baseInstructions).toContain("/integrations/mcp-call");
+    if (baseInstructions.includes("/slack/post-message") || baseInstructions.includes("/integrations/mcp-call")) {
+      expect(baseInstructions).toContain("/slack/post-state");
+      expect(baseInstructions).toContain("/integrations/mcp-call");
+    } else {
+      expect(baseInstructions).toContain("chat.post_message");
+      expect(baseInstructions).toContain("integration.call");
+    }
     expect(baseInstructions).not.toContain("{{");
 
     const promptEvents = (await readAgentTraceEvents(tempRoot, sessionKey)).filter((event) => event.type === "agent_system_prompt");

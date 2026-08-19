@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 
 import type { CodexInputItem } from "../../src/services/codex/app-server-client.js";
+import { toDynamicToolCallResult, type DynamicToolCallResult } from "../../src/services/codex/dynamic-tools.js";
 
 interface MockTurnRecord {
   readonly threadId: string;
@@ -44,11 +45,31 @@ export interface MockTurnSteerRequest {
   readonly input: readonly CodexInputItem[];
 }
 
+const INVOKE_TOOL_TIMEOUT_MS = 35_000;
+
+interface PendingServerRequest {
+  readonly resolve: (value: Record<string, unknown>) => void;
+  readonly reject: (error: Error) => void;
+  readonly timer: ReturnType<typeof setTimeout>;
+}
+
+interface IncomingRpcMessage {
+  readonly id?: string | number;
+  readonly method?: string;
+  readonly params?: Record<string, unknown>;
+  readonly result?: unknown;
+  readonly error?: { readonly message?: string; readonly code?: number };
+}
+
 export class MockCodexAppServer {
   readonly #server = http.createServer();
   readonly #wsServer = new WebSocketServer({ server: this.#server });
   readonly #connections = new Set<WebSocket>();
   readonly #threads = new Map<string, MockThreadRecord>();
+  readonly #threadSockets = new Map<string, WebSocket>();
+  readonly #pendingServerRequests = new Map<string, PendingServerRequest>();
+  #lastSocket: WebSocket | undefined;
+  #serverRequestSeq = 0;
   readonly turnsStarted: MockTurnRecord[] = [];
   readonly threadStarts: Array<{
     readonly threadId: string;
@@ -93,22 +114,33 @@ export class MockCodexAppServer {
 
     this.#wsServer.on("connection", (socket) => {
       this.#connections.add(socket);
+      this.#lastSocket = socket;
       socket.on("close", () => {
         this.#connections.delete(socket);
+        if (this.#lastSocket === socket) {
+          this.#lastSocket = [...this.#connections].at(-1);
+        }
+        for (const [threadId, threadSocket] of this.#threadSockets) {
+          if (threadSocket === socket) {
+            this.#threadSockets.delete(threadId);
+          }
+        }
+        this.#rejectPendingServerRequests(new Error("client disconnected during item/tool/call"));
       });
       socket.on("message", (data) => {
-        void this.#handleMessage(
-          socket,
-          JSON.parse(data.toString()) as {
-            readonly id?: string;
-            readonly method?: string;
-            readonly params?: Record<string, unknown>;
-          },
-        ).catch((error) => {
+        void this.#handleMessage(socket, JSON.parse(data.toString()) as IncomingRpcMessage).catch((error) => {
           process.stderr.write(`[mock-codex] handleMessage failed: ${error instanceof Error ? error.message : String(error)}\n`);
         });
       });
     });
+  }
+
+  get lastThreadStartParams(): Record<string, unknown> | undefined {
+    return this.threadStarts.at(-1)?.params;
+  }
+
+  get dynamicTools(): unknown {
+    return this.lastThreadStartParams?.dynamicTools;
   }
 
   async start(): Promise<string> {
@@ -125,6 +157,7 @@ export class MockCodexAppServer {
   }
 
   async stop(): Promise<void> {
+    this.#rejectPendingServerRequests(new Error("mock Codex app-server stopped"));
     for (const connection of this.#connections) {
       connection.close();
     }
@@ -144,14 +177,80 @@ export class MockCodexAppServer {
     return this.#threads.get(threadId);
   }
 
-  async #handleMessage(
-    socket: WebSocket,
-    message: {
-      readonly id?: string;
-      readonly method?: string;
-      readonly params?: Record<string, unknown>;
-    },
-  ): Promise<void> {
+  async invokeTool(threadId: string, namespace: string, tool: string, args: Record<string, unknown> = {}): Promise<DynamicToolCallResult> {
+    const socket = this.#socketFor(threadId);
+    if (!socket || socket.readyState !== 1) {
+      throw new Error("no connected Codex client for invokeTool");
+    }
+
+    const thread = this.#threads.get(threadId);
+    const turnId = thread?.activeTurnId ?? thread?.turns.at(-1)?.turnId ?? randomUUID();
+    const callId = randomUUID();
+    const toolName = `${namespace}.${tool}`;
+    const startedItem = {
+      type: "dynamicToolCall",
+      id: callId,
+      tool: toolName,
+      arguments: args,
+    };
+
+    this.#notify(socket, "item/started", {
+      threadId,
+      turnId,
+      item: startedItem,
+    });
+
+    const requestId = `mock-tool-${++this.#serverRequestSeq}`;
+    let result: Record<string, unknown>;
+    try {
+      result = await this.#requestFromClient(
+        socket,
+        requestId,
+        "item/tool/call",
+        {
+          threadId,
+          turnId,
+          callId,
+          namespace,
+          tool,
+          arguments: args,
+        },
+        INVOKE_TOOL_TIMEOUT_MS,
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      this.#notify(socket, "item/completed", {
+        threadId,
+        turnId,
+        item: {
+          ...startedItem,
+          contentItems: [{ type: "inputText", text: reason }],
+          success: false,
+        },
+      });
+      throw error;
+    }
+
+    const normalized = toDynamicToolCallResult(result, "item/tool/call failed");
+    this.#notify(socket, "item/completed", {
+      threadId,
+      turnId,
+      item: {
+        ...startedItem,
+        contentItems: normalized.contentItems,
+        success: normalized.success,
+        ...(normalized.reason ? { reason: normalized.reason } : {}),
+      },
+    });
+    return normalized;
+  }
+
+  async #handleMessage(socket: WebSocket, message: IncomingRpcMessage): Promise<void> {
+    if (message.id !== undefined && message.method === undefined) {
+      this.#settleServerRequest(message);
+      return;
+    }
+
     const method = message.method;
     const params = message.params ?? {};
 
@@ -229,6 +328,8 @@ export class MockCodexAppServer {
             experimentalRawEvents: params.experimentalRawEvents,
             params,
           });
+          this.#threadSockets.set(threadId, socket);
+          this.#lastSocket = socket;
           this.#respond(socket, message.id, {
             thread: { id: threadId },
           });
@@ -237,6 +338,8 @@ export class MockCodexAppServer {
         case "thread/resume": {
           const threadId = String(params.threadId ?? "");
           const thread = this.#threads.get(threadId);
+          this.#threadSockets.set(threadId, socket);
+          this.#lastSocket = socket;
           this.threadResumes.push({
             threadId,
             cwd: String(params.cwd ?? thread?.cwd ?? ""),
@@ -514,7 +617,74 @@ export class MockCodexAppServer {
     return turn;
   }
 
-  #respond(socket: WebSocket, id: string | undefined, result: Record<string, unknown>): void {
+  #socketFor(threadId: string): WebSocket | undefined {
+    return this.#threadSockets.get(threadId) ?? this.#lastSocket;
+  }
+
+  #notify(socket: WebSocket, method: string, params: Record<string, unknown>): void {
+    socket.send(
+      JSON.stringify({
+        method,
+        params,
+      }),
+    );
+  }
+
+  #requestFromClient(socket: WebSocket, requestId: string, method: string, params: Record<string, unknown>, timeoutMs: number): Promise<Record<string, unknown>> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.#pendingServerRequests.delete(requestId);
+        reject(new Error("item/tool/call timed out"));
+      }, timeoutMs);
+      this.#pendingServerRequests.set(requestId, { resolve, reject, timer });
+      socket.send(
+        JSON.stringify({
+          id: requestId,
+          method,
+          params,
+        }),
+        (error) => {
+          if (!error) {
+            return;
+          }
+          this.#pendingServerRequests.delete(requestId);
+          clearTimeout(timer);
+          reject(error);
+        },
+      );
+    });
+  }
+
+  #settleServerRequest(message: IncomingRpcMessage): void {
+    if (message.id === undefined) {
+      return;
+    }
+
+    const requestId = String(message.id);
+    const pending = this.#pendingServerRequests.get(requestId);
+    if (!pending) {
+      return;
+    }
+
+    this.#pendingServerRequests.delete(requestId);
+    clearTimeout(pending.timer);
+    if (message.error) {
+      pending.reject(new Error(message.error.message?.trim() || "item/tool/call error"));
+      return;
+    }
+
+    pending.resolve(isRecord(message.result) ? message.result : {});
+  }
+
+  #rejectPendingServerRequests(error: Error): void {
+    for (const [requestId, pending] of this.#pendingServerRequests) {
+      this.#pendingServerRequests.delete(requestId);
+      clearTimeout(pending.timer);
+      pending.reject(error);
+    }
+  }
+
+  #respond(socket: WebSocket, id: string | number | undefined, result: Record<string, unknown>): void {
     socket.send(
       JSON.stringify({
         id,
@@ -523,7 +693,7 @@ export class MockCodexAppServer {
     );
   }
 
-  #error(socket: WebSocket, id: string | undefined, message: string): void {
+  #error(socket: WebSocket, id: string | number | undefined, message: string): void {
     socket.send(
       JSON.stringify({
         id,
@@ -533,6 +703,10 @@ export class MockCodexAppServer {
       }),
     );
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function normalizeInput(value: unknown): readonly CodexInputItem[] {

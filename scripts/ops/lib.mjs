@@ -278,47 +278,174 @@ export async function writeRolloutMetadata(directory, payload) {
   await fsp.writeFile(path.join(directory, "metadata.json"), `${JSON.stringify(sanitizeOpsMetadataValue(payload), null, 2)}\n`);
 }
 
-async function readJsonIfExists(filePath) {
+const STATE_DATABASE_FILENAME = "broker.sqlite";
+const BROKER_SQLITE_SESSIONS_SQL = `
+  SELECT key, platform, conversation_id, conversation_kind, root_message_id, platform_thread_id,
+         channel_id, root_thread_ts, workspace_path, created_at, updated_at, active_turn_id,
+         active_turn_started_at, last_observed_message_ts, last_delivered_message_ts, last_slack_reply_at
+  FROM sessions
+`;
+const BROKER_SQLITE_OPEN_INBOUND_SQL = `
+  SELECT key, session_key, channel_id, channel_type, root_thread_ts, message_ts, source,
+         sender_kind, status, batch_id, created_at, updated_at, text
+  FROM inbound_messages
+  WHERE status IN ('pending', 'inflight')
+`;
+const BROKER_SQLITE_BACKGROUND_JOBS_SQL = `
+  SELECT id, session_key, channel_id, root_thread_ts, kind, status, cwd, restart_on_boot,
+         created_at, updated_at, started_at, heartbeat_at, completed_at, cancelled_at,
+         exit_code, error, last_event_at, last_event_kind
+  FROM background_jobs
+`;
+
+function emptyBrokerSqliteState() {
+  return {
+    sessions: [],
+    inboundMessages: [],
+    backgroundJobs: [],
+  };
+}
+
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function logOpsStateReadReason(reason) {
+  console.error(`ops: reporting empty session/inbound/job counts (${sanitizeOpsCommandErrorText(reason)})`);
+}
+
+function mapSqlRowToCamelRecord(row) {
+  if (!row || typeof row !== "object") {
+    return {};
+  }
+
+  return Object.fromEntries(Object.entries(row).map(([column, value]) => [sqlColumnToCamelCase(column), normalizeSqlColumnValue(column, value)]));
+}
+
+function sqlColumnToCamelCase(column) {
+  return column.replaceAll(/_([a-z])/gu, (_match, letter) => letter.toUpperCase());
+}
+
+function normalizeSqlColumnValue(column, value) {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  const scalar = typeof value === "bigint" ? Number(value) : value;
+  if (column === "restart_on_boot") {
+    return typeof scalar === "boolean" ? scalar : typeof scalar === "number" ? scalar !== 0 : undefined;
+  }
+
+  if (column === "exit_code") {
+    return typeof scalar === "number" && Number.isFinite(scalar) ? scalar : undefined;
+  }
+
+  return scalar;
+}
+
+async function readBrokerSqliteState(stateRoot) {
+  const databasePath = path.join(stateRoot, STATE_DATABASE_FILENAME);
   try {
-    return JSON.parse(await fsp.readFile(filePath, "utf8"));
+    await fsp.access(databasePath);
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-      return undefined;
+      return emptyBrokerSqliteState();
     }
 
-    throw error;
+    logOpsStateReadReason(`unable to access ${STATE_DATABASE_FILENAME}: ${errorMessage(error)}`);
+    return emptyBrokerSqliteState();
+  }
+
+  const nodeResult = await readBrokerSqliteStateWithNode(databasePath);
+  if (nodeResult.ok) {
+    return nodeResult;
+  }
+
+  const cliResult = readBrokerSqliteStateWithCli(databasePath);
+  if (cliResult.ok) {
+    return cliResult;
+  }
+
+  logOpsStateReadReason(`${nodeResult.reason}; ${cliResult.reason}`);
+  return emptyBrokerSqliteState();
+}
+
+async function readBrokerSqliteStateWithNode(databasePath) {
+  let DatabaseSync;
+  try {
+    ({ DatabaseSync } = await import("node:sqlite"));
+  } catch (error) {
+    return { ok: false, reason: `node:sqlite unavailable: ${errorMessage(error)}` };
+  }
+
+  let database;
+  try {
+    database = new DatabaseSync(databasePath, { readOnly: true });
+    return {
+      ok: true,
+      sessions: database.prepare(BROKER_SQLITE_SESSIONS_SQL).all().map(mapSqlRowToCamelRecord),
+      inboundMessages: database.prepare(BROKER_SQLITE_OPEN_INBOUND_SQL).all().map(mapSqlRowToCamelRecord),
+      backgroundJobs: database.prepare(BROKER_SQLITE_BACKGROUND_JOBS_SQL).all().map(mapSqlRowToCamelRecord),
+    };
+  } catch (error) {
+    return { ok: false, reason: `node:sqlite read failed: ${errorMessage(error)}` };
+  } finally {
+    try {
+      database?.close();
+    } catch {
+      // ignore close failures after a successful or failed snapshot
+    }
   }
 }
 
-async function readJsonRecordsFromDirectory(directory) {
+function readBrokerSqliteStateWithCli(databasePath) {
+  const sessions = sqlite3JsonQuery(databasePath, BROKER_SQLITE_SESSIONS_SQL);
+  if (!sessions.ok) {
+    return sessions;
+  }
+
+  const inboundMessages = sqlite3JsonQuery(databasePath, BROKER_SQLITE_OPEN_INBOUND_SQL);
+  if (!inboundMessages.ok) {
+    return inboundMessages;
+  }
+
+  const backgroundJobs = sqlite3JsonQuery(databasePath, BROKER_SQLITE_BACKGROUND_JOBS_SQL);
+  if (!backgroundJobs.ok) {
+    return backgroundJobs;
+  }
+
+  return {
+    ok: true,
+    sessions: sessions.rows.map(mapSqlRowToCamelRecord),
+    inboundMessages: inboundMessages.rows.map(mapSqlRowToCamelRecord),
+    backgroundJobs: backgroundJobs.rows.map(mapSqlRowToCamelRecord),
+  };
+}
+
+function sqlite3JsonQuery(databasePath, sql) {
+  const result = spawnSync("sqlite3", ["-readonly", "-json", databasePath, sql], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error) {
+    return { ok: false, reason: `sqlite3 CLI unavailable: ${errorMessage(result.error)}` };
+  }
+
+  if (result.status !== 0) {
+    const details = [result.stderr, result.stdout].filter(Boolean).join("\n").trim();
+    return { ok: false, reason: `sqlite3 CLI failed: ${details || `exit ${result.status}`}` };
+  }
+
+  const text = result.stdout.trim();
+  if (!text) {
+    return { ok: true, rows: [] };
+  }
+
   try {
-    const entries = await fsp.readdir(directory);
-    const records = [];
-    for (const entry of entries.sort()) {
-      if (!entry.endsWith(".json")) {
-        continue;
-      }
-
-      const payload = await readJsonIfExists(path.join(directory, entry));
-      if (payload === undefined) {
-        continue;
-      }
-
-      if (Array.isArray(payload)) {
-        records.push(...payload);
-        continue;
-      }
-
-      records.push(payload);
-    }
-
-    return records;
+    const parsed = JSON.parse(text);
+    return { ok: true, rows: Array.isArray(parsed) ? parsed : [] };
   } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-      return [];
-    }
-
-    throw error;
+    return { ok: false, reason: `sqlite3 CLI JSON parse failed: ${errorMessage(error)}` };
   }
 }
 
@@ -579,9 +706,7 @@ export async function readDetailedStateFromHost(dataRootSource, options = {}) {
   const stateRoot = path.join(dataRootSource, "state");
   const logsRoot = path.join(dataRootSource, "logs");
 
-  const sessions = await readJsonRecordsFromDirectory(path.join(stateRoot, "sessions"));
-  const inboundMessages = await readJsonRecordsFromDirectory(path.join(stateRoot, "inbound-messages"));
-  const backgroundJobs = await readJsonRecordsFromDirectory(path.join(stateRoot, "background-jobs"));
+  const { sessions, inboundMessages, backgroundJobs } = await readBrokerSqliteState(stateRoot);
 
   const activeSessions = sessions.filter((session) => session?.activeTurnId).sort((left, right) => String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? "")));
 

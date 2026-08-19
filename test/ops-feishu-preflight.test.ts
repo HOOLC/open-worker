@@ -4,6 +4,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { StateStore } from "../src/store/state-store.js";
+
 // @ts-expect-error ops scripts are plain ESM JavaScript without generated declarations.
 const opsLib = await import("../scripts/ops/lib.mjs");
 const { getAdminHeadersFromInspect, getEnvObjectFromInspect, readDetailedStateFromHost, runCommand, sanitizeOpsLogsForEvidence, summarizeOpsDisplayPath, summarizeOpsEvidencePath, summarizeOpsHostPath, summarizePlatformHealth, shouldRunFeishuPreflight, writeRolloutMetadata } = opsLib;
@@ -225,14 +227,12 @@ describe("ops Feishu preflight helpers", () => {
     const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "ops-status-redaction-"));
     tempDirs.push(dataRoot);
 
-    await fs.mkdir(path.join(dataRoot, "state", "sessions"), { recursive: true });
-    await fs.mkdir(path.join(dataRoot, "state", "inbound-messages"), { recursive: true });
-    await fs.mkdir(path.join(dataRoot, "state", "background-jobs"), { recursive: true });
     await fs.mkdir(path.join(dataRoot, "logs"), { recursive: true });
 
-    await fs.writeFile(
-      path.join(dataRoot, "state", "sessions", "feishu-session.json"),
-      JSON.stringify({
+    const store = new StateStore(path.join(dataRoot, "state"), path.join(dataRoot, "sessions"));
+    await store.load();
+    try {
+      await store.upsertSession({
         key: "feishu:oc_group:om_root",
         platform: "feishu",
         conversationId: "oc_group",
@@ -247,48 +247,43 @@ describe("ops Feishu preflight helpers", () => {
         coAuthorCandidateUserIds: ["ou_secret_user"],
         createdAt: "2026-03-19T00:00:00.000Z",
         updatedAt: "2026-03-19T00:00:10.000Z",
-      }),
-      "utf8",
-    );
-    await fs.writeFile(
-      path.join(dataRoot, "state", "inbound-messages", "feishu-session.json"),
-      JSON.stringify([
-        {
-          key: "message-key",
-          sessionKey: "feishu:oc_group:om_root",
-          channelId: "oc_group",
-          channelType: "group",
-          rootThreadTs: "om_root",
-          messageTs: "om_msg",
-          source: "thread_reply",
-          userId: "ou_secret_user",
-          senderKind: "user",
-          botId: "ou_secret_bot",
-          appId: "cli_secret_app",
-          text: "OPS_STATUS_SECRET_BODY",
-          contextText: "OPS_STATUS_CONTEXT_SECRET",
-          slackMessage: {
-            text: "OPS_STATUS_SLACK_MESSAGE_SECRET",
-          },
-          images: [
-            {
-              alt: "OPS_STATUS_IMAGE_SECRET",
-            },
-          ],
-          backgroundJob: {
-            summary: "OPS_STATUS_JOB_EVENT_SECRET",
-          },
-          status: "pending",
-          batchId: "batch_123",
-          createdAt: "2026-03-19T00:00:01.000Z",
-          updatedAt: "2026-03-19T00:00:02.000Z",
+      });
+      await store.upsertInboundMessage({
+        key: "message-key",
+        sessionKey: "feishu:oc_group:om_root",
+        channelId: "oc_group",
+        channelType: "group",
+        rootThreadTs: "om_root",
+        messageTs: "om_msg",
+        source: "thread_reply",
+        userId: "ou_secret_user",
+        senderKind: "user",
+        botId: "ou_secret_bot",
+        appId: "cli_secret_app",
+        text: "OPS_STATUS_SECRET_BODY",
+        contextText: "OPS_STATUS_CONTEXT_SECRET",
+        slackMessage: {
+          text: "OPS_STATUS_SLACK_MESSAGE_SECRET",
         },
-      ]),
-      "utf8",
-    );
-    await fs.writeFile(
-      path.join(dataRoot, "state", "background-jobs", "job.json"),
-      JSON.stringify({
+        images: [
+          {
+            fileId: "file_secret",
+            url: "https://example.invalid/OPS_STATUS_IMAGE_SECRET",
+            title: "OPS_STATUS_IMAGE_SECRET",
+          },
+        ],
+        backgroundJob: {
+          jobId: "job_123",
+          jobKind: "background_job_event",
+          eventKind: "progress",
+          summary: "OPS_STATUS_JOB_EVENT_SECRET",
+        },
+        status: "pending",
+        batchId: "batch_123",
+        createdAt: "2026-03-19T00:00:01.000Z",
+        updatedAt: "2026-03-19T00:00:02.000Z",
+      });
+      await store.upsertBackgroundJob({
         id: "job_123",
         token: "OPS_STATUS_JOB_TOKEN_SECRET",
         sessionKey: "feishu:oc_group:om_root",
@@ -304,9 +299,10 @@ describe("ops Feishu preflight helpers", () => {
         lastEventSummary: "OPS_STATUS_LAST_EVENT_SECRET",
         createdAt: "2026-03-19T00:00:03.000Z",
         updatedAt: "2026-03-19T00:00:04.000Z",
-      }),
-      "utf8",
-    );
+      });
+    } finally {
+      store.close();
+    }
     await fs.writeFile(
       path.join(dataRoot, "logs", "broker.jsonl"),
       [

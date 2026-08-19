@@ -180,12 +180,12 @@ export const RFC0001_REQUIRED_LOCAL_EVIDENCE_PATTERNS: ReadonlyArray<{
   {
     id: "prompt.platform_aware_template",
     file: "src/services/codex/prompts/slack-thread-base-instructions.md",
-    snippets: ["{{chat_surface_name}}", "{{thread_coordinates_section}}", "{{post_state_route_label}}", "{{registered_job_env_vars}}"],
+    snippets: ["{{chat_surface_name}}", "{{thread_coordinates_section}}", "{{dynamic_tools_section}}", "{{turn_stopping_contract}}"],
   },
   {
     id: "prompt.feishu_platform_runtime_instructions",
     file: "src/services/codex/slack-thread-base-instructions.ts",
-    snippets: ['const postStateRoute = isSlack ? "/slack/post-state" : "/chat/post-state"', "SLACK_CHANNEL_ID", "SLACK_THREAD_TS", "CHAT_PLATFORM", "CHAT_CONVERSATION_ID", "CHAT_ROOT_MESSAGE_ID"],
+    snippets: ["chat.post_message", "SLACK_CHANNEL_ID", "SLACK_THREAD_TS", "CHAT_PLATFORM", "CHAT_CONVERSATION_ID", "CHAT_ROOT_MESSAGE_ID"],
   },
   {
     id: "smoke.final_evidence_gates",

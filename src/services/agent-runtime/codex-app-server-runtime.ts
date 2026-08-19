@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 
 import type { AgentRuntime, AgentRuntimeCapabilities, AgentRuntimeEvent, AgentInputItem, AgentSession, AgentSessionSnapshot, AgentSubmitInputResult, AgentTurnResult, ReadAgentTurnOptions, AgentTurnSnapshot, SubmitAgentInput } from "./types.js";
+import type { BrokerToolBackend } from "../codex/dynamic-tools.js";
 import { CodexBroker } from "../codex/codex-broker.js";
 import { SessionManager } from "../session-manager.js";
 import type { SlackSessionRecord, SlackUserIdentity } from "../../types.js";
@@ -44,6 +45,10 @@ export class CodexAppServerRuntime extends EventEmitter implements AgentRuntime 
 
   setSlackBotIdentity(identity: SlackUserIdentity | null): void {
     this.#codex.setSlackBotIdentity(identity);
+  }
+
+  setToolBackend(backend: BrokerToolBackend | undefined): void {
+    this.#codex.setToolBackend(backend);
   }
 
   async ensureSession(session: SlackSessionRecord): Promise<AgentSession> {
@@ -276,6 +281,35 @@ function codexNotificationToAgentEvents(session: SlackSessionRecord, method: str
         name: "exec_command",
         output: commandExecutionTracePayload(item),
         status: commandExecutionFailed(item) ? "failed" : "completed",
+        at,
+      },
+    ];
+  }
+  if (method === "item/started" && turnId && item?.type === "dynamicToolCall") {
+    return [
+      {
+        type: "agent.tool.started",
+        agentSessionId,
+        turnId,
+        brokerSessionKey: session.key,
+        callId: dynamicToolCallId(item, turnId, at),
+        name: dynamicToolCallName(item),
+        input: dynamicToolCallInput(item),
+        at,
+      },
+    ];
+  }
+  if (method === "item/completed" && turnId && item?.type === "dynamicToolCall") {
+    return [
+      {
+        type: "agent.tool.completed",
+        agentSessionId,
+        turnId,
+        brokerSessionKey: session.key,
+        callId: dynamicToolCallId(item, turnId, at),
+        name: dynamicToolCallName(item),
+        output: dynamicToolCallOutput(item),
+        status: dynamicToolCallFailed(item) ? "failed" : "completed",
         at,
       },
     ];
@@ -635,6 +669,31 @@ function commandExecutionTracePayload(item: Record<string, unknown>): Record<str
 function commandExecutionFailed(item: Record<string, unknown>): boolean {
   const exitCode = normalizeFiniteNumber(item.exitCode);
   return toolFailed(item) || (exitCode !== undefined && exitCode !== 0);
+}
+
+function dynamicToolCallName(item: Record<string, unknown>): string {
+  const namespace = normalizeNonEmptyString(item.namespace);
+  const tool = normalizeNonEmptyString(item.tool ?? item.toolName ?? item.tool_name);
+  if (namespace && tool) {
+    return tool.startsWith(`${namespace}.`) ? tool : `${namespace}.${tool}`;
+  }
+  return tool ?? normalizeNonEmptyString(item.name) ?? "dynamic_tool";
+}
+
+function dynamicToolCallId(item: Record<string, unknown>, turnId: string, at: string): string {
+  return normalizeNonEmptyString(item.callId ?? item.call_id ?? item.id) ?? `${turnId}:dynamic:${at}`;
+}
+
+function dynamicToolCallInput(item: Record<string, unknown>): unknown {
+  return item.arguments ?? item;
+}
+
+function dynamicToolCallOutput(item: Record<string, unknown>): unknown {
+  return item.contentItems ?? item.returned ?? item.result ?? item;
+}
+
+function dynamicToolCallFailed(item: Record<string, unknown>): boolean {
+  return item.success === false || toolFailed(item);
 }
 
 function compactRecord(record: Record<string, unknown>): Record<string, unknown> {

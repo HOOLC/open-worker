@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import WebSocket from "ws";
 
 import type { AgentTurnTokenUsage, GeneratedImageArtifact, JsonLike, SlackUserIdentity } from "../../types.js";
+import type { DynamicToolBackend, ThreadCoordinates } from "./dynamic-tools.js";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -172,6 +173,16 @@ export class AppServerClientBase extends EventEmitter {
 
   privateAwaitingPong = false;
 
+  // Handlers for JSON-RPC requests the app-server sends TO the client
+  // (e.g. item/tool/call for dynamicTools). Keyed by method name.
+  readonly privateServerRequestHandlers = new Map<string, (params: Record<string, any>) => Promise<Record<string, unknown>>>();
+
+  // threadId -> platform coordinates, populated by both thread/start and
+  // thread/resume so reverse item/tool/call requests can be routed.
+  readonly privateThreadCoordinates = new Map<string, ThreadCoordinates>();
+
+  privateDynamicToolBackend: DynamicToolBackend | undefined;
+
   constructor(
     readonly options: {
       readonly url: string;
@@ -185,6 +196,18 @@ export class AppServerClientBase extends EventEmitter {
     },
   ) {
     super();
+  }
+
+  setServerRequestHandler(method: string, handler: (params: Record<string, any>) => Promise<Record<string, unknown>>): void {
+    this.privateServerRequestHandlers.set(method, handler);
+  }
+
+  sendServerResponse(id: string | number, result: Record<string, unknown>): void {
+    this.privateSocket?.send(JSON.stringify({ id, result }));
+  }
+
+  sendServerError(id: string | number, code: number, message: string): void {
+    this.privateSocket?.send(JSON.stringify({ id, error: { code, message } }));
   }
 }
 

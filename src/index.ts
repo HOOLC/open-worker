@@ -6,7 +6,21 @@ import { logger } from "./logger.js";
 import { AdminService } from "./services/admin-service.js";
 import { AuthProfileService } from "./services/auth-profile-service.js";
 import { CodexRuntimeControl } from "./services/codex-runtime-control.js";
-import { configureServiceLogger, createAgentRuntime, createCodexBroker, createDiskPressureCleanup, createGitHubAuthorMappings, createGitHubPrIdentity, createIsolatedMcpService, createJobManager, createSessionServices, createSlackApi, createSlackBridge } from "./services/service-components.js";
+import {
+  bindBrokerToolBackend,
+  configureServiceLogger,
+  createAgentRuntime,
+  createBrokerToolBackend,
+  createCodexBroker,
+  createDiskPressureCleanup,
+  createGitHubAuthorMappings,
+  createGitHubPrIdentity,
+  createIsolatedMcpService,
+  createJobManager,
+  createSessionServices,
+  createSlackApi,
+  createSlackBridge,
+} from "./services/service-components.js";
 
 export async function startService(): Promise<{
   readonly stop: () => Promise<void>;
@@ -40,6 +54,15 @@ export async function startService(): Promise<{
     config,
     sessions: sessionManager,
     bridge,
+  });
+  bindBrokerToolBackend({
+    codex: codexBroker,
+    agentRuntime,
+    backend: createBrokerToolBackend({
+      bridge,
+      jobManager,
+      isolatedMcp,
+    }),
   });
   const diskCleanup = createDiskPressureCleanup({
     config,

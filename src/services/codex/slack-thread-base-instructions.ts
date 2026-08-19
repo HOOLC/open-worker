@@ -12,7 +12,6 @@ let templateCache: Promise<string> | undefined;
 
 export interface BuildSlackThreadBaseInstructionsOptions {
   readonly platform?: "slack" | "feishu" | undefined;
-  readonly brokerHttpBaseUrl: string;
   readonly channelId: string;
   readonly rootThreadTs: string;
   readonly conversationId?: string | undefined;
@@ -26,133 +25,23 @@ export interface BuildSlackThreadBaseInstructionsOptions {
   readonly personalMemory?: string | undefined;
 }
 
+// Platform tool guidance is taught as the injected dynamicTools only. The
+// migrated broker HTTP routes still exist for job scripts and helper
+// processes, but the prompt no longer teaches curl for them. Tool names are
+// identical on Slack and Feishu.
 export async function buildSlackThreadBaseInstructions(options: BuildSlackThreadBaseInstructionsOptions): Promise<string> {
   const template = await loadTemplate();
   const platform = options.platform === "feishu" ? "feishu" : "slack";
   const chatSurfaceName = platform === "feishu" ? "Feishu" : "Slack";
   const conversationId = options.conversationId ?? options.channelId;
   const rootMessageId = options.rootMessageId ?? options.rootThreadTs;
-  const isSlack = platform === "slack";
-  const linearToolsUrl = `${options.brokerHttpBaseUrl}/integrations/mcp-tools?server=linear`;
-  const notionToolsUrl = `${options.brokerHttpBaseUrl}/integrations/mcp-tools?server=notion`;
-  const messagePayload = isSlack
-    ? JSON.stringify({
-        channel_id: options.channelId,
-        thread_ts: options.rootThreadTs,
-        text: "replace with your Slack update",
-        kind: "progress",
-      })
-    : JSON.stringify({
-        platform,
-        conversation_id: conversationId,
-        root_message_id: rootMessageId,
-        text: "replace with your Feishu update",
-        kind: "progress",
-      });
-  const waitStatePayload = isSlack
-    ? JSON.stringify({
-        channel_id: options.channelId,
-        thread_ts: options.rootThreadTs,
-        kind: "wait",
-        reason: "replace with what you are waiting for",
-      })
-    : JSON.stringify({
-        platform,
-        conversation_id: conversationId,
-        root_message_id: rootMessageId,
-        kind: "wait",
-        reason: "replace with what you are waiting for",
-      });
-  const finalStatePayload = isSlack
-    ? JSON.stringify({
-        channel_id: options.channelId,
-        thread_ts: options.rootThreadTs,
-        kind: "final",
-      })
-    : JSON.stringify({
-        platform,
-        conversation_id: conversationId,
-        root_message_id: rootMessageId,
-        kind: "final",
-      });
-  const blockStatePayload = isSlack
-    ? JSON.stringify({
-        channel_id: options.channelId,
-        thread_ts: options.rootThreadTs,
-        kind: "block",
-        reason: "replace with the blocker",
-      })
-    : JSON.stringify({
-        platform,
-        conversation_id: conversationId,
-        root_message_id: rootMessageId,
-        kind: "block",
-        reason: "replace with the blocker",
-      });
-  const filePayload = isSlack
-    ? JSON.stringify({
-        channel_id: options.channelId,
-        thread_ts: options.rootThreadTs,
-        file_path: "/absolute/path/to/file.png",
-        initial_comment: "replace with your Slack file caption",
-      })
-    : JSON.stringify({
-        platform,
-        conversation_id: conversationId,
-        root_message_id: rootMessageId,
-        file_path: "/absolute/path/to/file.png",
-        initial_comment: "replace with your Feishu file caption",
-      });
-  const coauthorConfigurePayload = JSON.stringify({
-    cwd: options.workspacePath,
-    coauthors: ["Alice Example"],
-    ignore_missing: true,
-  });
-  const linearCallPayload = JSON.stringify({
-    server: "linear",
-    name: "replace_with_linear_tool_name",
-    arguments: {
-      replace: "with tool arguments",
-    },
-  });
-  const notionCallPayload = JSON.stringify({
-    server: "notion",
-    name: "replace_with_notion_tool_name",
-    arguments: {
-      replace: "with tool arguments",
-    },
-  });
-  const jobPayload = isSlack
-    ? JSON.stringify({
-        channel_id: options.channelId,
-        thread_ts: options.rootThreadTs,
-        kind: "watch_ci",
-        cwd: ".",
-        script: '#!/usr/bin/env bash\nset -euo pipefail\nnode "$BROKER_JOB_HELPER" event --kind "state_changed" --summary "replace with your update"\nnode "$BROKER_JOB_HELPER" complete --summary "replace with your completion update"',
-      })
-    : JSON.stringify({
-        platform,
-        conversationId,
-        rootMessageId,
-        kind: "watch_ci",
-        cwd: ".",
-        script: '#!/usr/bin/env bash\nset -euo pipefail\nnode "$BROKER_JOB_HELPER" event --kind "state_changed" --summary "replace with your update"\nnode "$BROKER_JOB_HELPER" complete --summary "replace with your completion update"',
-      });
-  const postMessageRoute = isSlack ? "/slack/post-message" : "/chat/post-message";
-  const postStateRoute = isSlack ? "/slack/post-state" : "/chat/post-state";
-  const postFileRoute = isSlack ? "/slack/post-file" : "/chat/post-file";
-  const threadHistoryCommand = isSlack
-    ? `curl -sS '${options.brokerHttpBaseUrl}/slack/thread-history?channel_id=${encodeURIComponent(options.channelId)}&thread_ts=${encodeURIComponent(options.rootThreadTs)}&before_ts=older-message-ts&limit=20&format=text'`
-    : `curl -sS '${options.brokerHttpBaseUrl}/chat/thread-history?platform=feishu&conversation_id=${encodeURIComponent(conversationId)}&root_message_id=${encodeURIComponent(rootMessageId)}&before_cursor=older-message-cursor&limit=20&format=text'`;
+  const variant = buildDynamicToolsVariant(options, chatSurfaceName, platform);
 
   return renderTemplate(template, {
     chat_surface_name: chatSurfaceName,
     execution_environment_section: await buildExecutionEnvironmentSection(),
     session_workspace: options.workspacePath,
     shared_repos_root: options.reposRoot,
-    codex_generated_images_root: options.codexGeneratedImagesRoot,
-    channel_id: options.channelId,
-    thread_ts: options.rootThreadTs,
     thread_coordinates_section: formatThreadCoordinatesSection({
       platform,
       channelId: options.channelId,
@@ -162,34 +51,98 @@ export async function buildSlackThreadBaseInstructions(options: BuildSlackThread
       rootMessageId,
       platformThreadId: options.platformThreadId,
     }),
-    thread_model_note: isSlack
-      ? "Slack message model: this session is anchored to one Slack thread. Treat each forwarded message in this thread as a possible follow-up in the same product session."
-      : "Feishu message model: this session is anchored to one Feishu topic. Treat `root_message_id` and `platform_thread_id` as the Feishu equivalent of a Slack thread; every forwarded message in this topic is a possible follow-up in the same product session.",
-    markdown_note: isSlack
-      ? "Write normal Markdown in the `text` field. Do not handcraft Slack `mrkdwn`; the broker converts markdownish output to `mrkdwn` before posting."
-      : "For Feishu, set `format` to `markdown` when you want the broker to send Feishu rich-post Markdown; otherwise plain `text` is sent as text or operational cards.",
-    post_file_note: isSlack ? "For `/slack/post-file`, `initial_comment` also accepts normal Markdown and is converted before posting." : "For `/chat/post-file`, `initial_comment`/`initialComment` can be sent with the same Feishu thread coordinates.",
-    post_file_route_label: `\`${postFileRoute}\``,
-    post_state_route_label: `\`${postStateRoute}\``,
-    registered_job_env_vars: isSlack
-      ? "BROKER_JOB_ID, BROKER_JOB_TOKEN, BROKER_API_BASE, BROKER_JOB_HELPER, CHAT_PLATFORM, CHAT_CONVERSATION_ID, CHAT_ROOT_MESSAGE_ID, SLACK_CHANNEL_ID, SLACK_THREAD_TS, SESSION_KEY, SESSION_WORKSPACE, and REPOS_ROOT"
-      : "BROKER_JOB_ID, BROKER_JOB_TOKEN, BROKER_API_BASE, BROKER_JOB_HELPER, CHAT_PLATFORM, CHAT_CONVERSATION_ID, CHAT_ROOT_MESSAGE_ID, SESSION_KEY, SESSION_WORKSPACE, and REPOS_ROOT",
-    post_message_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}${postMessageRoute} -H 'content-type: application/json' -d '${messagePayload}'`,
-    post_state_final_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}${postStateRoute} -H 'content-type: application/json' -d '${finalStatePayload}'`,
-    post_state_wait_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}${postStateRoute} -H 'content-type: application/json' -d '${waitStatePayload}'`,
-    post_state_block_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}${postStateRoute} -H 'content-type: application/json' -d '${blockStatePayload}'`,
-    post_file_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}${postFileRoute} -H 'content-type: application/json' -d '${filePayload}'`,
-    coauthor_status_command: `curl -sS '${options.brokerHttpBaseUrl}/slack/git-coauthors/session-status?cwd=${encodeURIComponent(options.workspacePath)}'`,
-    coauthor_configure_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}/slack/git-coauthors/configure-session -H 'content-type: application/json' -d '${coauthorConfigurePayload}'`,
-    thread_history_command: threadHistoryCommand,
-    register_job_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}/jobs/register -H 'content-type: application/json' -d '${jobPayload}'`,
-    linear_tools_command: `curl -sS '${linearToolsUrl}'`,
-    notion_tools_command: `curl -sS '${notionToolsUrl}'`,
-    linear_call_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}/integrations/mcp-call -H 'content-type: application/json' -d '${linearCallPayload}'`,
-    notion_call_command: `curl -sS -X POST ${options.brokerHttpBaseUrl}/integrations/mcp-call -H 'content-type: application/json' -d '${notionCallPayload}'`,
-    chat_bot_identity_section: isSlack ? formatSlackBotIdentitySection(options.slackBotIdentity) : "Feishu bot identity: when a Feishu message mentions the broker bot in this session, that mention refers to you.",
+    thread_model_note:
+      platform === "slack"
+        ? "Slack message model: this session is anchored to one Slack thread. Treat each forwarded message in this thread as a possible follow-up in the same product session."
+        : "Feishu message model: this session is anchored to one Feishu topic. Treat `root_message_id` and `platform_thread_id` as the Feishu equivalent of a Slack thread; every forwarded message in this topic is a possible follow-up in the same product session.",
+    ...variant,
+    chat_bot_identity_section: platform === "slack" ? formatSlackBotIdentitySection(options.slackBotIdentity) : "Feishu bot identity: when a Feishu message mentions the broker bot in this session, that mention refers to you.",
     personal_memory_section: formatPersonalMemorySection(options.personalMemory),
   });
+}
+
+function buildDynamicToolsVariant(options: BuildSlackThreadBaseInstructionsOptions, chatSurfaceName: string, platform: "slack" | "feishu"): PromptVariant {
+  return {
+    dynamic_tools_section: buildDynamicToolsSection(options, chatSurfaceName, platform),
+    turn_stopping_contract: turnStoppingContract(chatSurfaceName, "chat.post_state"),
+    coauthor_contract: ["- Use the coauthor.status and coauthor.configure tools to inspect or update session co-author state when needed; the agent can operate these directly.", ...coauthorContractTail("coauthor.configure")].join("\n"),
+  };
+}
+
+interface PromptVariant {
+  readonly dynamic_tools_section: string;
+  readonly turn_stopping_contract: string;
+  readonly coauthor_contract: string;
+}
+
+function buildDynamicToolsSection(options: BuildSlackThreadBaseInstructionsOptions, chatSurfaceName: string, platform: "slack" | "feishu"): string {
+  return [
+    `${chatSurfaceName} tools for this session. Thread coordinates are already bound; do not pass channel, conversation, or thread ids.`,
+    "",
+    "- chat.post_message: send a visible update. Set kind to progress, final, block, or wait. For block/wait, include a short reason field.",
+    `- ${markdownNote(chatSurfaceName, "chat.post_message")}`,
+    `- ${postFileNote(chatSurfaceName, "chat.post_file")}`,
+    `- When sending a terminal ${chatSurfaceName} state, set kind to final, block, or wait. For block/wait, include a short reason field.`,
+    "- chat.post_state: record a silent final, wait, or block state without posting another message.",
+    "- chat.post_file: upload a local image or file. Prefer an absolute filePath.",
+    `- Built-in Codex image-generation outputs are saved under \`${options.codexGeneratedImagesRoot}/<thread-id>/...\`. When you want to share one in ${chatSurfaceName}, upload it yourself with chat.post_file and an absolute file path.`,
+    "- chat.thread_history: read earlier thread context when you need to backfill messages that were not forwarded into this turn. Paginate with beforeMessageId or beforeCursor.",
+    `- job.register: register a broker-managed background job. Only tell ${chatSurfaceName} you will keep monitoring after the job registration succeeds.`,
+    "- coauthor.status: inspect the current session's co-author status.",
+    "- coauthor.configure: configure the current session's co-authors. Accepts current-session contributors by Slack user id, @mention, display name, real name, username, email, GitHub login, or GitHub email. GitHub author identity comes only from the user's GitHub OAuth binding.",
+    "- Prefer absolute filePath values when uploading local artifacts.",
+    `- Registered background jobs receive environment variables including ${registeredJobEnvVars(platform)}.`,
+    '- Inside a background job script, prefer `node "$BROKER_JOB_HELPER" ...` for heartbeat/event/complete/fail/cancel callbacks instead of hand-writing nested curl JSON payloads.',
+    "",
+    "Isolated Linear/Notion access for this session:",
+    "",
+    `- The main Codex runtime for this ${chatSurfaceName} broker does not load the linear or notion MCPs directly.`,
+    "- To use Linear or Notion, first call integration.list_tools, then integration.call for the specific tool you need.",
+    '- integration.list_tools: list isolated tools for server "linear" or "notion".',
+    "- integration.call: call a listed Linear or Notion tool with server, name, and a JSON arguments object.",
+    `- If the isolated integration call fails, tell ${chatSurfaceName} that the specific integration is unavailable right now. Do not assume the whole runtime is broken.`,
+  ].join("\n");
+}
+
+function markdownNote(chatSurfaceName: string, api: string): string {
+  return chatSurfaceName === "Feishu"
+    ? `Write Feishu-facing text in the \`text\` field of ${api}. Prefer readable Markdown-style text; the broker maps it onto Feishu-visible formatting.`
+    : `Write normal Markdown in the \`text\` field of ${api}. Do not handcraft Slack \`mrkdwn\`; the broker converts markdownish output to \`mrkdwn\` before posting.`;
+}
+
+function postFileNote(chatSurfaceName: string, api: string): string {
+  return chatSurfaceName === "Feishu" ? `For ${api}, \`initialComment\` is posted as the Feishu file caption.` : `For ${api}, \`initialComment\` also accepts normal Markdown and is converted before posting.`;
+}
+
+function turnStoppingContract(chatSurfaceName: string, silentStateApi: string): string {
+  return [
+    `- If the work is done, send a ${chatSurfaceName} update with kind=final.`,
+    `- If the thread already has a clear completion update from you and you only need to settle broker state, record a silent final state through ${silentStateApi} instead of posting another completion message.`,
+    `- If you are blocked and need user input, approval, credentials, or any other human/external intervention, send a ${chatSurfaceName} update with kind=block and include a concrete reason.`,
+    `- If your visible ${chatSurfaceName} reply already explains the blocker in human language, record a silent block state through ${silentStateApi} instead of sending a second '[block]' line.`,
+    `- If you are intentionally waiting because a broker-managed async job is already running and will wake this session later, either send a visible ${chatSurfaceName} update with kind=wait or record a silent wait state with ${silentStateApi}.`,
+    "- Prefer the silent wait-state API when humans do not need an immediate user-visible update. Use a visible kind=wait message only when entering wait is itself worth telling the thread about.",
+    `- Do not send one plain ${chatSurfaceName} reply and then a second state-only reply just to attach final/block/wait. Either send a single visible message with the appropriate kind attached, or send the human-facing reply once and record the state silently through ${silentStateApi}.`,
+    `- When you do send a visible kind=final/block/wait message, write normal human-facing text. Do not prefix the message body with tags like [final], [block], or [wait].`,
+    "- Do not emit repeated wait updates for routine watcher ticks, unchanged CI polls, or other low-signal monitoring noise.",
+    "- Do not end a run silently when you intend to stop. If you stop without an explicit final/block/wait explanation, the broker will treat it as an unexpected stop and wake you again.",
+  ].join("\n");
+}
+
+function coauthorContractTail(missingBindingAction: string): readonly string[] {
+  return [
+    "- Do not bypass git hooks, disable the configured hooks path, or use `--no-verify` to dodge the gate.",
+    "- Commits from this Slack session should remain non-blocking: if selected co-authors already have GitHub OAuth bindings, commit directly without an extra registration step.",
+    `- If co-author GitHub OAuth binding is missing and the commit would benefit from it, proactively ask in Slack or call ${missingBindingAction} yourself before committing.`,
+    "- If the user explicitly authorizes proceeding without unresolved co-authors, set the session to ignore missing co-authors and continue; unresolved co-authors may be skipped for that commit.",
+    "- The broker may append `Co-authored-by:` trailers automatically from selected Slack users' GitHub OAuth bindings.",
+  ];
+}
+
+function registeredJobEnvVars(platform: "slack" | "feishu"): string {
+  return platform === "slack"
+    ? "BROKER_JOB_ID, BROKER_JOB_TOKEN, BROKER_API_BASE, BROKER_JOB_HELPER, CHAT_PLATFORM, CHAT_CONVERSATION_ID, CHAT_ROOT_MESSAGE_ID, SLACK_CHANNEL_ID, SLACK_THREAD_TS, SESSION_KEY, SESSION_WORKSPACE, and REPOS_ROOT"
+    : "BROKER_JOB_ID, BROKER_JOB_TOKEN, BROKER_API_BASE, BROKER_JOB_HELPER, CHAT_PLATFORM, CHAT_CONVERSATION_ID, CHAT_ROOT_MESSAGE_ID, SESSION_KEY, SESSION_WORKSPACE, and REPOS_ROOT";
 }
 
 function formatThreadCoordinatesSection(options: {
@@ -219,7 +172,7 @@ async function loadTemplate(): Promise<string> {
 }
 
 function renderTemplate(template: string, variables: Record<string, string>): string {
-  const rendered = template.replace(/{{\s*([a-z0-9_]+)\s*}}/gi, (match, key: string) => {
+  const rendered = template.replace(/{{\s*([a-z0-9_]+)\s*}}/gi, (_match, key: string) => {
     const value = variables[key];
     if (value === undefined) {
       throw new Error(`Missing prompt template variable: ${key}`);

@@ -666,6 +666,10 @@ export class SessionManager {
     return this.#stateStore.getAgentSessionTraceSummary(sessionKey);
   }
 
+  rebuildTraceSummaries(): void {
+    this.#stateStore.rebuildTraceSummaries();
+  }
+
   async upsertAgentTraceEvent(record: PersistedAgentTraceEvent): Promise<void> {
     await this.#stateStore.upsertAgentTraceEvent(record);
   }

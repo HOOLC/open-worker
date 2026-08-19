@@ -5,6 +5,8 @@ import type { AgentRuntime } from "./agent-runtime/types.js";
 import { CodexAppServerRuntime } from "./agent-runtime/codex-app-server-runtime.js";
 import { SessionAuthProfileRuntime } from "./agent-runtime/session-auth-profile-runtime.js";
 import type { AuthProfileService } from "./auth-profile-service.js";
+import { createBrokerToolBackend } from "./broker-tool-backend.js";
+import type { BrokerToolBackend } from "./codex/dynamic-tools.js";
 import { CodexBroker } from "./codex/codex-broker.js";
 import { IsolatedMcpService } from "./codex/isolated-mcp-service.js";
 import { DiskPressureCleanupService } from "./disk-pressure-cleanup-service.js";
@@ -90,7 +92,7 @@ export function createCodexBroker(config: AppConfig): CodexBroker {
   });
 }
 
-export function createAgentRuntime(options: { readonly config: AppConfig; readonly codex: CodexBroker; readonly sessions: SessionManager; readonly authProfiles: AuthProfileService }): AgentRuntime {
+export function createAgentRuntime(options: { readonly config: AppConfig; readonly codex: CodexBroker; readonly sessions: SessionManager; readonly authProfiles: AuthProfileService; readonly toolBackend?: BrokerToolBackend | undefined }): AgentRuntime {
   const legacyRuntime = options.config.codexAppServerUrl
     ? new CodexAppServerRuntime({
         codex: options.codex,
@@ -102,7 +104,17 @@ export function createAgentRuntime(options: { readonly config: AppConfig; readon
     sessions: options.sessions,
     authProfiles: options.authProfiles,
     legacyRuntime,
+    toolBackend: options.toolBackend,
   });
+}
+
+export { createBrokerToolBackend };
+
+export function bindBrokerToolBackend(options: { readonly codex: CodexBroker; readonly agentRuntime: AgentRuntime; readonly backend: BrokerToolBackend }): void {
+  options.codex.setToolBackend(options.backend);
+  if (options.agentRuntime instanceof SessionAuthProfileRuntime) {
+    options.agentRuntime.setToolBackend(options.backend);
+  }
 }
 
 export function createSlackBridge(options: {

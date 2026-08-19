@@ -47,7 +47,7 @@ export const DEFAULT_CLOUDFLARED_PATH = "/opt/homebrew/bin/cloudflared";
 
 export const DEFAULT_LAUNCHD_DAEMON_DIR = "/Library/LaunchDaemons";
 
-export const DEFAULT_CODEX_VERSION = "0.114.0";
+export const DEFAULT_CODEX_VERSION = "0.148.0";
 
 export const DEFAULT_PACKAGE_INFO = readDefaultPackageInfo();
 
