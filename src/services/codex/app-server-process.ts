@@ -10,7 +10,6 @@ import { ensureDir, fileExists } from "../../utils/fs.js";
 import { withoutGlobalGitHubTokenEnv } from "../../utils/github-env.js";
 import { resolveRuntimeToolPath } from "../../utils/runtime-paths.js";
 import { syncUserCodexHome } from "./codex-home.js";
-import { syncGeminiHome } from "./gemini-home.js";
 
 const ALL_MCP_SERVERS = "*";
 const DISABLED_CODEX_APP_SERVER_FEATURES = ["apps"] as const;
@@ -29,12 +28,8 @@ export class AppServerProcess {
   readonly #openAiApiKey: string | undefined;
   readonly #authJsonPath: string | undefined;
   readonly #hostCodexHomePath: string | undefined;
-  readonly #hostGeminiHomePath: string | undefined;
   readonly #disabledMcpServers: string[];
   readonly #tempadLinkServiceUrl: string | undefined;
-  readonly #geminiHttpProxy: string | undefined;
-  readonly #geminiHttpsProxy: string | undefined;
-  readonly #geminiAllProxy: string | undefined;
   #child: ChildProcessByStdio<null, Readable, Readable> | undefined;
   #startPromise: Promise<void> | undefined;
   #homePrepared = false;
@@ -47,12 +42,8 @@ export class AppServerProcess {
     readonly openAiApiKey?: string | undefined;
     readonly authJsonPath?: string | undefined;
     readonly hostCodexHomePath?: string | undefined;
-    readonly hostGeminiHomePath?: string | undefined;
     readonly disabledMcpServers?: string[] | undefined;
     readonly tempadLinkServiceUrl?: string | undefined;
-    readonly geminiHttpProxy?: string | undefined;
-    readonly geminiHttpsProxy?: string | undefined;
-    readonly geminiAllProxy?: string | undefined;
   }) {
     this.#brokerHttpBaseUrl = options.brokerHttpBaseUrl;
     this.#codexHome = options.codexHome;
@@ -62,12 +53,8 @@ export class AppServerProcess {
     this.#openAiApiKey = options.openAiApiKey;
     this.#authJsonPath = options.authJsonPath;
     this.#hostCodexHomePath = options.hostCodexHomePath;
-    this.#hostGeminiHomePath = options.hostGeminiHomePath;
     this.#disabledMcpServers = options.disabledMcpServers ?? [];
     this.#tempadLinkServiceUrl = options.tempadLinkServiceUrl;
-    this.#geminiHttpProxy = options.geminiHttpProxy;
-    this.#geminiHttpsProxy = options.geminiHttpsProxy;
-    this.#geminiAllProxy = options.geminiAllProxy;
   }
 
   get url(): string {
@@ -113,21 +100,8 @@ export class AppServerProcess {
       BROKER_REAL_GH_PATH: process.env.BROKER_REAL_GH_PATH?.trim() || githubCliWrapper.realGhPath || "",
       TEMPAD_LINK_SERVICE_URL: tempadLinkServiceUrl,
       BROKER_GIT_COAUTHOR_HELPER: process.env.BROKER_GIT_COAUTHOR_HELPER?.trim() || resolveRuntimeToolPath("git-coauthor.js"),
-      BROKER_GEMINI_UI_HELPER: process.env.BROKER_GEMINI_UI_HELPER?.trim() || resolveRuntimeToolPath("gemini-ui.js"),
       PATH: `${githubCliWrapper.binDir}:${process.env.PATH ?? ""}`,
     });
-
-    if (this.#geminiHttpProxy) {
-      env.BROKER_GEMINI_HTTP_PROXY = this.#geminiHttpProxy;
-    }
-
-    if (this.#geminiHttpsProxy) {
-      env.BROKER_GEMINI_HTTPS_PROXY = this.#geminiHttpsProxy;
-    }
-
-    if (this.#geminiAllProxy) {
-      env.BROKER_GEMINI_ALL_PROXY = this.#geminiAllProxy;
-    }
 
     if (this.#openAiApiKey) {
       env.OPENAI_API_KEY = this.#openAiApiKey;
@@ -205,10 +179,6 @@ export class AppServerProcess {
       teamCodexHomePath: this.#teamCodexHomePath,
       hostCodexHomePath: this.#hostCodexHomePath,
       runtimeHomePath: this.#runtimeHome,
-    });
-    await syncGeminiHome({
-      runtimeHomePath: this.#runtimeHome,
-      hostGeminiHomePath: this.#hostGeminiHomePath,
     });
     this.#homePrepared = true;
   }
@@ -367,7 +337,7 @@ export class AppServerProcess {
   }
 
   async #resolveTempadLinkServiceUrl(): Promise<string> {
-    const candidates = uniqueStrings([this.#tempadLinkServiceUrl, "http://host.docker.internal:4318", "http://host.docker.internal:4320"]);
+    const candidates = uniqueStrings([this.#tempadLinkServiceUrl, "http://127.0.0.1:4318", "http://127.0.0.1:4320"]);
 
     for (const candidate of candidates) {
       if (await isHealthyHttpService(candidate)) {
@@ -376,7 +346,7 @@ export class AppServerProcess {
       }
     }
 
-    const fallback = candidates[0] ?? "http://host.docker.internal:4320";
+    const fallback = candidates[0] ?? "http://127.0.0.1:4320";
     logger.warn("Failed to find a healthy tempad link service; falling back to first candidate", {
       url: fallback,
       attemptedCandidates: candidates,

@@ -233,10 +233,10 @@ Admin requirements:
 - [x] Summarize admin active sessions without raw co-author candidate IDs.
 - [x] Summarize live admin API service roots, auth file/profile paths, active session workspaces, background job cwd, and deployment release paths without full host filesystem paths.
 - [x] Platform-filtered admin status limits sessions, jobs, and GitHub author mappings to the requested platform while retaining independent Slack/Feishu health and cross-platform `recentBrokerLogs` for same-runtime smoke evidence.
-- [x] Allowlist `recentBrokerLogs` top-level event tokens plus metadata in admin status, `ops:rollout:real`, `ops:check:real`, `ops:status:real`, and smoke evidence bundles to RFC-safe scalar fields; malformed broker log lines are reported without echoing their raw text.
-- [x] Recursively redact unsafe nested string fields from `ops:rollout:real` metadata while preserving safe posture text such as `FEISHU_APP_SECRET=missing`.
-- [x] Write `ops:rollout:real` pre-rollout Docker logs as sanitized evidence snapshots: structured logs keep only allowlisted event/meta fields, known startup markers are kept by name, and other non-structured lines are represented by redacted summaries.
-- [x] Summarize `ops:rollout:real`, `ops:check:real`, and `ops:status:real` backup/data-root coordinates without full host filesystem paths; `ops:check:real` and `ops:status:real` also summarize active sessions, open inbound messages, and background jobs without raw message bodies, job tokens, or job scripts.
+- [x] Allowlist `recentBrokerLogs` top-level event tokens plus metadata in admin status and smoke evidence bundles to RFC-safe scalar fields; malformed broker log lines are reported without echoing their raw text.
+- [x] Recursively redact unsafe nested string fields from rollout metadata while preserving safe posture text such as `FEISHU_APP_SECRET=missing`.
+- [x] Write rollout pre-rollout broker logs as sanitized evidence snapshots: structured logs keep only allowlisted event/meta fields, known startup markers are kept by name, and other non-structured lines are represented by redacted summaries.
+- [x] Summarize ops backup/data-root coordinates without full host filesystem paths; ops summaries also cover active sessions, open inbound messages, and background jobs without raw message bodies, job tokens, or job scripts.
 - [x] Summarize `ops:auth:real`, `ops:auth:profiles`, and `ops:ui:real` auth/profile paths before printing or rendering so operator screenshots and copied status output do not preserve full host filesystem paths.
 
 </details>

@@ -1,88 +1,65 @@
 import fs from "node:fs/promises";
-import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createHttpHandler } from "../src/http/router.js";
-import { configureLogger, flushLogger } from "../src/logger.js";
+import { MockCodexAppServer } from "./helpers/mock-codex-app-server.js";
+import { MockSlackServer } from "./manual/mock-slack-server.js";
+import { delay, fetchJson, getFreePort, removeTempRoot, seedBrokerSessions, startBrokerProcess, waitFor } from "./e2e-broker-helpers.js";
 
-describe("raw HTTP request log redaction", () => {
-  const servers: http.Server[] = [];
-  const tempRoots: string[] = [];
+describe.sequential("raw HTTP request log redaction", () => {
+  const cleanups: Array<() => Promise<void>> = [];
 
   afterEach(async () => {
-    while (servers.length > 0) {
-      await close(servers.pop()!);
-    }
-
-    await flushLogger();
-    configureLogger(disabledLoggerConfig());
-
-    while (tempRoots.length > 0) {
-      await fs.rm(tempRoots.pop()!, { recursive: true, force: true });
+    while (cleanups.length > 0) {
+      await cleanups.pop()?.();
     }
   });
 
   it("redacts body-like fields from generic chat route raw request logs", async () => {
-    const { baseUrl, logDir } = await startLoggedBroker({
-      postChatMessage: async () => {},
-      postChatState: async () => {},
-      postChatFile: async () => ({
-        platform: "feishu",
-        fileId: "file_uploaded",
-      }),
-    } as never);
+    const { baseUrl, logDir } = await startLoggedBroker(cleanups);
     const inlineContent = Buffer.from("CHAT_SECRET_INLINE_FILE").toString("base64");
 
-    await expect(
-      postJson(`${baseUrl}/chat/post-message`, {
-        platform: "feishu",
-        conversation_id: "oc_group",
-        root_message_id: "om_root",
-        text: "CHAT_SECRET_TEXT",
-        kind: "wait",
-        reason: "CHAT_SECRET_REASON",
-        stop_reason: "CHAT_SECRET_STOP_REASON",
-        format: "card",
-        card: {
-          title: "CHAT_SECRET_CARD",
-        },
-        rich_text: {
-          content: "CHAT_SECRET_RICH",
-        },
-        richText: {
-          content: "CHAT_SECRET_RICH_CAMEL",
-        },
-      }),
-    ).resolves.toBe(200);
-
-    await expect(
-      postJson(`${baseUrl}/chat/post-state`, {
-        platform: "feishu",
-        conversation_id: "oc_group",
-        root_message_id: "om_root",
-        kind: "block",
-        reason: "CHAT_SECRET_STATE_REASON",
-      }),
-    ).resolves.toBe(200);
-
-    await expect(
-      postJson(`${baseUrl}/chat/post-file`, {
-        platform: "feishu",
-        conversation_id: "oc_group",
-        root_message_id: "om_root",
-        content_base64: inlineContent,
-        contentBase64: inlineContent,
-        filename: "report.txt",
-        initial_comment: "CHAT_SECRET_COMMENT",
-        initialComment: "CHAT_SECRET_COMMENT_CAMEL",
-        text: "CHAT_SECRET_FILE_TEXT",
-        alt_text: "CHAT_SECRET_ALT",
-        altText: "CHAT_SECRET_ALT_CAMEL",
-      }),
-    ).resolves.toBe(200);
+    await fetchJson(`${baseUrl}/chat/post-message`, {
+      platform: "feishu",
+      conversation_id: "oc_group",
+      root_message_id: "om_root",
+      text: "CHAT_SECRET_TEXT",
+      kind: "wait",
+      reason: "CHAT_SECRET_REASON",
+      stop_reason: "CHAT_SECRET_STOP_REASON",
+      format: "card",
+      card: {
+        title: "CHAT_SECRET_CARD",
+      },
+      rich_text: {
+        content: "CHAT_SECRET_RICH",
+      },
+      richText: {
+        content: "CHAT_SECRET_RICH_CAMEL",
+      },
+    });
+    await fetchJson(`${baseUrl}/chat/post-state`, {
+      platform: "feishu",
+      conversation_id: "oc_group",
+      root_message_id: "om_root",
+      kind: "block",
+      reason: "CHAT_SECRET_STATE_REASON",
+    });
+    await fetchJson(`${baseUrl}/chat/post-file`, {
+      platform: "feishu",
+      conversation_id: "oc_group",
+      root_message_id: "om_root",
+      content_base64: inlineContent,
+      contentBase64: inlineContent,
+      filename: "report.txt",
+      initial_comment: "CHAT_SECRET_COMMENT",
+      initialComment: "CHAT_SECRET_COMMENT_CAMEL",
+      text: "CHAT_SECRET_FILE_TEXT",
+      alt_text: "CHAT_SECRET_ALT",
+      altText: "CHAT_SECRET_ALT_CAMEL",
+    });
 
     const { raw, records } = await readRawHttpLog(logDir);
     expect(raw).not.toContain("CHAT_SECRET_TEXT");
@@ -115,41 +92,44 @@ describe("raw HTTP request log redaction", () => {
     expect(fileBody.text).toMatch(/^\[redacted-text:\d+\]$/u);
     expect(fileBody.alt_text).toMatch(/^\[redacted-alt-text:\d+\]$/u);
     expect(fileBody.altText).toMatch(/^\[redacted-alt-text:\d+\]$/u);
-  });
+  }, 60_000);
 
   it("redacts body-like fields from legacy Slack route raw request logs", async () => {
-    const { baseUrl, logDir } = await startLoggedBroker({
-      postChatMessage: async () => {},
-      postChatState: async () => {},
-      postChatFile: async () => ({
-        platform: "slack",
-        fileId: "F123",
-      }),
-    } as never);
+    const { baseUrl, logDir } = await startLoggedBroker(cleanups);
     const inlineContent = Buffer.from("SLACK_SECRET_INLINE_FILE").toString("base64");
 
-    await expect(
-      postForm(`${baseUrl}/slack/post-message`, {
+    await fetch(`${baseUrl}/slack/post-message`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+      },
+      body: new URLSearchParams({
         channel_id: "C123",
         thread_ts: "111.222",
         text: "SLACK_SECRET_TEXT",
         kind: "wait",
         reason: "SLACK_SECRET_REASON",
         stop_reason: "SLACK_SECRET_STOP_REASON",
-      }),
-    ).resolves.toBe(200);
-
-    await expect(
-      postForm(`${baseUrl}/slack/post-state`, {
+      }).toString(),
+    });
+    await fetch(`${baseUrl}/slack/post-state`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+      },
+      body: new URLSearchParams({
         channel_id: "C123",
         thread_ts: "111.222",
         kind: "block",
         reason: "SLACK_SECRET_STATE_REASON",
-      }),
-    ).resolves.toBe(200);
-
-    await expect(
-      postForm(`${baseUrl}/slack/post-file`, {
+      }).toString(),
+    });
+    await fetch(`${baseUrl}/slack/post-file`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+      },
+      body: new URLSearchParams({
         channel_id: "C123",
         thread_ts: "111.222",
         content_base64: inlineContent,
@@ -157,8 +137,8 @@ describe("raw HTTP request log redaction", () => {
         initial_comment: "SLACK_SECRET_COMMENT",
         text: "SLACK_SECRET_FILE_TEXT",
         alt_text: "SLACK_SECRET_ALT",
-      }),
-    ).resolves.toBe(200);
+      }).toString(),
+    });
 
     const { raw, records } = await readRawHttpLog(logDir);
     expect(raw).not.toContain("SLACK_SECRET_TEXT");
@@ -183,41 +163,39 @@ describe("raw HTTP request log redaction", () => {
     expect(fileBody.initial_comment).toMatch(/^\[redacted-comment:\d+\]$/u);
     expect(fileBody.text).toMatch(/^\[redacted-text:\d+\]$/u);
     expect(fileBody.alt_text).toMatch(/^\[redacted-alt-text:\d+\]$/u);
-  });
+  }, 60_000);
 
   it("redacts scripts, tokens, and event bodies from job route raw request logs", async () => {
-    const { baseUrl, logDir } = await startLoggedJobBroker();
-
-    await expect(
-      postJson(`${baseUrl}/jobs/register`, {
+    const { baseUrl, logDir } = await startLoggedBroker(cleanups, [
+      {
         platform: "feishu",
-        conversation_id: "oc_group",
-        root_message_id: "om_root",
-        kind: "watch_ci",
-        script: "JOB_SECRET_SCRIPT",
-        cwd: ".",
-      }),
-    ).resolves.toBe(200);
+        conversationId: "oc_group",
+        rootMessageId: "om_root",
+      },
+    ]);
 
-    await expect(
-      postJson(`${baseUrl}/jobs/job-1/event`, {
-        token: "JOB_SECRET_TOKEN",
-        event_kind: "state_changed",
-        summary: "JOB_SECRET_SUMMARY",
-        details_text: "JOB_SECRET_DETAILS",
-        details_json: {
-          value: "JOB_SECRET_JSON",
-        },
-      }),
-    ).resolves.toBe(200);
-
-    await expect(
-      postJson(`${baseUrl}/jobs/job-1/fail`, {
-        token: "JOB_SECRET_TOKEN",
-        summary: "JOB_SECRET_FAIL_SUMMARY",
-        error: "JOB_SECRET_ERROR",
-      }),
-    ).resolves.toBe(200);
+    await fetchJson(`${baseUrl}/jobs/register`, {
+      platform: "feishu",
+      conversation_id: "oc_group",
+      root_message_id: "om_root",
+      kind: "watch_ci",
+      script: "JOB_SECRET_SCRIPT",
+      cwd: ".",
+    });
+    await fetchJson(`${baseUrl}/jobs/job-1/event`, {
+      token: "JOB_SECRET_TOKEN",
+      event_kind: "state_changed",
+      summary: "JOB_SECRET_SUMMARY",
+      details_text: "JOB_SECRET_DETAILS",
+      details_json: {
+        value: "JOB_SECRET_JSON",
+      },
+    });
+    await fetchJson(`${baseUrl}/jobs/job-1/fail`, {
+      token: "JOB_SECRET_TOKEN",
+      summary: "JOB_SECRET_FAIL_SUMMARY",
+      error: "JOB_SECRET_ERROR",
+    });
 
     const { raw, records } = await readRawHttpLog(logDir);
     expect(raw).not.toContain("JOB_SECRET_SCRIPT");
@@ -238,31 +216,26 @@ describe("raw HTTP request log redaction", () => {
 
     const failBody = findRawBody(records, "/jobs/job-1/fail");
     expect(failBody.error).toMatch(/^\[redacted-error:\d+\]$/u);
-  });
+  }, 60_000);
 
   it("redacts MCP call arguments from integration route raw request logs", async () => {
-    const { baseUrl, logDir } = await startLoggedIntegrationBroker();
+    const { baseUrl, logDir } = await startLoggedBroker(cleanups);
 
-    await expect(
-      postJson(`${baseUrl}/integrations/mcp-call`, {
-        server: "linear",
-        name: "search",
-        arguments: {
-          query: "INTEGRATION_SECRET_QUERY",
-          apiToken: "INTEGRATION_SECRET_TOKEN",
-        },
+    await fetchJson(`${baseUrl}/integrations/mcp-call`, {
+      server: "linear",
+      name: "search",
+      arguments: {
+        query: "INTEGRATION_SECRET_QUERY",
+        apiToken: "INTEGRATION_SECRET_TOKEN",
+      },
+    });
+    await fetchJson(`${baseUrl}/integrations/mcp-call`, {
+      server: "linear",
+      name: "search",
+      arguments: JSON.stringify({
+        query: "INTEGRATION_SECRET_STRING_QUERY",
       }),
-    ).resolves.toBe(200);
-
-    await expect(
-      postJson(`${baseUrl}/integrations/mcp-call`, {
-        server: "linear",
-        name: "search",
-        arguments: JSON.stringify({
-          query: "INTEGRATION_SECRET_STRING_QUERY",
-        }),
-      }),
-    ).resolves.toBe(200);
+    });
 
     const { raw, records } = await readRawHttpLog(logDir);
     expect(raw).not.toContain("INTEGRATION_SECRET_QUERY");
@@ -273,151 +246,71 @@ describe("raw HTTP request log redaction", () => {
     expect(bodies).toHaveLength(2);
     expect(bodies[0]?.arguments).toBe("[redacted-arguments]");
     expect(bodies[1]?.arguments).toMatch(/^\[redacted-arguments:\d+\]$/u);
-  });
-
-  async function startLoggedBroker(bridge: never): Promise<{ baseUrl: string; logDir: string }> {
-    const logDir = await fs.mkdtemp(path.join(os.tmpdir(), "broker-http-logs-"));
-    tempRoots.push(logDir);
-    configureLogger({
-      ...disabledLoggerConfig(),
-      logDir,
-      rawHttpRequests: true,
-    });
-
-    const server = http.createServer(
-      createHttpHandler({
-        bridge,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    servers.push(server);
-
-    return {
-      baseUrl: await listen(server),
-      logDir,
-    };
-  }
-
-  async function startLoggedJobBroker(): Promise<{ baseUrl: string; logDir: string }> {
-    const logDir = await fs.mkdtemp(path.join(os.tmpdir(), "broker-http-logs-"));
-    tempRoots.push(logDir);
-    configureLogger({
-      ...disabledLoggerConfig(),
-      logDir,
-      rawHttpRequests: true,
-    });
-
-    const job = {
-      id: "job-1",
-      token: "JOB_SECRET_TOKEN",
-      sessionKey: "feishu:b2NfZ3JvdXA:b21fcm9vdA",
-      platform: "feishu",
-      conversationId: "oc_group",
-      rootMessageId: "om_root",
-      channelId: "oc_group",
-      rootThreadTs: "om_root",
-      kind: "watch_ci",
-      shell: "sh",
-      cwd: "/tmp/workspace",
-      scriptPath: "/tmp/jobs/job-1/run.sh",
-      restartOnBoot: true,
-      status: "running",
-      createdAt: "2026-05-29T00:00:00.000Z",
-      updatedAt: "2026-05-29T00:00:00.000Z",
-    };
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {
-          registerJob: async () => job,
-          emitJobEvent: async () => job,
-          failJob: async () => ({
-            ...job,
-            status: "failed",
-          }),
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    servers.push(server);
-
-    return {
-      baseUrl: await listen(server),
-      logDir,
-    };
-  }
-
-  async function startLoggedIntegrationBroker(): Promise<{ baseUrl: string; logDir: string }> {
-    const logDir = await fs.mkdtemp(path.join(os.tmpdir(), "broker-http-logs-"));
-    tempRoots.push(logDir);
-    configureLogger({
-      ...disabledLoggerConfig(),
-      logDir,
-      rawHttpRequests: true,
-    });
-
-    const server = http.createServer(
-      createHttpHandler({
-        isolatedMcp: {
-          listTools: async () => [],
-          callTool: async () => ({
-            content: [{ type: "text", text: "ok" }],
-            isError: false,
-          }),
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    servers.push(server);
-
-    return {
-      baseUrl: await listen(server),
-      logDir,
-    };
-  }
+  }, 60_000);
 });
 
-async function postJson(url: string, body: Record<string, unknown>): Promise<number> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
+async function startLoggedBroker(
+  cleanups: Array<() => Promise<void>>,
+  sessions: Parameters<typeof seedBrokerSessions>[1] = [],
+): Promise<{
+  readonly baseUrl: string;
+  readonly logDir: string;
+}> {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "http-redaction-e2e-"));
+  cleanups.push(async () => {
+    await removeTempRoot(tempRoot);
   });
+  if (sessions.length > 0) {
+    await seedBrokerSessions(tempRoot, sessions);
+  }
 
-  return response.status;
-}
-
-async function postForm(url: string, body: Record<string, string>): Promise<number> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded; charset=utf-8",
-    },
-    body: new URLSearchParams(body).toString(),
+  const mockSlack = new MockSlackServer("UBOT", {
+    botId: "BBOT",
+    appId: "AAPP",
   });
-
-  return response.status;
+  const mockCodex = new MockCodexAppServer();
+  const slackPort = await mockSlack.start();
+  const codexUrl = await mockCodex.start();
+  cleanups.push(async () => {
+    await mockCodex.stop();
+    await mockSlack.stop();
+  });
+  const broker = await startBrokerProcess({
+    port: await getFreePort(),
+    slackPort,
+    codexUrl,
+    tempRoot,
+    extraEnv: {
+      LOG_RAW_HTTP_REQUESTS: "true",
+    },
+  });
+  cleanups.push(() => broker.stop());
+  return {
+    baseUrl: broker.baseUrl,
+    logDir: path.join(tempRoot, "logs"),
+  };
 }
 
 async function readRawHttpLog(logDir: string): Promise<{
   raw: string;
   records: Array<{ payload: { path: string; body: Record<string, unknown> } }>;
 }> {
-  await flushLogger();
-  const raw = await fs.readFile(path.join(logDir, "raw", "http-requests.jsonl"), "utf8");
+  const logPath = path.join(logDir, "raw", "http-requests.jsonl");
+  await waitFor(async () => {
+    try {
+      const raw = await fs.readFile(logPath, "utf8");
+      return raw.includes('"path":');
+    } catch {
+      return false;
+    }
+  }, "raw HTTP request log");
+  await delay(100);
+  const raw = await fs.readFile(logPath, "utf8");
   const records = raw
     .trim()
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line) as { payload: { path: string; body: Record<string, unknown> } });
-
   return { raw, records };
 }
 
@@ -426,38 +319,5 @@ function findRawBody(records: Array<{ payload: { path: string; body: Record<stri
   if (!record) {
     throw new Error(`missing raw HTTP record for ${requestPath}`);
   }
-
   return record.payload.body;
-}
-
-function disabledLoggerConfig(): Parameters<typeof configureLogger>[0] {
-  return {
-    logDir: undefined,
-    level: "info",
-    rawSlackEvents: false,
-    rawFeishuEvents: false,
-    rawCodexRpc: false,
-    rawHttpRequests: false,
-  };
-}
-
-async function listen(server: http.Server): Promise<string> {
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  if (!address || typeof address === "string") {
-    throw new Error("failed to bind test server");
-  }
-  return `http://127.0.0.1:${address.port}`;
-}
-
-async function close(server: http.Server): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  });
 }

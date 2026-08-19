@@ -1,18 +1,12 @@
 import http from "node:http";
 
-import fs from "node:fs/promises";
-
-import path from "node:path";
-
-import { fileURLToPath, URL } from "node:url";
+import { URL } from "node:url";
 
 import type { AppConfig } from "../config.js";
 
 import type { AdminService } from "../services/admin-service.js";
 
-import { readJsonBody, readString, respondJson } from "./common.js";
-
-import { renderAdminPage } from "./admin-page.js";
+import { readString, respondJson } from "./common.js";
 
 import {
   matchSessionJobCancelPath,

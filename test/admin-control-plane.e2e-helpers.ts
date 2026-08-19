@@ -1,28 +1,59 @@
 import fs from "node:fs/promises";
-
 import http from "node:http";
-
 import os from "node:os";
-
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { expect } from "vitest";
 
 import { loadConfig } from "../src/config.js";
-
 import { createHttpHandler } from "../src/http/router.js";
-
 import { AdminService } from "../src/services/admin-service.js";
-
-import type { AuthProfilesStatus } from "../src/services/auth-profile-service.js";
-
+import { AuthProfileService, type AuthProfilesStatus } from "../src/services/auth-profile-service.js";
+import { GitHubAuthorMappingService } from "../src/services/github-author-mapping-service.js";
+import { GitHubPrIdentityService } from "../src/services/github-pr-identity-service.js";
 import { SessionManager } from "../src/services/session-manager.js";
-
 import { StateStore } from "../src/store/state-store.js";
-
 import type { AppConfig } from "../src/config.js";
+import type { PersistedAgentTraceEvent, PersistedBackgroundJob, PersistedInboundMessage, SlackUserIdentity } from "../src/types.js";
 
-import type { PersistedAgentTraceEvent, PersistedBackgroundJob, PersistedInboundMessage } from "../src/types.js";
+export type AdminHarnessCleanup = () => Promise<void>;
+
+export type AdminSlackConversations = {
+  getConversationInfo?: (channelId: string) => Promise<{
+    readonly channelId: string;
+    readonly name?: string | undefined;
+    readonly channelType?: string | undefined;
+  } | null>;
+  getUserIdentity?: (userId: string) => Promise<SlackUserIdentity | null>;
+  getPermalink?: (options: { readonly channelId: string; readonly messageTs: string }) => Promise<string | null>;
+};
+
+export type StartAdminFixtureOptions = {
+  readonly authProfilesStatus?: AuthProfilesStatus | undefined;
+  readonly workerBaseUrl?: string | undefined;
+  readonly extraEnv?: NodeJS.ProcessEnv | undefined;
+  readonly tempPrefix?: string | undefined;
+  readonly startedAt?: Date | undefined;
+  readonly slackConversations?: AdminSlackConversations | undefined;
+  readonly authProfiles?: unknown;
+  readonly githubAuthorMappings?: unknown;
+  readonly githubPrIdentity?: unknown;
+  readonly runtime?: Record<string, unknown> | undefined;
+  readonly deployment?: unknown;
+  readonly useRealGitHubServices?: boolean | undefined;
+  readonly useRealAuthProfiles?: boolean | undefined;
+};
+
+export type AdminFixture = {
+  readonly baseUrl: string;
+  readonly config: AppConfig;
+  readonly sessions: SessionManager;
+  readonly deploymentCalls: Array<Record<string, unknown>>;
+  readonly dataRoot: string;
+  readonly githubAuthorMappings?: GitHubAuthorMappingService | undefined;
+  readonly githubPrIdentity?: GitHubPrIdentityService | undefined;
+  readonly authProfiles?: AuthProfileService | undefined;
+};
 
 export async function seedAgentTraceFixture(sessions: SessionManager, sessionKey: string): Promise<void> {
   const baseInstructions = ["System core instruction", "", "Personal long-lived memory from ~/.codex/AGENT.md:", "- prefer Chinese admin pages", "- preserve Slack context", "", "Slack thread message model:", "The following messages are the live Slack thread."].join("\n");
@@ -420,7 +451,7 @@ export function deploymentStatus(config: AppConfig): Record<string, unknown> {
 export function authProfilesStatusFixture(): AuthProfilesStatus {
   return {
     managedRoot: "/tmp/auth-profiles",
-    profilesRoot: "/tmp/auth-profiles/docker/profiles",
+    profilesRoot: "/tmp/auth-profiles/profiles",
     profiles: [authProfileFixture("empty-profile", 100, 20), authProfileFixture("usable-profile", 10, 15)],
   };
 }
@@ -428,7 +459,7 @@ export function authProfilesStatusFixture(): AuthProfilesStatus {
 export function authProfileFixture(name: string, primaryUsed: number, secondaryUsed: number): AuthProfilesStatus["profiles"][number] {
   return {
     name,
-    path: `/tmp/auth-profiles/docker/profiles/${name}.json`,
+    path: `/tmp/auth-profiles/profiles/${name}.json`,
     source: "probe",
     checkedAt: "2026-05-09T00:00:00.000Z",
     account: {
@@ -470,15 +501,217 @@ export async function readJson(url: string): Promise<Record<string, unknown>> {
   return payload;
 }
 
-export async function postJson(url: string, body: Record<string, unknown>): Promise<Record<string, any>> {
+export async function postJson(url: string, body: Record<string, unknown>, headers: Record<string, string> = {}): Promise<Record<string, any>> {
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
+      ...headers,
     },
     body: JSON.stringify(body),
   });
   const payload = (await response.json()) as Record<string, any>;
   expect(response.status).toBe(200);
   return payload;
+}
+
+export async function requestJson(
+  url: string,
+  init: RequestInit = {},
+): Promise<{
+  readonly status: number;
+  readonly payload: Record<string, any>;
+  readonly headers: Headers;
+}> {
+  const response = await fetch(url, init);
+  const payload = (await response.json()) as Record<string, any>;
+  return {
+    status: response.status,
+    payload,
+    headers: response.headers,
+  };
+}
+
+export async function startAdminFixture(cleanups: AdminHarnessCleanup[], options: StartAdminFixtureOptions = {}): Promise<AdminFixture> {
+  const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), options.tempPrefix ?? "admin-control-plane-"));
+  cleanups.push(async () => {
+    await fs.rm(dataRoot, { force: true, recursive: true });
+  });
+
+  const config = loadConfig({
+    SLACK_APP_TOKEN: "xapp-test",
+    SLACK_BOT_TOKEN: "xoxb-test",
+    DATA_ROOT: dataRoot,
+    SERVICE_ROOT: dataRoot,
+    ADMIN_LAUNCHD_LABEL: "admin.test",
+    WORKER_LAUNCHD_LABEL: "worker.test",
+    ADMIN_PLIST_PATH: path.join(dataRoot, "admin.plist"),
+    WORKER_PLIST_PATH: path.join(dataRoot, "worker.plist"),
+    ...(options.workerBaseUrl ? { WORKER_BASE_URL: options.workerBaseUrl } : {}),
+    ...options.extraEnv,
+  } as NodeJS.ProcessEnv);
+  await fs.mkdir(config.codexHome, { recursive: true });
+  await fs.mkdir(config.logDir, { recursive: true });
+
+  const stateStore = new StateStore(config.stateDir, config.sessionsRoot);
+  const sessions = new SessionManager({
+    stateStore,
+    sessionsRoot: config.sessionsRoot,
+  });
+  await sessions.load();
+  cleanups.push(async () => {
+    stateStore.close();
+  });
+
+  const githubAuthorMappings = options.useRealGitHubServices ? new GitHubAuthorMappingService({ stateDir: config.stateDir }) : undefined;
+  if (githubAuthorMappings) {
+    await githubAuthorMappings.load();
+  }
+  const githubPrIdentity = options.useRealGitHubServices
+    ? new GitHubPrIdentityService({
+        stateDir: config.stateDir,
+        defaultGitHubLogin: config.defaultGitHubLogin,
+        defaultGitHubToken: config.defaultGitHubToken,
+      })
+    : undefined;
+  if (githubPrIdentity) {
+    await githubPrIdentity.load();
+  }
+  const authProfiles = options.useRealAuthProfiles
+    ? new AuthProfileService({
+        config,
+        probeProfile: async (profileName) => ({
+          source: "probe",
+          checkedAt: "2026-03-19T00:00:00.000Z",
+          account: {
+            ok: true,
+            account: {
+              email: `${profileName}@example.com`,
+              type: "chatgpt",
+              planType: "pro",
+            },
+            requiresOpenaiAuth: false,
+          },
+          rateLimits: {
+            ok: true,
+            rateLimits: {
+              limitId: "codex",
+              limitName: "Codex",
+              primary: {
+                usedPercent: 10,
+                windowDurationMins: 300,
+                resetsAt: 1_743_307_200,
+              },
+              secondary: {
+                usedPercent: 20,
+                windowDurationMins: 10_080,
+                resetsAt: 1_743_912_000,
+              },
+              credits: null,
+              planType: "pro",
+            },
+            rateLimitsByLimitId: {},
+          },
+        }),
+      })
+    : undefined;
+
+  const deploymentCalls: Array<Record<string, unknown>> = [];
+  const defaultDeployment = {
+    getStatus: async () => deploymentStatus(config),
+    deploy: async ({ target, version }: { readonly target: "admin" | "worker"; readonly version: string }) => {
+      deploymentCalls.push({ kind: "deploy", target, version });
+      return deploymentStatus(config);
+    },
+    rollback: async ({ target, version }: { readonly target: "admin" | "worker"; readonly version?: string | undefined }) => {
+      deploymentCalls.push({ kind: "rollback", target, version: version ?? null });
+      return deploymentStatus(config);
+    },
+    restartWorker: async () => {},
+  };
+
+  const adminService = new AdminService({
+    config,
+    sessions,
+    startedAt: options.startedAt ?? new Date("2026-03-19T00:00:00.000Z"),
+    authProfiles: (options.authProfiles ??
+      authProfiles ?? {
+        listProfilesStatus: async () =>
+          options.authProfilesStatus ?? {
+            managedRoot: path.join(dataRoot, "auth-profiles"),
+            profilesRoot: path.join(dataRoot, "auth-profiles", "profiles"),
+            profiles: [],
+          },
+        addProfile: async () => ({ name: "profile" }),
+        deleteProfile: async () => {},
+        requestDeviceCodeAuth: async () => ({
+          deviceAuthId: "device-1",
+          userCode: "ABCD-EFGH",
+        }),
+        completeDeviceCodeAuth: async () => ({
+          status: "pending",
+        }),
+      }) as never,
+    githubAuthorMappings: (options.githubAuthorMappings ??
+      githubAuthorMappings ?? {
+        load: async () => {},
+        listMappings: () => [],
+        upsertManualMapping: async () => ({}),
+        deleteMapping: async () => {},
+      }) as never,
+    ...(options.githubPrIdentity || githubPrIdentity ? { githubPrIdentity: (options.githubPrIdentity ?? githubPrIdentity) as never } : {}),
+    runtime: {
+      restartRuntime: async () => {},
+      readAccountSummary: async () => ({
+        account: {
+          email: "admin@example.com",
+          type: "chatgpt",
+          planType: "team",
+        },
+        requiresOpenaiAuth: false,
+      }),
+      readAccountRateLimits: async () => ({
+        rateLimits: null,
+        rateLimitsByLimitId: {},
+      }),
+      ...options.runtime,
+    } as never,
+    deployment: (options.deployment ?? defaultDeployment) as never,
+    ...(options.slackConversations ? { slackConversations: options.slackConversations as never } : {}),
+  });
+
+  const server = http.createServer(
+    createHttpHandler({
+      adminService,
+      config,
+    }),
+  );
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  cleanups.push(async () => {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  });
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("failed to start admin fixture");
+  }
+
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    config,
+    sessions,
+    deploymentCalls,
+    dataRoot,
+    ...(githubAuthorMappings ? { githubAuthorMappings } : {}),
+    ...(githubPrIdentity ? { githubPrIdentity } : {}),
+    ...(authProfiles ? { authProfiles } : {}),
+  };
 }

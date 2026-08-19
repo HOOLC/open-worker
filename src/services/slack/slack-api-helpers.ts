@@ -1,6 +1,4 @@
-import { logger } from "../../logger.js";
-
-import type { JsonLike, SlackImageAttachment, SlackSenderKind, SlackThreadMessage, SlackUserIdentity } from "../../types.js";
+import type { JsonLike, SlackImageAttachment, SlackSenderKind } from "../../types.js";
 
 export function parseRetryAfterMs(header: string | null): number | undefined {
   if (!header) {

@@ -18,12 +18,10 @@ import {
   DEFAULT_CLOUDFLARED_PATH,
   DEFAULT_LAUNCHD_DAEMON_DIR,
   DEFAULT_CODEX_VERSION,
-  DEFAULT_GEMINI_VERSION,
   DEFAULT_PACKAGE_INFO,
   RELEASE_METADATA_FILENAME,
   CODEX_HOME_FILE_ENTRIES,
   CODEX_HOME_DIRECTORY_ENTRIES,
-  GEMINI_HOME_FILES,
   BROKER_ENV_PASSTHROUGH_KEYS,
   readDefaultPackageInfo,
   parseArgs,
@@ -39,7 +37,6 @@ import {
   copyDirectoryResolved,
   writeTextFile,
   buildPortableCodexHome,
-  buildPortableGeminiHome,
 } from "./macos-bootstrap-helpers-1.mjs";
 import { removeLegacyLaunchAgent, writeLaunchdFiles, launchdDomain, useSudoForLaunchctl, runLaunchctl, bootout, bootstrap, kickstart } from "./macos-bootstrap-helpers-3.mjs";
 
@@ -63,7 +60,7 @@ export async function initializeRuntimeData(dataRoot) {
   await ensureDir(path.join(dataRoot, "logs", "jobs"));
   await ensureDir(path.join(dataRoot, "repos"));
   await ensureDir(path.join(dataRoot, "runtime-home"));
-  await ensureDir(path.join(dataRoot, "auth-profiles", "docker", "profiles"));
+  await ensureDir(path.join(dataRoot, "auth-profiles", "profiles"));
 }
 
 export function renderEnvFile(env) {
@@ -187,7 +184,6 @@ export function buildPaths(serviceRoot, options) {
     teamCodexHome: path.join(serviceRoot, ".data", "team-codex-home"),
     runtimeSupportRoot: path.join(serviceRoot, "runtime-support"),
     codexSupportHome: path.join(serviceRoot, "runtime-support", "codex"),
-    geminiSupportHome: path.join(serviceRoot, "runtime-support", "gemini"),
     agentsSupportHome: path.join(serviceRoot, "runtime-support", ".agents"),
     envDir: path.join(serviceRoot, "config"),
     adminEnvFile: path.join(serviceRoot, "config", "admin.env"),
@@ -266,7 +262,6 @@ export function buildAdminEnv(paths, options, seedBrokerEnv) {
     CODEX_TEAM_HOME: paths.teamCodexHome,
     CODEX_HOST_HOME_PATH: paths.codexSupportHome,
     CODEX_AUTH_JSON_PATH: path.join(paths.dataRoot, "codex-home", "auth.json"),
-    GEMINI_HOST_HOME_PATH: paths.geminiSupportHome,
     CODEX_APP_SERVER_PORT: "4590",
     ADMIN_LAUNCHD_LABEL: options.adminLabel,
     WORKER_LAUNCHD_LABEL: options.workerLabel,
@@ -309,7 +304,6 @@ export function buildWorkerEnv(paths, options, seedBrokerEnv) {
     CODEX_TEAM_HOME: paths.teamCodexHome,
     CODEX_HOST_HOME_PATH: paths.codexSupportHome,
     CODEX_AUTH_JSON_PATH: path.join(paths.dataRoot, "codex-home", "auth.json"),
-    GEMINI_HOST_HOME_PATH: paths.geminiSupportHome,
     CODEX_APP_SERVER_PORT: "4590",
     ADMIN_LAUNCHD_LABEL: options.adminLabel,
     WORKER_LAUNCHD_LABEL: options.workerLabel,
@@ -325,18 +319,16 @@ export function buildWorkerEnv(paths, options, seedBrokerEnv) {
     CURRENT_WORKER_RELEASE_PATH: paths.currentWorkerReleasePath,
     PREVIOUS_WORKER_RELEASE_PATH: paths.previousWorkerReleasePath,
     FAILED_WORKER_RELEASE_PATH: paths.failedWorkerReleasePath,
-    BROKER_GEMINI_UI_HELPER: path.join(paths.currentWorkerReleasePath, "dist", "src", "tools", "gemini-ui.js"),
   };
 }
 
 export async function installTooling(options) {
   const npmPath = options.npmPath || path.join(path.dirname(options.nodePath), "npm");
-  runCommand(npmPath, ["install", "-g", "--force", `@openai/codex@${options.codexVersion}`, `@google/gemini-cli@${options.geminiVersion}`]);
+  runCommand(npmPath, ["install", "-g", "--force", `@openai/codex@${options.codexVersion}`]);
 }
 
 export async function prepareSharedHomes(paths) {
   const sourceCodexHome = path.join(os.homedir(), ".codex");
-  const sourceGeminiHome = path.join(os.homedir(), ".gemini");
   const sourceGhConfigHome = path.join(os.homedir(), ".config", "gh");
   const sourceAgentsHome = path.join(os.homedir(), ".agents");
 
@@ -344,7 +336,6 @@ export async function prepareSharedHomes(paths) {
   await ensureDir(paths.dataRoot);
   await initializeRuntimeData(paths.dataRoot);
   await buildPortableCodexHome(sourceCodexHome, path.join(paths.dataRoot, "codex-home"));
-  await buildPortableGeminiHome(sourceGeminiHome, paths.geminiSupportHome);
   await buildPortableGhConfigHome(sourceGhConfigHome, path.join(paths.dataRoot, "runtime-home"));
   await copyDirectoryResolved(sourceAgentsHome, paths.agentsSupportHome);
 }

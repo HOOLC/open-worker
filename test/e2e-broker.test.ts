@@ -1,24 +1,10 @@
 import fs from "node:fs/promises";
 
-import http from "node:http";
-
 import os from "node:os";
 
 import path from "node:path";
 
-import { once } from "node:events";
-
-import { spawn } from "node:child_process";
-
-import { fileURLToPath } from "node:url";
-
 import { afterEach, describe, expect, it } from "vitest";
-
-import type { CodexInputItem } from "../src/services/codex/app-server-client.js";
-
-import { SessionManager } from "../src/services/session-manager.js";
-
-import { StateStore } from "../src/store/state-store.js";
 
 import type { PersistedAgentTraceEvent, PersistedInboundMessage, SlackSessionRecord } from "../src/types.js";
 

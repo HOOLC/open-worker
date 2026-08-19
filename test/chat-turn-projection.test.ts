@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { createChatTurnProjection, createChatTurnProjectionFromOutboundMessage, createChatTurnProjectionFromUploadedFile } from "../src/services/chat/chat-turn-projection.js";
 import { createFeishuTurnStateCard } from "../src/services/feishu/feishu-status-card.js";
-import { createSlackTurnStatusText } from "../src/services/slack/slack-turn-status.js";
 
 describe("chat turn projection", () => {
   it("maps logical chat turn states without platform rendering details", () => {
@@ -55,10 +54,8 @@ describe("chat turn projection", () => {
       reason: "approval needed",
     });
 
-    const slackStatus = createSlackTurnStatusText(projection);
     const feishuCard = createFeishuTurnStateCard(projection);
 
-    expect(slackStatus).toBe("Blocked... approval needed");
     expect(feishuCard).toEqual(
       expect.objectContaining({
         header: expect.objectContaining({
@@ -70,7 +67,6 @@ describe("chat turn projection", () => {
       }),
     );
     expect(typeof feishuCard).toBe("object");
-    expect(feishuCard).not.toBe(slackStatus);
   });
 
   it("projects progress, tool, and final messages into stable logical slots", () => {

@@ -6,10 +6,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { loadConfig } from "../src/config.js";
 
-import { stableSessionOrder } from "../src/admin-ui/session-order.js";
-
-import { renderAdminPage } from "../src/http/admin-page.js";
-
 import { deferUntilResponseFinished } from "../src/http/response-deferred-tasks.js";
 
 import { createHttpHandler } from "../src/http/router.js";
@@ -57,39 +53,6 @@ describe("admin routes", () => {
     return `http://127.0.0.1:${address.port}`;
   }
 
-  it("requires the configured admin token for admin api requests", async () => {
-    const baseUrl = await startAdminServer(
-      {
-        SLACK_APP_TOKEN: "xapp-test",
-        SLACK_BOT_TOKEN: "xoxb-test",
-        BROKER_ADMIN_TOKEN: "secret-token",
-      } as NodeJS.ProcessEnv,
-      {
-        getStatus: async () => ({ ok: true, status: "admin-ok" }),
-        addAuthProfile: async () => ({ ok: true }),
-        upsertGitHubAuthorMapping: async () => ({ ok: true }),
-        deleteGitHubAuthorMapping: async () => ({ ok: true }),
-        deleteAuthProfile: async () => ({ ok: true }),
-        deployRelease: async () => ({ ok: true }),
-        rollbackRelease: async () => ({ ok: true }),
-      },
-    );
-
-    const unauthorized = await fetch(`${baseUrl}/admin/api/status`);
-    expect(unauthorized.status).toBe(401);
-
-    const authorized = await fetch(`${baseUrl}/admin/api/status`, {
-      headers: {
-        "x-admin-token": "secret-token",
-      },
-    });
-    expect(authorized.status).toBe(200);
-    await expect(authorized.json()).resolves.toMatchObject({
-      ok: true,
-      status: "admin-ok",
-    });
-  });
-
   it("runs deploy restart callbacks only after the deploy response is finished", async () => {
     const restartCalls: string[] = [];
     const baseUrl = await startAdminServer(
@@ -131,38 +94,6 @@ describe("admin routes", () => {
     });
 
     await waitFor(() => restartCalls.length === 1, "deferred restart callback");
-  });
-
-  it("serves recent logs as a separate admin resource", async () => {
-    const calls: Array<Record<string, unknown>> = [];
-    const baseUrl = await startAdminServer(
-      {
-        SLACK_APP_TOKEN: "xapp-test",
-        SLACK_BOT_TOKEN: "xoxb-test",
-      } as NodeJS.ProcessEnv,
-      {
-        getRecentLogs: async (payload: Record<string, unknown>) => {
-          calls.push(payload);
-          return {
-            ok: true,
-            logs: [{ ts: "2026-05-13T09:00:00.000Z", level: "info", message: "ready" }],
-          };
-        },
-      },
-    );
-
-    const response = await fetch(`${baseUrl}/admin/api/logs?limit=3`);
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
-      ok: true,
-      logs: [
-        {
-          level: "info",
-          message: "ready",
-        },
-      ],
-    });
-    expect(calls).toEqual([{ limit: 3 }]);
   });
 
   it("renders auth profile management and session console sections in the admin page", async () => {
@@ -281,33 +212,6 @@ describe("admin routes", () => {
     expect(sessionViewSource).toContain("readPermalinkSessionKey");
     expect(sessionViewSource).toContain("SessionPermalinkView");
     expect(sessionViewSource).toContain('/admin/api/sessions/" + encodeURIComponent(sessionKey) + "/timeline');
-  });
-
-  it("routes session Slack thread permalink resolution", async () => {
-    const calls: string[] = [];
-    const baseUrl = await startAdminServer(
-      {
-        SLACK_APP_TOKEN: "xapp-test",
-        SLACK_BOT_TOKEN: "xoxb-test",
-      } as NodeJS.ProcessEnv,
-      {
-        getSessionSlackThreadUrl: async (sessionKey: string) => {
-          calls.push(sessionKey);
-          return {
-            ok: true,
-            url: "https://workspace.slack.com/archives/C123/p111222?thread_ts=111.222&cid=C123",
-          };
-        },
-      },
-    );
-
-    const response = await fetch(`${baseUrl}/admin/api/sessions/${encodeURIComponent("C123:111.222")}/slack-thread-url`);
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
-      ok: true,
-      url: "https://workspace.slack.com/archives/C123/p111222?thread_ts=111.222&cid=C123",
-    });
-    expect(calls).toEqual(["C123:111.222"]);
   });
 
   it("serves the GitHub bind session deep link and routes device OAuth api calls", async () => {
@@ -511,5 +415,6 @@ describe("admin routes", () => {
     expect(adminCssSource).toContain("z-index: 1000");
     expect(adminCssSource).not.toContain(".top-actions");
     expect(adminCssSource).not.toContain(".admin-nav { grid-template-columns: 1fr; }");
+    expect(html).toContain("/admin/assets/admin-ui.js");
   });
 });

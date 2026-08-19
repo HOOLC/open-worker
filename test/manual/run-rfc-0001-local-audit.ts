@@ -69,12 +69,7 @@ const REQUIRED_PACKAGE_SCRIPTS: ReadonlyArray<{
   { name: "rfc:feishu-audit:local", includes: "--local-only" },
   { name: "rfc:feishu-completion-audit", includes: "run-rfc-0001-completion-audit.ts" },
   { name: "rfc:feishu-test-plan", includes: "run-rfc-0001-test-plan.ts" },
-  { name: "ops:auth:real", includes: "scripts/ops/auth-real.mjs" },
   { name: "ops:auth:profiles", includes: "scripts/ops/auth-profiles.mjs" },
-  { name: "ops:ui:real", includes: "scripts/ops/auth-ui-real.mjs" },
-  { name: "ops:rollout:real", includes: "scripts/ops/rollout-real.mjs" },
-  { name: "ops:check:real", includes: "scripts/ops/check-real.mjs" },
-  { name: "ops:status:real", includes: "scripts/ops/status-real.mjs" },
 ];
 
 export const RFC0001_REQUIRED_LOCAL_IMPLEMENTATION_FILES = [
@@ -108,19 +103,14 @@ export const RFC0001_REQUIRED_LOCAL_IMPLEMENTATION_FILES = [
   "src/http/slack-routes.ts",
   "src/http/request-log-redaction.ts",
   "src/services/admin-service.ts",
-  "scripts/ops/auth-real.mjs",
-  "scripts/ops/auth-real-lib.mjs",
   "scripts/ops/auth-profiles.mjs",
-  "scripts/ops/auth-ui-real.mjs",
   "scripts/ops/lib.mjs",
-  "scripts/ops/rollout-real.mjs",
-  "scripts/ops/check-real.mjs",
-  "scripts/ops/status-real.mjs",
 ];
 
 export const RFC0001_REQUIRED_LOCAL_TEST_FILES = [
   "test/config.test.ts",
   "test/chat-routes.test.ts",
+  "test/chat-routes.e2e.test.ts",
   "test/chat-session-key.test.ts",
   "test/session-manager.test.ts",
   "test/dual-platform-runtime.test.ts",
@@ -143,7 +133,7 @@ export const RFC0001_REQUIRED_LOCAL_TEST_FILES = [
   "test/job-manager.test.ts",
   "test/job-routes.test.ts",
   "test/ops-feishu-preflight.test.ts",
-  "test/slack-routes.test.ts",
+  "test/slack-routes.e2e.test.ts",
   "test/self-regression-runner.test.ts",
   "test/rfc-0001-completion-audit.test.ts",
   "test/rfc-0001-docs.test.ts",
@@ -320,7 +310,7 @@ export const RFC0001_REQUIRED_LOCAL_EVIDENCE_PATTERNS: ReadonlyArray<{
   {
     id: "ops.redaction_rollout",
     file: "test/ops-feishu-preflight.test.ts",
-    snippets: ["summarizes platform health from admin status without copying recent logs", "sanitizes rollout preflight docker logs before writing evidence"],
+    snippets: ["summarizes platform health from admin status without copying recent logs", "sanitizes rollout preflight broker logs before writing evidence"],
   },
   {
     id: "ops.status_check_real_sanitization",
@@ -345,24 +335,14 @@ export const RFC0001_REQUIRED_LOCAL_EVIDENCE_PATTERNS: ReadonlyArray<{
     snippets: ["formats operator-facing paths without exposing full host filesystem paths", "auth.json (path redacted)", "[redacted-path] (path redacted)"],
   },
   {
-    id: "ops.auth_real_path_summarization",
-    file: "scripts/ops/auth-real-lib.mjs",
-    snippets: ["summarizeOpsDisplayPath(filePath)", "codexHome: summarizeOpsDisplayPath(codexHome)", "target: summarizeOpsDisplayPath(entry.target)"],
-  },
-  {
     id: "ops.auth_profiles_path_summarization",
     file: "scripts/ops/auth-profiles.mjs",
-    snippets: ['const sourcePath = requireOption(options.sourcePath, "--from")', "const targetPath = dockerProfilePath(paths, profileName)", "await fs.copyFile(sourcePath, targetPath)"],
-  },
-  {
-    id: "ops.auth_ui_reuses_sanitized_status",
-    file: "scripts/ops/auth-ui-real.mjs",
-    snippets: ["getAuthRealStatus", "replaceAuthInRealContainer", 'esc(payload.restartAction || "updated")'],
+    snippets: ['const sourcePath = requireOption(options.sourcePath, "--from")', "const targetPath = profilePath(paths, profileName)", "await fs.copyFile(sourcePath, targetPath)"],
   },
   {
     id: "http.generic_chat_redaction",
-    file: "test/chat-routes.test.ts",
-    snippets: ["posts Feishu rich/card messages through generic chat coordinates", "uploads Feishu inline files through generic chat coordinates"],
+    file: "test/chat-routes.e2e.test.ts",
+    snippets: ["posts Feishu card messages through generic chat coordinates", "uploads Feishu inline files through generic chat coordinates"],
   },
   {
     id: "http.request_log_redaction",

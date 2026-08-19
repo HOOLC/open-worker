@@ -1,19 +1,10 @@
-import { spawn, type ChildProcessByStdio } from "node:child_process";
-
-import fs from "node:fs/promises";
-
-import os from "node:os";
-
-import path from "node:path";
-
-import { DatabaseSync } from "node:sqlite";
+import { type ChildProcessByStdio } from "node:child_process";
 
 import type { Readable } from "node:stream";
 
-import { describe, expect, it } from "vitest";
+import { expect } from "vitest";
 
 import { CURRENT_STATE_SCHEMA_VERSION, STATE_DATABASE_FILENAME, STATE_STORE_BUSY_TIMEOUT_MS, StateStore } from "../src/store/state-store.js";
-import { readCompanionSource } from "./source-helpers.js";
 
 export const LOCK_DATABASE_SCRIPT = `
 const { DatabaseSync } = require("node:sqlite");

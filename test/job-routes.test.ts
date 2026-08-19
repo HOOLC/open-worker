@@ -1,10 +1,14 @@
-import http from "node:http";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createHttpHandler } from "../src/http/router.js";
+import { MockCodexAppServer } from "./helpers/mock-codex-app-server.js";
+import { MockSlackServer } from "./manual/mock-slack-server.js";
+import { fetchJson, getFreePort, removeTempRoot, seedBrokerSessions, startBrokerProcess } from "./e2e-broker-helpers.js";
 
-describe("job routes", () => {
+describe.sequential("job routes", () => {
   const cleanups: Array<() => Promise<void>> = [];
 
   afterEach(async () => {
@@ -14,380 +18,181 @@ describe("job routes", () => {
   });
 
   it("registers jobs with canonical platform-aware chat coordinates", async () => {
-    const calls: unknown[] = [];
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {
-          registerJob: async (payload: unknown) => {
-            calls.push(payload);
-            return {
-              id: "job-1",
-              token: "secret-token",
-              sessionKey: "feishu:b2NfZ3JvdXA:b21fcm9vdA",
-              platform: "feishu",
-              conversationId: "oc_group",
-              rootMessageId: "om_root",
-              channelId: "oc_group",
-              rootThreadTs: "om_root",
-              kind: "watch_ci",
-              shell: "sh",
-              cwd: "/tmp/workspace",
-              scriptPath: "/tmp/jobs/job-1/run.sh",
-              restartOnBoot: true,
-              status: "running",
-              createdAt: "2026-05-29T00:00:00.000Z",
-              updatedAt: "2026-05-29T00:00:00.000Z",
-            };
-          },
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    const baseUrl = await listen(server);
-    cleanups.push(() => close(server));
-
-    const response = await fetch(`${baseUrl}/jobs/register`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
+    const { baseUrl } = await startJobBroker(cleanups, [
+      {
         platform: "feishu",
         conversationId: "oc_group",
         rootMessageId: "om_root",
-        kind: "watch_ci",
-        cwd: ".",
-        script: 'node "$BROKER_JOB_HELPER" event --kind state_changed --summary done',
-        restart_on_boot: false,
-      }),
+      },
+    ]);
+
+    const response = await fetchJson(`${baseUrl}/jobs/register`, {
+      platform: "feishu",
+      conversationId: "oc_group",
+      rootMessageId: "om_root",
+      kind: "watch_ci",
+      cwd: ".",
+      script: 'node "$BROKER_JOB_HELPER" event --kind state_changed --summary done',
+      restart_on_boot: false,
     });
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
+    expect(response.body).toMatchObject({
       ok: true,
       job: {
-        id: "job-1",
         status: "running",
         platform: "feishu",
         conversationId: "oc_group",
         rootMessageId: "om_root",
         channelId: "oc_group",
         rootThreadTs: "om_root",
-      },
-    });
-    expect(calls).toEqual([
-      {
-        platform: "feishu",
-        conversationId: "oc_group",
-        rootMessageId: "om_root",
-        channelId: undefined,
-        rootThreadTs: undefined,
         kind: "watch_ci",
-        script: 'node "$BROKER_JOB_HELPER" event --kind state_changed --summary done',
-        cwd: ".",
-        shell: undefined,
         restartOnBoot: false,
       },
-    ]);
-  });
+    });
+  }, 60_000);
 
   it("keeps legacy Slack job coordinates working", async () => {
-    const calls: unknown[] = [];
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {
-          registerJob: async (payload: unknown) => {
-            calls.push(payload);
-            return {
-              id: "job-legacy",
-              token: "secret-token",
-              sessionKey: "C123:111.222",
-              platform: "slack",
-              conversationId: "C123",
-              rootMessageId: "111.222",
-              channelId: "C123",
-              rootThreadTs: "111.222",
-              kind: "watch_ci",
-              shell: "sh",
-              cwd: "/tmp/workspace",
-              scriptPath: "/tmp/jobs/job-legacy/run.sh",
-              restartOnBoot: true,
-              status: "running",
-              createdAt: "2026-05-29T00:00:00.000Z",
-              updatedAt: "2026-05-29T00:00:00.000Z",
-            };
-          },
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    const baseUrl = await listen(server);
-    cleanups.push(() => close(server));
-
-    const response = await fetch(`${baseUrl}/jobs/register`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        channel_id: "C123",
-        thread_ts: "111.222",
-        kind: "watch_ci",
-        script: "sleep 30",
-      }),
-    });
-
-    expect(response.status).toBe(200);
-    expect(calls).toEqual([
+    const { baseUrl } = await startJobBroker(cleanups, [
       {
-        platform: undefined,
-        conversationId: undefined,
-        rootMessageId: undefined,
-        channelId: "C123",
-        rootThreadTs: "111.222",
-        kind: "watch_ci",
-        script: "sleep 30",
-        cwd: undefined,
-        shell: undefined,
-        restartOnBoot: true,
-      },
-    ]);
-  });
-
-  it("accepts legacy Slack job coordinates when platform is explicitly slack", async () => {
-    const calls: unknown[] = [];
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {
-          registerJob: async (payload: unknown) => {
-            calls.push(payload);
-            return {
-              id: "job-slack",
-              token: "secret-token",
-              sessionKey: "C123:111.222",
-              platform: "slack",
-              conversationId: "C123",
-              rootMessageId: "111.222",
-              channelId: "C123",
-              rootThreadTs: "111.222",
-              kind: "watch_ci",
-              shell: "sh",
-              cwd: "/tmp/workspace",
-              scriptPath: "/tmp/jobs/job-slack/run.sh",
-              restartOnBoot: true,
-              status: "running",
-              createdAt: "2026-05-29T00:00:00.000Z",
-              updatedAt: "2026-05-29T00:00:00.000Z",
-            };
-          },
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    const baseUrl = await listen(server);
-    cleanups.push(() => close(server));
-
-    const response = await fetch(`${baseUrl}/jobs/register`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        platform: "slack",
-        channel_id: "C123",
-        thread_ts: "111.222",
-        kind: "watch_ci",
-        script: "sleep 30",
-      }),
-    });
-
-    expect(response.status).toBe(200);
-    expect(calls).toEqual([
-      {
-        platform: "slack",
-        conversationId: undefined,
-        rootMessageId: undefined,
-        channelId: "C123",
-        rootThreadTs: "111.222",
-        kind: "watch_ci",
-        script: "sleep 30",
-        cwd: undefined,
-        shell: undefined,
-        restartOnBoot: true,
-      },
-    ]);
-  });
-
-  it("documents generic job coordinates in missing-field errors", async () => {
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {} as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    const baseUrl = await listen(server);
-    cleanups.push(() => close(server));
-
-    const response = await fetch(`${baseUrl}/jobs/register`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        kind: "watch_ci",
-        script: "sleep 30",
-      }),
-    });
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
-      ok: false,
-      error: "missing_required_body",
-      required: ["platform", "conversationId (alias: conversation_id)", "rootMessageId (alias: root_message_id)", "kind", "script"],
-      legacyAliases: ["channel_id", "thread_ts"],
-    });
-  });
-
-  it("rejects invalid job platforms before missing-coordinate validation", async () => {
-    const calls: unknown[] = [];
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {
-          registerJob: async (payload: unknown) => {
-            calls.push(payload);
-            return {};
-          },
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    const baseUrl = await listen(server);
-    cleanups.push(() => close(server));
-
-    const response = await fetch(`${baseUrl}/jobs/register`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        platform: "teams",
-        kind: "watch_ci",
-        script: "sleep 30",
-      }),
-    });
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
-      ok: false,
-      error: "invalid_platform",
-      allowed: ["slack", "feishu"],
-    });
-
-    const nonStringPlatform = await fetch(`${baseUrl}/jobs/register`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        platform: 123,
         conversationId: "C123",
         rootMessageId: "111.222",
-        kind: "watch_ci",
-        script: "sleep 30",
-      }),
-    });
-    expect(nonStringPlatform.status).toBe(400);
-    await expect(nonStringPlatform.json()).resolves.toEqual({
-      ok: false,
-      error: "invalid_platform",
-      allowed: ["slack", "feishu"],
-    });
-    expect(calls).toEqual([]);
-  });
-
-  it("does not treat legacy Slack job coordinates as Feishu coordinates", async () => {
-    const calls: unknown[] = [];
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {
-          registerJob: async (payload: unknown) => {
-            calls.push(payload);
-            return {};
-          },
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    const baseUrl = await listen(server);
-    cleanups.push(() => close(server));
-
-    const response = await fetch(`${baseUrl}/jobs/register`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
       },
-      body: JSON.stringify({
-        platform: "feishu",
-        channel_id: "C123",
-        thread_ts: "111.222",
-        kind: "watch_ci",
-        script: "sleep 30",
-      }),
+    ]);
+
+    const response = await fetchJson(`${baseUrl}/jobs/register`, {
+      channel_id: "C123",
+      thread_ts: "111.222",
+      kind: "watch_ci",
+      script: "sleep 30",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      ok: true,
+      job: {
+        platform: "slack",
+        channelId: "C123",
+        rootThreadTs: "111.222",
+        restartOnBoot: true,
+      },
+    });
+  }, 60_000);
+
+  it("accepts legacy Slack job coordinates when platform is explicitly slack", async () => {
+    const { baseUrl } = await startJobBroker(cleanups, [
+      {
+        conversationId: "C123",
+        rootMessageId: "111.222",
+      },
+    ]);
+
+    const response = await fetchJson(`${baseUrl}/jobs/register`, {
+      platform: "slack",
+      channel_id: "C123",
+      thread_ts: "111.222",
+      kind: "watch_ci",
+      script: "sleep 30",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      ok: true,
+      job: {
+        platform: "slack",
+        channelId: "C123",
+        rootThreadTs: "111.222",
+      },
+    });
+  }, 60_000);
+
+  it("documents generic job coordinates in missing-field errors", async () => {
+    const { baseUrl } = await startJobBroker(cleanups);
+
+    const response = await fetchJson(`${baseUrl}/jobs/register`, {
+      kind: "watch_ci",
+      script: "sleep 30",
     });
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
+    expect(response.body).toEqual({
       ok: false,
       error: "missing_required_body",
       required: ["platform", "conversationId (alias: conversation_id)", "rootMessageId (alias: root_message_id)", "kind", "script"],
       legacyAliases: ["channel_id", "thread_ts"],
     });
-    expect(calls).toEqual([]);
-  });
+  }, 60_000);
+
+  it("rejects invalid job platforms before missing-coordinate validation", async () => {
+    const { baseUrl } = await startJobBroker(cleanups);
+
+    const response = await fetchJson(`${baseUrl}/jobs/register`, {
+      platform: "teams",
+      kind: "watch_ci",
+      script: "sleep 30",
+    });
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      ok: false,
+      error: "invalid_platform",
+      allowed: ["slack", "feishu"],
+    });
+
+    const nonStringPlatform = await fetchJson(`${baseUrl}/jobs/register`, {
+      platform: 123,
+      conversationId: "C123",
+      rootMessageId: "111.222",
+      kind: "watch_ci",
+      script: "sleep 30",
+    });
+    expect(nonStringPlatform.status).toBe(400);
+    expect(nonStringPlatform.body).toEqual({
+      ok: false,
+      error: "invalid_platform",
+      allowed: ["slack", "feishu"],
+    });
+  }, 60_000);
+
+  it("does not treat legacy Slack job coordinates as Feishu coordinates", async () => {
+    const { baseUrl } = await startJobBroker(cleanups);
+
+    const response = await fetchJson(`${baseUrl}/jobs/register`, {
+      platform: "feishu",
+      channel_id: "C123",
+      thread_ts: "111.222",
+      kind: "watch_ci",
+      script: "sleep 30",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      ok: false,
+      error: "missing_required_body",
+      required: ["platform", "conversationId (alias: conversation_id)", "rootMessageId (alias: root_message_id)", "kind", "script"],
+      legacyAliases: ["channel_id", "thread_ts"],
+    });
+  }, 60_000);
 
   it("rejects invalid job details JSON fields before delegation", async () => {
-    const calls: unknown[] = [];
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {
-          emitJobEvent: async (...args: unknown[]) => {
-            calls.push(["event", ...args]);
-            return {};
-          },
-          completeJob: async (...args: unknown[]) => {
-            calls.push(["complete", ...args]);
-            return {};
-          },
-          failJob: async (...args: unknown[]) => {
-            calls.push(["fail", ...args]);
-            return {};
-          },
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    const baseUrl = await listen(server);
-    cleanups.push(() => close(server));
+    const { baseUrl } = await startJobBroker(cleanups, [
+      {
+        conversationId: "C123",
+        rootMessageId: "111.222",
+      },
+    ]);
+    const registered = await fetchJson(`${baseUrl}/jobs/register`, {
+      channel_id: "C123",
+      thread_ts: "111.222",
+      kind: "watch_ci",
+      script: "#!/bin/sh\nsleep 30",
+    });
+    const job = registered.body.job as { id: string; token: string };
 
     const actionBodies: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
       [
         "event",
         {
-          token: "secret-token",
+          token: job.token,
           event_kind: "state_changed",
           summary: "changed",
           details_json: "{not json",
@@ -396,7 +201,7 @@ describe("job routes", () => {
       [
         "complete",
         {
-          token: "secret-token",
+          token: job.token,
           summary: "done",
           detailsJson: "{not json",
         },
@@ -404,7 +209,7 @@ describe("job routes", () => {
       [
         "fail",
         {
-          token: "secret-token",
+          token: job.token,
           summary: "failed",
           error: "failed",
           details_json: "{not json",
@@ -413,101 +218,85 @@ describe("job routes", () => {
     ];
 
     for (const [action, body] of actionBodies) {
-      const response = await fetch(`${baseUrl}/jobs/job-1/${action}`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
+      const response = await fetchJson(`${baseUrl}/jobs/${job.id}/${action}`, body);
       expect(response.status).toBe(400);
-      await expect(response.json()).resolves.toEqual({
+      expect(response.body).toEqual({
         ok: false,
         error: "invalid_json_field",
         field: "detailsJson (alias: details_json)",
       });
     }
-
-    expect(calls).toEqual([]);
-  });
+  }, 60_000);
 
   it("accepts canonical job details JSON aliases before delegation", async () => {
-    const calls: unknown[] = [];
-    const server = http.createServer(
-      createHttpHandler({
-        jobManager: {
-          completeJob: async (...args: unknown[]) => {
-            calls.push(args);
-            return {
-              id: "job-1",
-              status: "completed",
-            };
-          },
-        } as never,
-        config: {
-          serviceName: "test-broker",
-        } as never,
-      }),
-    );
-    const baseUrl = await listen(server);
-    cleanups.push(() => close(server));
-
-    const response = await fetch(`${baseUrl}/jobs/job-1/complete`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
+    const { baseUrl } = await startJobBroker(cleanups, [
+      {
+        conversationId: "C123",
+        rootMessageId: "111.222",
       },
-      body: JSON.stringify({
-        token: "secret-token",
-        summary: "done",
-        detailsJson: JSON.stringify({
-          conclusion: "success",
-        }),
+    ]);
+    const registered = await fetchJson(`${baseUrl}/jobs/register`, {
+      channel_id: "C123",
+      thread_ts: "111.222",
+      kind: "watch_ci",
+      script: "#!/bin/sh\nsleep 30",
+    });
+    const job = registered.body.job as { id: string; token: string };
+
+    const response = await fetchJson(`${baseUrl}/jobs/${job.id}/complete`, {
+      token: job.token,
+      summary: "done",
+      detailsJson: JSON.stringify({
+        conclusion: "success",
       }),
     });
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
+    expect(response.body).toMatchObject({
       ok: true,
       job: {
-        id: "job-1",
+        id: job.id,
         status: "completed",
       },
     });
-    expect(calls).toEqual([
-      [
-        "job-1",
-        "secret-token",
-        {
-          summary: "done",
-          detailsText: undefined,
-          detailsJson: {
-            conclusion: "success",
-          },
-        },
-      ],
-    ]);
-  });
+  }, 60_000);
 });
 
-async function listen(server: http.Server): Promise<string> {
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  if (!address || typeof address === "string") {
-    throw new Error("failed to bind test server");
-  }
-  return `http://127.0.0.1:${address.port}`;
-}
-
-async function close(server: http.Server): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
+async function startJobBroker(
+  cleanups: Array<() => Promise<void>>,
+  sessions: Parameters<typeof seedBrokerSessions>[1] = [],
+): Promise<{
+  readonly baseUrl: string;
+  readonly tempRoot: string;
+}> {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "job-routes-e2e-"));
+  cleanups.push(async () => {
+    await removeTempRoot(tempRoot);
   });
+  if (sessions.length > 0) {
+    await seedBrokerSessions(tempRoot, sessions);
+  }
+
+  const mockSlack = new MockSlackServer("UBOT", {
+    botId: "BBOT",
+    appId: "AAPP",
+  });
+  const mockCodex = new MockCodexAppServer();
+  const slackPort = await mockSlack.start();
+  const codexUrl = await mockCodex.start();
+  cleanups.push(async () => {
+    await mockCodex.stop();
+    await mockSlack.stop();
+  });
+  const broker = await startBrokerProcess({
+    port: await getFreePort(),
+    slackPort,
+    codexUrl,
+    tempRoot,
+  });
+  cleanups.push(() => broker.stop());
+  return {
+    baseUrl: broker.baseUrl,
+    tempRoot,
+  };
 }

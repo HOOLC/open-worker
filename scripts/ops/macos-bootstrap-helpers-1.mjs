@@ -49,8 +49,6 @@ export const DEFAULT_LAUNCHD_DAEMON_DIR = "/Library/LaunchDaemons";
 
 export const DEFAULT_CODEX_VERSION = "0.114.0";
 
-export const DEFAULT_GEMINI_VERSION = "0.33.0";
-
 export const DEFAULT_PACKAGE_INFO = readDefaultPackageInfo();
 
 export const RELEASE_METADATA_FILENAME = ".broker-release.json";
@@ -58,8 +56,6 @@ export const RELEASE_METADATA_FILENAME = ".broker-release.json";
 export const CODEX_HOME_FILE_ENTRIES = [".credentials.json", ".personality_migration", "AGENT.md", "AGENTS.md", "config.toml", "memory.md", "models_cache.json"];
 
 export const CODEX_HOME_DIRECTORY_ENTRIES = ["memories", "rules", "skills", "superpowers", "vendor_imports"];
-
-export const GEMINI_HOME_FILES = ["settings.json", "oauth_creds.json", "google_accounts.json"];
 
 export const BROKER_ENV_PASSTHROUGH_KEYS = [
   "SLACK_APP_TOKEN",
@@ -87,9 +83,6 @@ export const BROKER_ENV_PASSTHROUGH_KEYS = [
   "CODEX_APP_SERVER_URL",
   "OPENAI_API_KEY",
   "TEMPAD_LINK_SERVICE_URL",
-  "GEMINI_HTTP_PROXY",
-  "GEMINI_HTTPS_PROXY",
-  "GEMINI_ALL_PROXY",
   "BROKER_ADMIN_TOKEN",
   "ADMIN_BASE_URL",
   "GITHUB_API_BASE_URL",
@@ -134,7 +127,6 @@ export function parseArgs(argv) {
     packageVersion: DEFAULT_PACKAGE_INFO.version,
     npmRegistryUrl: undefined,
     codexVersion: DEFAULT_CODEX_VERSION,
-    geminiVersion: DEFAULT_GEMINI_VERSION,
     startWorker: false,
   };
 
@@ -197,10 +189,6 @@ export function parseArgs(argv) {
         options.codexVersion = argv[index + 1];
         index += 1;
         break;
-      case "--gemini-version":
-        options.geminiVersion = argv[index + 1];
-        index += 1;
-        break;
       case "--start-worker":
         options.startWorker = true;
         break;
@@ -249,7 +237,6 @@ export function printHelp() {
       "  --package-version <version>         Broker npm package version",
       "  --npm-registry-url <url>            Optional npm registry URL",
       "  --codex-version <version>           codex CLI version to install globally",
-      "  --gemini-version <version>          gemini CLI version to install globally",
     ].join("\n"),
   );
 }
@@ -390,16 +377,5 @@ export async function buildPortableCodexHome(sourceCodexHome, targetCodexHome) {
 
   for (const entry of CODEX_HOME_DIRECTORY_ENTRIES) {
     await copyDirectoryResolved(path.join(sourceCodexHome, entry), path.join(targetCodexHome, entry));
-  }
-}
-
-export async function buildPortableGeminiHome(sourceGeminiHome, targetGeminiHome) {
-  if (!(await fileExists(sourceGeminiHome))) {
-    return;
-  }
-
-  await ensureDir(targetGeminiHome);
-  for (const entry of GEMINI_HOME_FILES) {
-    await copyFileResolved(path.join(sourceGeminiHome, entry), path.join(targetGeminiHome, entry));
   }
 }

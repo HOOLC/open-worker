@@ -40,10 +40,6 @@ describe("loadConfig", () => {
     expect(config.diskCleanupJobProtectionMs).toBe(48 * 60 * 60 * 1000);
     expect(config.diskCleanupOldLogMs).toBe(24 * 60 * 60 * 1000);
     expect(config.brokerAdminToken).toBeUndefined();
-    expect(config.geminiHostHomePath).toBeUndefined();
-    expect(config.geminiHttpProxy).toBeUndefined();
-    expect(config.geminiHttpsProxy).toBeUndefined();
-    expect(config.geminiAllProxy).toBeUndefined();
     expect(config.isolatedMcpServers).toEqual(["linear", "notion"]);
     expect(config.codexDisabledMcpServers).toEqual(["*", "linear", "notion"]);
     expect(config.tempadLinkServiceUrl).toBeUndefined();
@@ -84,30 +80,14 @@ describe("loadConfig", () => {
     expect(config.codexHostHomePath).toBe("/host-codex-home");
   });
 
-  it("loads Gemini runtime configuration", () => {
-    const config = loadConfig({
-      SLACK_APP_TOKEN: "xapp-test",
-      SLACK_BOT_TOKEN: "xoxb-test",
-      GEMINI_HOST_HOME_PATH: "/host-gemini-home",
-      GEMINI_HTTP_PROXY: "http://host.docker.internal:6152",
-      GEMINI_HTTPS_PROXY: "http://host.docker.internal:6152",
-      GEMINI_ALL_PROXY: "socks5://host.docker.internal:6153",
-    } as NodeJS.ProcessEnv);
-
-    expect(config.geminiHostHomePath).toBe("/host-gemini-home");
-    expect(config.geminiHttpProxy).toBe("http://host.docker.internal:6152");
-    expect(config.geminiHttpsProxy).toBe("http://host.docker.internal:6152");
-    expect(config.geminiAllProxy).toBe("socks5://host.docker.internal:6153");
-  });
-
   it("loads an explicit tempad link service url override", () => {
     const config = loadConfig({
       SLACK_APP_TOKEN: "xapp-test",
       SLACK_BOT_TOKEN: "xoxb-test",
-      TEMPAD_LINK_SERVICE_URL: "http://host.docker.internal:4320",
+      TEMPAD_LINK_SERVICE_URL: "http://127.0.0.1:4320",
     } as NodeJS.ProcessEnv);
 
-    expect(config.tempadLinkServiceUrl).toBe("http://host.docker.internal:4320");
+    expect(config.tempadLinkServiceUrl).toBe("http://127.0.0.1:4320");
   });
 
   it("parses disabled MCP servers as a csv list and unions isolated MCP servers", () => {

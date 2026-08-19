@@ -1,30 +1,10 @@
-import fs from "node:fs/promises";
-
 import http from "node:http";
-
-import os from "node:os";
-
-import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { loadConfig } from "../src/config.js";
-
-import { createHttpHandler } from "../src/http/router.js";
-
-import { AdminService } from "../src/services/admin-service.js";
-
-import type { AuthProfilesStatus } from "../src/services/auth-profile-service.js";
-
 import { SessionManager } from "../src/services/session-manager.js";
 
-import { StateStore } from "../src/store/state-store.js";
-
-import type { AppConfig } from "../src/config.js";
-
-import type { PersistedAgentTraceEvent, PersistedBackgroundJob, PersistedInboundMessage } from "../src/types.js";
-
-import { seedAgentTraceFixture, seedActiveSession, inboundMessage, backgroundJob, deploymentStatus, authProfilesStatusFixture, authProfileFixture, readJson, postJson } from "./admin-control-plane.e2e-helpers.js";
+import { seedActiveSession, backgroundJob, readJson, postJson, startAdminFixture } from "./admin-control-plane.e2e-helpers.js";
 
 describe("admin control plane e2e", () => {
   const cleanups: Array<() => Promise<void>> = [];
@@ -34,123 +14,6 @@ describe("admin control plane e2e", () => {
       await cleanups.pop()?.();
     }
   });
-
-  async function startAdminFixture(options?: { readonly authProfilesStatus?: AuthProfilesStatus | undefined; readonly workerBaseUrl?: string | undefined }): Promise<{
-    readonly baseUrl: string;
-    readonly config: AppConfig;
-    readonly sessions: SessionManager;
-    readonly deploymentCalls: Array<Record<string, unknown>>;
-  }> {
-    const dataRoot = await fs.mkdtemp(path.join(os.tmpdir(), "admin-control-plane-"));
-    cleanups.push(async () => {
-      await fs.rm(dataRoot, { force: true, recursive: true });
-    });
-
-    const config = loadConfig({
-      SLACK_APP_TOKEN: "xapp-test",
-      SLACK_BOT_TOKEN: "xoxb-test",
-      DATA_ROOT: dataRoot,
-      SERVICE_ROOT: dataRoot,
-      ADMIN_LAUNCHD_LABEL: "admin.test",
-      WORKER_LAUNCHD_LABEL: "worker.test",
-      ADMIN_PLIST_PATH: path.join(dataRoot, "admin.plist"),
-      WORKER_PLIST_PATH: path.join(dataRoot, "worker.plist"),
-      ...(options?.workerBaseUrl ? { WORKER_BASE_URL: options.workerBaseUrl } : {}),
-    } as NodeJS.ProcessEnv);
-    await fs.mkdir(config.codexHome, { recursive: true });
-    await fs.mkdir(config.logDir, { recursive: true });
-
-    const stateStore = new StateStore(config.stateDir, config.sessionsRoot);
-    const sessions = new SessionManager({
-      stateStore,
-      sessionsRoot: config.sessionsRoot,
-    });
-    await sessions.load();
-    cleanups.push(async () => {
-      stateStore.close();
-    });
-
-    const deploymentCalls: Array<Record<string, unknown>> = [];
-    const adminService = new AdminService({
-      config,
-      sessions,
-      startedAt: new Date("2026-03-19T00:00:00.000Z"),
-      authProfiles: {
-        listProfilesStatus: async () =>
-          options?.authProfilesStatus ?? {
-            managedRoot: path.join(dataRoot, "auth-profiles"),
-            profilesRoot: path.join(dataRoot, "auth-profiles", "docker", "profiles"),
-            profiles: [],
-          },
-        addProfile: async () => ({ name: "profile" }),
-        deleteProfile: async () => {},
-      } as never,
-      githubAuthorMappings: {
-        load: async () => {},
-        listMappings: () => [],
-        upsertManualMapping: async () => ({}),
-        deleteMapping: async () => {},
-      } as never,
-      runtime: {
-        restartRuntime: async () => {},
-        readAccountSummary: async () => ({
-          account: {
-            email: "admin@example.com",
-            type: "chatgpt",
-            planType: "team",
-          },
-          requiresOpenaiAuth: false,
-        }),
-        readAccountRateLimits: async () => ({
-          rateLimits: null,
-          rateLimitsByLimitId: {},
-        }),
-      } as never,
-      deployment: {
-        getStatus: async () => deploymentStatus(config),
-        deploy: async ({ target, version }: { readonly target: "admin" | "worker"; readonly version: string }) => {
-          deploymentCalls.push({ kind: "deploy", target, version });
-          return deploymentStatus(config);
-        },
-        rollback: async ({ target, version }: { readonly target: "admin" | "worker"; readonly version?: string | undefined }) => {
-          deploymentCalls.push({ kind: "rollback", target, version: version ?? null });
-          return deploymentStatus(config);
-        },
-        restartWorker: async () => {},
-      } as never,
-    });
-
-    const server = http.createServer(
-      createHttpHandler({
-        adminService,
-        config,
-      }),
-    );
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    cleanups.push(async () => {
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          resolve();
-        });
-      });
-    });
-
-    const address = server.address();
-    if (!address || typeof address === "string") {
-      throw new Error("failed to start admin fixture");
-    }
-
-    return {
-      baseUrl: `http://127.0.0.1:${address.port}`,
-      config,
-      sessions,
-      deploymentCalls,
-    };
-  }
 
   it("exposes a tracked session reset operation and delegates history clearing to the worker", async () => {
     const workerPaths: string[] = [];
@@ -198,7 +61,7 @@ describe("admin control plane e2e", () => {
       throw new Error("failed to start worker fixture");
     }
 
-    const { baseUrl, sessions } = await startAdminFixture({
+    const { baseUrl, sessions } = await startAdminFixture(cleanups, {
       workerBaseUrl: `http://127.0.0.1:${address.port}`,
     });
     sessionsRef = sessions;
@@ -293,7 +156,7 @@ describe("admin control plane e2e", () => {
       throw new Error("failed to start worker fixture");
     }
 
-    const { baseUrl, sessions } = await startAdminFixture({
+    const { baseUrl, sessions } = await startAdminFixture(cleanups, {
       workerBaseUrl: `http://127.0.0.1:${address.port}`,
     });
     sessionsRef = sessions;
@@ -346,7 +209,7 @@ describe("admin control plane e2e", () => {
   });
 
   it("records deploy requests as durable admin operations with audit events", async () => {
-    const { baseUrl, deploymentCalls } = await startAdminFixture();
+    const { baseUrl, deploymentCalls } = await startAdminFixture(cleanups);
 
     const deploy = await postJson(`${baseUrl}/admin/api/deploy`, {
       target: "worker",
@@ -401,7 +264,7 @@ describe("admin control plane e2e", () => {
   });
 
   it("records refused deploy preflight checks as failed admin operations", async () => {
-    const { baseUrl, deploymentCalls, sessions } = await startAdminFixture();
+    const { baseUrl, deploymentCalls, sessions } = await startAdminFixture(cleanups);
     await seedActiveSession(sessions);
 
     const response = await fetch(`${baseUrl}/admin/api/deploy`, {

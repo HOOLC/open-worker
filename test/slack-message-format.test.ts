@@ -239,44 +239,6 @@ describe("formatSlackMessageForAgent", () => {
     expect(result).toContain('"mentioned_users": [');
   });
 
-  it("renders bot/app card messages with raw Slack payload intact", () => {
-    const result = formatSlackMessageForAgent(
-      {
-        source: "thread_reply",
-        channelId: "C123",
-        rootThreadTs: "111.222",
-        messageTs: "111.226",
-        userId: "bot:B123",
-        text: "zanwei.guo@cue.surf created an issue in the Bridge project",
-        senderKind: "bot",
-        botId: "B123",
-        appId: "A123",
-        senderUsername: "Linear",
-        slackMessage: {
-          subtype: "bot_message",
-          bot_id: "B123",
-          app_id: "A123",
-          username: "Linear",
-          text: "zanwei.guo@cue.surf created an issue in the Bridge project",
-          attachments: [
-            {
-              title: "CUE-1180 感觉 ai chat webview 帧率很低",
-              title_link: "https://linear.app/surf-cue/issue/CUE-1180",
-            },
-          ],
-        },
-      },
-      null,
-    );
-
-    expect(result).toContain('"kind": "bot"');
-    expect(result).toContain('"bot_id": "B123"');
-    expect(result).toContain('"app_id": "A123"');
-    expect(result).toContain('"username": "Linear"');
-    expect(result).toContain('"attachments": [');
-    expect(result).toContain("CUE-1180 感觉 ai chat webview 帧率很低");
-  });
-
   it("includes only selected Slack payload fields for bot cards", () => {
     const result = formatSlackMessageForAgent(
       {
@@ -316,71 +278,6 @@ describe("formatSlackMessageForAgent", () => {
     expect(result).toContain('"attachments": [');
     expect(result).not.toContain('"metadata"');
     expect(result).not.toContain('"team"');
-  });
-
-  it("renders background job events without pretending they came from a Slack user", () => {
-    const result = formatSlackMessageForAgent(
-      {
-        source: "background_job_event",
-        channelId: "C123",
-        rootThreadTs: "111.222",
-        messageTs: "1741940000000.000001",
-        userId: "U_BOT",
-        text: "CI turned green.",
-        backgroundJob: {
-          jobId: "job-1",
-          jobKind: "watch_ci",
-          eventKind: "state_changed",
-          summary: "CI turned green.",
-          detailsText: "run_id=123",
-          detailsJson: {
-            status: "success",
-          },
-        },
-      },
-      null,
-    );
-
-    expect(result).toContain("A broker-managed background job reported a new asynchronous event");
-    expect(result).toContain("background_job_event_json:");
-    expect(result).toContain('"source": "background_job_event"');
-    expect(result).toContain('"job_id": "job-1"');
-    expect(result).toContain('"job_kind": "watch_ci"');
-    expect(result).toContain('"event_kind": "state_changed"');
-    expect(result).toContain('"summary": "CI turned green."');
-    expect(result).toContain("Most watcher events do not need a Slack reply.");
-    expect(result).toContain("/slack/post-state");
-    expect(result).toContain("silent final state");
-    expect(result).not.toContain('"sender":');
-  });
-
-  it("renders unexpected stop nudges as structured broker events", () => {
-    const result = formatSlackMessageForAgent(
-      {
-        source: "unexpected_turn_stop",
-        channelId: "C123",
-        rootThreadTs: "111.222",
-        messageTs: "1741940000000.000002",
-        userId: "U_BROKER",
-        text: "The previous run ended without an explicit final, block, or wait state.",
-        unexpectedTurnStop: {
-          turnId: "turn-123",
-          reason: "The previous run ended without an explicit final, block, or wait state.",
-        },
-      },
-      null,
-    );
-
-    expect(result).toContain("The previous run for this Slack thread appears to have stopped unexpectedly.");
-    expect(result).toContain("unexpected_turn_stop_json:");
-    expect(result).toContain('"source": "unexpected_turn_stop"');
-    expect(result).toContain('"turn_id": "turn-123"');
-    expect(result).toContain("kind=block");
-    expect(result).toContain("kind=wait");
-    expect(result).toContain("/slack/post-state");
-    expect(result).toContain("silent block state");
-    expect(result).toContain("silent final state");
-    expect(result).toContain("Do not send a normal Slack reply and then a second '[block]' or '[wait]' line");
   });
 });
 

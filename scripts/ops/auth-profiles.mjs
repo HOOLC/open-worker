@@ -4,20 +4,17 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { getDataRootSource, inspectContainer } from "./lib.mjs";
-
-const DEFAULT_CONTAINER_NAME = "slack-codex-broker-real";
 const DEFAULT_PROFILE_NAME = "primary";
 
 function usage() {
   console.error(
     [
       "Usage:",
-      "  node scripts/ops/auth-profiles.mjs status [--container <name>]",
-      "  node scripts/ops/auth-profiles.mjs bootstrap [--container <name>] [--profile <name>] [--refresh-host]",
-      "  node scripts/ops/auth-profiles.mjs list [--container <name>]",
-      "  node scripts/ops/auth-profiles.mjs import --name <profile> --from <path> [--container <name>]",
-      "  node scripts/ops/auth-profiles.mjs import-host --name <profile> [--container <name>]",
+      "  DATA_ROOT=<path> node scripts/ops/auth-profiles.mjs status",
+      "  DATA_ROOT=<path> node scripts/ops/auth-profiles.mjs bootstrap [--profile <name>] [--refresh-host]",
+      "  DATA_ROOT=<path> node scripts/ops/auth-profiles.mjs list",
+      "  DATA_ROOT=<path> node scripts/ops/auth-profiles.mjs import --name <profile> --from <path>",
+      "  DATA_ROOT=<path> node scripts/ops/auth-profiles.mjs import-host --name <profile>",
     ].join("\n"),
   );
 }
@@ -34,7 +31,6 @@ function parseArgs(argv) {
   const command = args.shift();
   const positional = [];
   const options = {
-    containerName: DEFAULT_CONTAINER_NAME,
     profileName: undefined,
     sourcePath: undefined,
     refreshHost: false,
@@ -43,9 +39,6 @@ function parseArgs(argv) {
   while (args.length > 0) {
     const arg = args.shift();
     switch (arg) {
-      case "--container":
-        options.containerName = requireOption(args.shift(), "--container");
-        break;
       case "--profile":
       case "--name":
         options.profileName = requireOption(args.shift(), arg);
@@ -175,26 +168,23 @@ async function fileExists(filePath) {
   }
 }
 
-function resolvePaths(containerName) {
-  const inspect = inspectContainer(containerName);
-  const dataRootSource = getDataRootSource(inspect);
+function resolvePaths() {
+  const dataRootSource = path.resolve(process.env.DATA_ROOT?.trim() || ".data");
   const managedRoot = path.join(dataRootSource, "auth-profiles");
-  const dockerRoot = path.join(managedRoot, "docker");
+  const profilesRoot = path.join(managedRoot, "profiles");
   return {
-    containerName,
     dataRootSource,
     managedRoot,
-    dockerRoot,
-    dockerProfilesRoot: path.join(dockerRoot, "profiles"),
+    profilesRoot,
     hostManagedAuthPath: path.join(managedRoot, "host", "auth.json"),
-    legacyDockerManagedAuthPath: path.join(dockerRoot, "auth.json"),
+    legacyManagedAuthPath: path.join(managedRoot, "legacy", "auth.json"),
     hostAuthPath: path.join(os.homedir(), ".codex", "auth.json"),
-    dockerAuthPath: path.join(dataRootSource, "codex-home", "auth.json"),
+    activeAuthPath: path.join(dataRootSource, "codex-home", "auth.json"),
   };
 }
 
-function dockerProfilePath(paths, profileName) {
-  return path.join(paths.dockerProfilesRoot, `${sanitizeProfileName(profileName)}.json`);
+function profilePath(paths, profileName) {
+  return path.join(paths.profilesRoot, `${sanitizeProfileName(profileName)}.json`);
 }
 
 async function ensureHostManagedCopy(paths, refreshHost) {
@@ -207,31 +197,31 @@ async function ensureHostManagedCopy(paths, refreshHost) {
   return true;
 }
 
-async function migrateLegacyDockerProfile(paths, initialProfileName) {
-  const initialProfilePath = dockerProfilePath(paths, initialProfileName);
-  await ensureDir(paths.dockerProfilesRoot);
+async function seedInitialProfile(paths, initialProfileName) {
+  const initialProfilePath = profilePath(paths, initialProfileName);
+  await ensureDir(paths.profilesRoot);
 
   if (await fileExists(initialProfilePath)) {
     return initialProfilePath;
   }
 
-  if (await fileExists(paths.legacyDockerManagedAuthPath)) {
-    await fs.copyFile(paths.legacyDockerManagedAuthPath, initialProfilePath);
+  if (await fileExists(paths.legacyManagedAuthPath)) {
+    await fs.copyFile(paths.legacyManagedAuthPath, initialProfilePath);
     return initialProfilePath;
   }
 
-  await fs.copyFile(paths.dockerAuthPath, initialProfilePath);
+  await fs.copyFile(paths.activeAuthPath, initialProfilePath);
   return initialProfilePath;
 }
 
 async function bootstrapProfiles(options) {
-  const paths = resolvePaths(options.containerName);
+  const paths = resolvePaths();
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupDir = path.join(paths.managedRoot, "backups", stamp);
   const initialProfileName = sanitizeProfileName(options.profileName || DEFAULT_PROFILE_NAME);
 
   const copiedHost = await ensureHostManagedCopy(paths, options.refreshHost);
-  const initialProfilePath = await migrateLegacyDockerProfile(paths, initialProfileName);
+  const initialProfilePath = await seedInitialProfile(paths, initialProfileName);
 
   const hostBackup = await ensureManagedSymlink({
     linkPath: paths.hostAuthPath,
@@ -250,19 +240,18 @@ async function bootstrapProfiles(options) {
 }
 
 async function listProfiles(options) {
-  const paths = resolvePaths(options.containerName);
-  await ensureDir(paths.dockerProfilesRoot);
-  const entries = await fs.readdir(paths.dockerProfilesRoot);
+  const paths = resolvePaths();
+  await ensureDir(paths.profilesRoot);
+  const entries = await fs.readdir(paths.profilesRoot);
   const profiles = [];
   for (const entry of entries.sort()) {
     if (!entry.endsWith(".json")) {
       continue;
     }
-    profiles.push(await pathInfo(path.join(paths.dockerProfilesRoot, entry)));
+    profiles.push(await pathInfo(path.join(paths.profilesRoot, entry)));
   }
 
   return {
-    containerName: options.containerName,
     managedRoot: paths.managedRoot,
     profiles,
   };
@@ -271,9 +260,9 @@ async function listProfiles(options) {
 async function importProfile(options) {
   const profileName = sanitizeProfileName(requireOption(options.profileName, "--name"));
   const sourcePath = requireOption(options.sourcePath, "--from");
-  const paths = resolvePaths(options.containerName);
-  const targetPath = dockerProfilePath(paths, profileName);
-  await ensureDir(paths.dockerProfilesRoot);
+  const paths = resolvePaths();
+  const targetPath = profilePath(paths, profileName);
+  await ensureDir(paths.profilesRoot);
   await fs.copyFile(sourcePath, targetPath);
 
   return {
@@ -292,16 +281,15 @@ async function importHostProfile(options) {
 }
 
 async function getStatus(options) {
-  const paths = resolvePaths(options.containerName);
+  const paths = resolvePaths();
 
   return {
-    containerName: options.containerName,
     dataRootSource: paths.dataRootSource,
     managedRoot: paths.managedRoot,
     hostAuth: await pathInfo(paths.hostAuthPath),
-    dockerAuth: await pathInfo(paths.dockerAuthPath),
+    activeAuth: await pathInfo(paths.activeAuthPath),
     hostManagedAuth: await pathInfo(paths.hostManagedAuthPath),
-    dockerProfiles: await listProfiles(options),
+    profiles: await listProfiles(options),
   };
 }
 

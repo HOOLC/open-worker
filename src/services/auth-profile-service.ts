@@ -47,8 +47,8 @@ interface ParsedAuthJson {
 export class AuthProfileService {
   readonly #dataRoot: string;
   readonly #managedRoot: string;
-  readonly #dockerRoot: string;
   readonly #profilesRoot: string;
+  readonly #legacyProfilesRoot: string;
   readonly #bootstrapAuthPath: string;
   readonly #cacheTtlMs: number;
   readonly #probeCache = new Map<string, CacheEntry>();
@@ -63,8 +63,8 @@ export class AuthProfileService {
   ) {
     this.#dataRoot = path.dirname(this.options.config.stateDir);
     this.#managedRoot = path.join(this.#dataRoot, "auth-profiles");
-    this.#dockerRoot = path.join(this.#managedRoot, "docker");
-    this.#profilesRoot = path.join(this.#dockerRoot, "profiles");
+    this.#profilesRoot = path.join(this.#managedRoot, "profiles");
+    this.#legacyProfilesRoot = path.join(this.#managedRoot, "docker", "profiles");
     this.#bootstrapAuthPath = path.join(this.options.config.codexHome, "auth.json");
     this.#cacheTtlMs = this.options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
   }
@@ -149,10 +149,36 @@ export class AuthProfileService {
 
   async #ensureLayout(): Promise<void> {
     await ensureDir(this.#profilesRoot);
+    await this.#migrateLegacyLayout();
+    await ensureDir(this.#profilesRoot);
 
     const existingProfiles = await this.#listProfileFiles();
     if (existingProfiles.length === 0) {
       await this.#seedInitialProfile();
+    }
+  }
+
+  // Older layouts kept profiles under auth-profiles/docker/profiles; move
+  // them to the neutral auth-profiles/profiles root on first touch.
+  async #migrateLegacyLayout(): Promise<void> {
+    try {
+      const legacyEntries = await fs.readdir(this.#legacyProfilesRoot);
+      for (const entry of legacyEntries) {
+        if (!entry.endsWith(".json")) {
+          continue;
+        }
+        const source = path.join(this.#legacyProfilesRoot, entry);
+        const target = path.join(this.#profilesRoot, entry);
+        if (!(await fileExists(target))) {
+          await fs.rename(source, target);
+        } else {
+          await fs.rm(source, { force: true });
+        }
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
+      }
     }
   }
 

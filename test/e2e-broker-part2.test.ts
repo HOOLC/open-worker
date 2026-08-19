@@ -1,20 +1,10 @@
 import fs from "node:fs/promises";
 
-import http from "node:http";
-
 import os from "node:os";
 
 import path from "node:path";
 
-import { once } from "node:events";
-
-import { spawn } from "node:child_process";
-
-import { fileURLToPath } from "node:url";
-
 import { afterEach, describe, expect, it } from "vitest";
-
-import type { CodexInputItem } from "../src/services/codex/app-server-client.js";
 
 import { SessionManager } from "../src/services/session-manager.js";
 
@@ -39,6 +29,8 @@ import {
   readSessionRecord,
   readInboundMessages,
   readAgentTraceEvents,
+  readHasProcessedEvent,
+  readPendingSlackEvents,
   delay,
   pathExists,
   removeTempRoot,
@@ -118,14 +110,43 @@ describe.sequential("slack-codex-broker e2e", () => {
 
     await waitFor(() => mockCodex.turnsStarted.length >= 1, "first turn start");
     await waitForSessionIdle(tempRoot, "C123:111.220");
-    await expect(readSessionRecord(tempRoot, "C123:111.220")).resolves.toMatchObject({
+    const session = await readSessionRecord(tempRoot, "C123:111.220");
+    expect(session).toMatchObject({
+      key: "C123:111.220",
       channelName: "deep-review",
       channelType: "channel",
+      initiatorUserId: "U123",
+      initiatorMessageTs: "111.222",
+      workspacePath: path.join(tempRoot, "sessions", "C123-111-220", "workspace"),
     });
+    expect(session.agentSessionId).toBeTruthy();
+    expect(session.activeTurnId).toBeUndefined();
+    expect(session.lastObservedMessageTs).toBeTruthy();
+    expect(session.lastDeliveredMessageTs).toBeTruthy();
+    await expect(pathExists(session.workspacePath)).resolves.toBe(true);
+    await expect(readHasProcessedEvent(tempRoot, "evt-mention")).resolves.toBe(true);
+    await expect(readPendingSlackEvents(tempRoot)).resolves.toEqual([]);
+    const inbound = await readInboundMessages(tempRoot, "C123:111.220");
+    expect(inbound).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          messageTs: "111.222",
+          mentionedUserIds: expect.arrayContaining(["U234"]),
+          mentionedUsers: expect.arrayContaining([
+            expect.objectContaining({
+              userId: "U234",
+              displayName: "Mock Display 234",
+            }),
+          ]),
+        }),
+      ]),
+    );
     const firstTurnText = collectTextInput(mockCodex.turnsStarted[0]!.input);
     expect(firstTurnText).toContain("ROOT_CONTEXT_ABC");
     expect(firstTurnText).toContain("RECENT_CONTEXT_DEF");
     expect(firstTurnText).toContain("structured_message_json");
+    expect(firstTurnText).toContain('"source": "app_mention"');
+    expect(firstTurnText).toContain('"user_id": "U123"');
     expect(firstTurnText).toContain('"text_with_resolved_mentions": "@Mock Bot 看看 @Mock Display 234 这条 thread"');
 
     const sessionListResponse = await fetch(`${broker.baseUrl}/admin/api/sessions`);
@@ -180,6 +201,9 @@ describe.sequential("slack-codex-broker e2e", () => {
     }, "delivery of bot card payload");
     const deliveredTexts = [...mockCodex.turnsStarted.map((turn) => collectTextInput(turn.input)), ...mockCodex.steers.map((steer) => collectTextInput(steer.input))];
     const botCardText = deliveredTexts.find((text) => text.includes('"bot_id": "BLINEAR"')) ?? "";
+    expect(botCardText).toContain('"kind": "bot"');
+    expect(botCardText).toContain('"app_id": "ALINEAR"');
+    expect(botCardText).toContain('"username": "Linear"');
     expect(botCardText).toContain('"attachments"');
     expect(botCardText).toContain("https://linear.app/cue/issue/CUE-1180");
   }, 90_000);
@@ -322,6 +346,9 @@ describe.sequential("slack-codex-broker e2e", () => {
     const deliveredTexts = [...mockCodex.turnsStarted.slice(1).map((turn) => collectTextInput(turn.input)), ...mockCodex.steers.map((steer) => collectTextInput(steer.input))];
     const recoveredText = deliveredTexts.find((text) => text.includes("recovered_message_batch_json")) ?? "";
     expect(recoveredText).toContain("recovered_message_batch_json");
+    expect(recoveredText).toContain("The broker server restarted or reconnected.");
+    expect(recoveredText).toContain('"source": "recovered_thread_batch"');
+    expect(recoveredText).toContain('"recovery_kind": "missed_thread_messages"');
     expect(recoveredText).toContain("漏掉的第一条");
     expect(recoveredText).toContain("漏掉的第二条");
     expect(recoveredText).toContain('"batch_message_count": 2');

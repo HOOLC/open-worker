@@ -2,29 +2,23 @@ import fs from "node:fs/promises";
 
 import http from "node:http";
 
-import os from "node:os";
-
 import path from "node:path";
 
 import { once } from "node:events";
 
 import { spawn } from "node:child_process";
 
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { CodexInputItem } from "../src/services/codex/app-server-client.js";
-
 import { SessionManager } from "../src/services/session-manager.js";
-
+import type { ChatPlatform } from "../src/services/chat/chat-types.js";
+import type { CodexInputItem } from "../src/services/codex/app-server-client.js";
 import { StateStore } from "../src/store/state-store.js";
-
-import type { PersistedAgentTraceEvent, PersistedInboundMessage, SlackSessionRecord } from "../src/types.js";
+import type { PersistedAgentTraceEvent, PersistedAgentTurnUsage, PersistedBackgroundJob, PersistedInboundMessage, SlackSessionRecord } from "../src/types.js";
 
 import { MockCodexAppServer } from "./helpers/mock-codex-app-server.js";
-
-import { MockSlackServer } from "./manual/mock-slack-server.js";
 
 export const brokerRoot = path.dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 
@@ -32,12 +26,38 @@ export const DEFAULT_E2E_TIMEOUT_MS = 30_000;
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
-export async function startBrokerProcess(options: { readonly port: number; readonly slackPort: number; readonly codexUrl: string; readonly tempRoot: string; readonly extraEnv?: Record<string, string> }): Promise<{
+export const FEISHU_E2E_APP_ID = "cli_0123456789abcdef";
+export const FEISHU_E2E_APP_SECRET = "feishu-e2e-secret";
+export const FEISHU_E2E_BOT_OPEN_ID = "ou_bot";
+
+export function feishuE2eSdkRegisterUrl(): string {
+  return pathToFileURL(path.join(brokerRoot, "test/helpers/mock-feishu-sdk-register.mjs")).href;
+}
+
+export function createFeishuE2eEnv(feishuPort: number, extra?: Record<string, string>): Record<string, string> {
+  return {
+    FEISHU_ENABLED: "true",
+    FEISHU_APP_ID: FEISHU_E2E_APP_ID,
+    FEISHU_APP_SECRET: FEISHU_E2E_APP_SECRET,
+    FEISHU_BOT_OPEN_ID: FEISHU_E2E_BOT_OPEN_ID,
+    FEISHU_GROUP_MESSAGE_MODE: "all",
+    FEISHU_ALL_MESSAGE_DELIVERY_VERIFIED: "true",
+    FEISHU_STARTUP_REQUIRED: "true",
+    LOG_LEVEL: "debug",
+    FEISHU_MOCK_ORIGIN: `http://127.0.0.1:${feishuPort}`,
+    FEISHU_MOCK_WS_URL: `ws://127.0.0.1:${feishuPort}/socket`,
+    ...extra,
+  };
+}
+
+export async function startBrokerProcess(options: { readonly port: number; readonly slackPort: number; readonly codexUrl: string; readonly tempRoot: string; readonly extraEnv?: Record<string, string> | undefined; readonly nodeImports?: readonly string[] | undefined }): Promise<{
   readonly baseUrl: string;
   readonly stop: () => Promise<void>;
   readonly logs: readonly string[];
 }> {
   const logs: string[] = [];
+  const importOption = (options.nodeImports ?? []).map((specifier) => `--import ${specifier}`).join(" ");
+  const nodeOptions = [options.extraEnv?.NODE_OPTIONS ?? process.env.NODE_OPTIONS, importOption].filter((value) => Boolean(value)).join(" ");
   const child = spawn("pnpm", ["exec", "tsx", "src/index.ts"], {
     cwd: brokerRoot,
     env: {
@@ -49,6 +69,7 @@ export async function startBrokerProcess(options: { readonly port: number; reado
       SLACK_SOCKET_OPEN_URL: "apps.connections.open",
       SLACK_INITIAL_THREAD_HISTORY_COUNT: "8",
       SLACK_HISTORY_API_MAX_LIMIT: "50",
+      FEISHU_ENABLED: options.extraEnv?.FEISHU_ENABLED ?? "false",
       STATE_DIR: path.join(options.tempRoot, "state"),
       SESSIONS_ROOT: path.join(options.tempRoot, "sessions"),
       REPOS_ROOT: path.join(options.tempRoot, "repos"),
@@ -59,6 +80,7 @@ export async function startBrokerProcess(options: { readonly port: number; reado
       BROKER_HTTP_BASE_URL: `http://127.0.0.1:${options.port}`,
       CODEX_APP_SERVER_URL: options.codexUrl,
       DEBUG: "1",
+      ...(nodeOptions ? { NODE_OPTIONS: nodeOptions } : {}),
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -213,6 +235,117 @@ export async function readAgentTraceEvents(tempRoot: string, sessionKey: string)
   }
 }
 
+export async function readAgentTurnUsage(tempRoot: string): Promise<PersistedAgentTurnUsage[]> {
+  const store = new StateStore(path.join(tempRoot, "state"), path.join(tempRoot, "sessions"));
+  await store.load();
+  try {
+    return store.listAgentTurnUsage();
+  } finally {
+    store.close();
+  }
+}
+
+export async function readBackgroundJobs(tempRoot: string, sessionKey?: string): Promise<PersistedBackgroundJob[]> {
+  const store = new StateStore(path.join(tempRoot, "state"), path.join(tempRoot, "sessions"));
+  await store.load();
+  try {
+    return store.listBackgroundJobs(sessionKey ? { sessionKey } : undefined);
+  } finally {
+    store.close();
+  }
+}
+
+export async function seedBrokerSessions(
+  tempRoot: string,
+  sessions: ReadonlyArray<{
+    readonly platform?: ChatPlatform | undefined;
+    readonly conversationId: string;
+    readonly rootMessageId: string;
+  }>,
+): Promise<void> {
+  await fs.mkdir(path.join(tempRoot, "state"), { recursive: true });
+  await fs.mkdir(path.join(tempRoot, "sessions"), { recursive: true });
+  const store = new StateStore(path.join(tempRoot, "state"), path.join(tempRoot, "sessions"));
+  const manager = new SessionManager({
+    stateStore: store,
+    sessionsRoot: path.join(tempRoot, "sessions"),
+  });
+  await manager.load();
+  try {
+    for (const session of sessions) {
+      const platform = session.platform ?? "slack";
+      if (platform === "slack") {
+        await manager.ensureSession(session.conversationId, session.rootMessageId);
+      } else {
+        await manager.ensureChatSession({
+          platform,
+          conversationId: session.conversationId,
+          rootMessageId: session.rootMessageId,
+        });
+      }
+    }
+  } finally {
+    store.close();
+  }
+}
+
+export async function writeGitHubPrBinding(
+  tempRoot: string,
+  binding: {
+    readonly slackUserId: string;
+    readonly githubLogin: string;
+    readonly githubUserId: number;
+    readonly token: string;
+    readonly githubEmail?: string | undefined;
+    readonly githubName?: string | undefined;
+    readonly scopes?: readonly string[] | undefined;
+    readonly revokedAt?: string | undefined;
+  },
+): Promise<void> {
+  const bindingsDir = path.join(tempRoot, "state", "github-pr-identities", "bindings");
+  await fs.mkdir(bindingsDir, { recursive: true });
+  const now = new Date().toISOString();
+  const fileName = `${encodeURIComponent(binding.slackUserId).replaceAll("%", "_")}.json`;
+  await fs.writeFile(
+    path.join(bindingsDir, fileName),
+    `${JSON.stringify(
+      {
+        slackUserId: binding.slackUserId,
+        githubLogin: binding.githubLogin,
+        githubUserId: binding.githubUserId,
+        token: binding.token,
+        ...(binding.githubEmail ? { githubEmail: binding.githubEmail } : {}),
+        ...(binding.githubName ? { githubName: binding.githubName } : {}),
+        scopes: binding.scopes ?? ["repo"],
+        createdAt: now,
+        updatedAt: now,
+        ...(binding.revokedAt ? { revokedAt: binding.revokedAt } : {}),
+      },
+      null,
+      2,
+    )}\n`,
+    { mode: 0o600 },
+  );
+}
+
+export async function withStateStore<T>(tempRoot: string, fn: (store: StateStore) => Promise<T> | T): Promise<T> {
+  const store = new StateStore(path.join(tempRoot, "state"), path.join(tempRoot, "sessions"));
+  await store.load();
+  try {
+    return await fn(store);
+  } finally {
+    store.close();
+  }
+}
+
+export async function readHasProcessedEvent(tempRoot: string, eventId: string): Promise<boolean> {
+  return await withStateStore(tempRoot, (store) => store.hasProcessedEvent(eventId));
+}
+
+export async function readPendingSlackEvents(tempRoot: string) {
+  return await withStateStore(tempRoot, (store) => store.listPendingSlackEvents());
+}
+
 export async function delay(timeoutMs: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, timeoutMs));
 }
@@ -271,17 +404,69 @@ export function findStartedTurnTextContaining(mockCodex: MockCodexAppServer, nee
 }
 
 export async function postJson(url: string, payload: Record<string, unknown>): Promise<void> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${url}: ${await response.text()}`);
+  const response = await fetchJson(url, payload);
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`HTTP ${response.status} for ${url}: ${JSON.stringify(response.body)}`);
   }
+}
+
+export async function fetchJson(
+  url: string,
+  payload?: Record<string, unknown>,
+  options?: {
+    readonly method?: string;
+    readonly headers?: Record<string, string>;
+  },
+): Promise<{
+  readonly status: number;
+  readonly body: Record<string, unknown>;
+}> {
+  const response = await fetch(url, {
+    method: options?.method ?? (payload ? "POST" : "GET"),
+    headers: {
+      ...(payload ? { "content-type": "application/json" } : {}),
+      ...options?.headers,
+    },
+    ...(payload ? { body: JSON.stringify(payload) } : {}),
+  });
+  const text = await response.text();
+  return {
+    status: response.status,
+    body: text ? (JSON.parse(text) as Record<string, unknown>) : {},
+  };
+}
+
+export async function runTsxTool(options: { readonly script: string; readonly cwd: string; readonly args?: readonly string[]; readonly env?: Record<string, string> }): Promise<{
+  readonly status: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}> {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(path.join(brokerRoot, "node_modules/.bin/tsx"), [options.script, ...(options.args ?? [])], {
+      cwd: options.cwd,
+      env: {
+        ...process.env,
+        ...options.env,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      resolve({
+        status: code ?? 1,
+        stdout,
+        stderr,
+      });
+    });
+  });
 }
 
 export function createDeferred<T>(): {

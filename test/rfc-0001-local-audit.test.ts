@@ -15,12 +15,7 @@ const requiredScripts = {
   "rfc:feishu-audit:local": "tsx test/manual/run-rfc-0001-local-audit.ts -- --local-only",
   "rfc:feishu-completion-audit": "tsx test/manual/run-rfc-0001-completion-audit.ts",
   "rfc:feishu-test-plan": "tsx test/manual/run-rfc-0001-test-plan.ts",
-  "ops:auth:real": "node scripts/ops/auth-real.mjs",
   "ops:auth:profiles": "node scripts/ops/auth-profiles.mjs",
-  "ops:ui:real": "node scripts/ops/auth-ui-real.mjs",
-  "ops:rollout:real": "node scripts/ops/rollout-real.mjs",
-  "ops:check:real": "node scripts/ops/check-real.mjs",
-  "ops:status:real": "node scripts/ops/status-real.mjs",
 };
 
 describe("RFC 0001 local audit", () => {
@@ -434,11 +429,11 @@ describe("RFC 0001 local audit", () => {
 
   it("fails local readiness when ops auth path-safety slices drift", async () => {
     const repo = await createFixtureRepo({
-      omitEvidenceProbe: "ops.auth_real_path_summarization",
-      omitFiles: ["scripts/ops/auth-profiles.mjs", "scripts/ops/auth-ui-real.mjs"],
+      omitEvidenceProbe: "ops.auth_profiles_path_summarization",
+      omitFiles: ["scripts/ops/auth-profiles.mjs"],
       scripts: {
         ...requiredScripts,
-        "ops:ui:real": "node scripts/ops/auth-ui-legacy.mjs",
+        "ops:auth:profiles": "node scripts/ops/auth-profiles-legacy.mjs",
       },
     });
     const report = await collectRfc0001LocalAudit({
@@ -453,17 +448,17 @@ describe("RFC 0001 local audit", () => {
         expect.objectContaining({
           id: "local.implementation_surfaces",
           status: "missing",
-          evidence: expect.arrayContaining(["missing=scripts/ops/auth-profiles.mjs", "missing=scripts/ops/auth-ui-real.mjs"]),
+          evidence: expect.arrayContaining(["missing=scripts/ops/auth-profiles.mjs"]),
         }),
         expect.objectContaining({
           id: "local.behavior_evidence",
           status: "missing",
-          evidence: expect.arrayContaining([expect.stringContaining("ops.auth_real_path_summarization:scripts/ops/auth-real-lib.mjs:missing_snippet="), "ops.auth_profiles_path_summarization:scripts/ops/auth-profiles.mjs:missing_file", "ops.auth_ui_reuses_sanitized_status:scripts/ops/auth-ui-real.mjs:missing_file"]),
+          evidence: expect.arrayContaining(["ops.auth_profiles_path_summarization:scripts/ops/auth-profiles.mjs:missing_file"]),
         }),
         expect.objectContaining({
           id: "local.package_scripts",
           status: "missing",
-          evidence: expect.arrayContaining(["ops:ui:real=missing_or_unexpected"]),
+          evidence: expect.arrayContaining(["ops:auth:profiles=missing_or_unexpected"]),
         }),
       ]),
     );

@@ -1,17 +1,10 @@
-import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
-import { buildAdminSessionUrl } from "../../admin-session-url.js";
 import type { AppConfig } from "../../config.js";
-import { logger } from "../../logger.js";
 import { SessionManager } from "../session-manager.js";
-import type { BackgroundJobEventPayload, PersistedInboundMessage, ResolvedSlackThreadMessage, SlackInputMessage, SlackSessionRecord, SlackThreadMessage, SlackTurnSignalKind } from "../../types.js";
+import type { SlackInputMessage, SlackSessionRecord } from "../../types.js";
 import type { AgentRuntime, AgentRuntimeEvent } from "../agent-runtime/types.js";
 import { isAuthProfileUnavailableError, type AuthProfileUnavailableError } from "../agent-runtime/session-auth-profile-runtime.js";
-import { isAuthProfileProbeFailureReason } from "../session-auth-profile-selector.js";
 import { AgentTraceRecorder } from "../agent-runtime/agent-trace-recorder.js";
-import { SlackApi, isSlackRateLimitError, type SlackUploadedFile } from "./slack-api.js";
+import { SlackApi } from "./slack-api.js";
 import { SlackAssistantStatusController } from "./slack-assistant-status.js";
 import { createSlackInputFromThreadMessage, isSlackMessageEffectivelyEmpty, parseSlackTextMetadata } from "./slack-event-parser.js";
 import {
@@ -34,12 +27,9 @@ import {
   shouldAutoRecoverSession,
 } from "./slack-conversation-utils.js";
 import { SlackInboundStore } from "./slack-inbound-store.js";
-import { formatSlackHistoryContextForAgent } from "./slack-message-format.js";
-import { markdownishToMrkdwn } from "./slack-mrkdwn.js";
 import { SlackSelfMessageFilter } from "./slack-self-filter.js";
 import { SlackCoauthorService } from "./slack-coauthor-service.js";
 import type { GitHubPrIdentityService } from "../github-pr-identity-service.js";
-import { planCompletedTurnDisposition } from "./slack-turn-disposition.js";
 import { SlackTurnReconciler } from "./slack-turn-reconciler.js";
 import { SlackTurnRunner } from "./slack-turn-runner.js";
 

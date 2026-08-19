@@ -29,25 +29,6 @@ export function runCommand(command, args, options = {}) {
   return capture ? result.stdout.trim() : "";
 }
 
-export function inspectContainer(containerName) {
-  const raw = runCommand("docker", ["inspect", containerName], { capture: true });
-  const parsed = JSON.parse(raw);
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    throw new Error(`Container ${containerName} not found`);
-  }
-
-  return parsed[0];
-}
-
-export function getDataRootSource(inspect) {
-  const mount = (inspect.Mounts ?? []).find((item) => item.Destination === "/app/.data");
-  if (!mount?.Source) {
-    throw new Error("Could not resolve /app/.data mount source from container inspect");
-  }
-
-  return mount.Source;
-}
-
 export function getEnvObjectFromInspect(inspect) {
   const env = {};
   for (const entry of inspect.Config?.Env ?? []) {
@@ -89,7 +70,7 @@ const SECRET_LIKE_OPS_COMMAND_ERROR_VALUE = /\b(?:xox[abprs]-[A-Za-z0-9_-]+|xapp
 const SENTINEL_LIKE_OPS_PATH_VALUE = /\b[A-Z0-9_]*(?:SECRET|BODY|PAYLOAD)[A-Z0-9_]*\b/u;
 const SENTINEL_LIKE_OPS_COMMAND_ERROR_VALUE = /\b[A-Z0-9_]*(?:SECRET|BODY|PAYLOAD)[A-Z0-9_]*\b/gu;
 const OPS_SAFE_COMMAND_ERROR_LITERALS = ["FEISHU_APP_SECRET"];
-const OPS_SAFE_DOCKER_TEXT_LOG_MARKERS = ["Codex app-server client connected", "Connected to Slack Socket Mode", "Service booted", "event-dispatch is ready"];
+const OPS_SAFE_TEXT_LOG_MARKERS = ["Codex app-server client connected", "Connected to Slack Socket Mode", "Service booted", "event-dispatch is ready"];
 const OPS_SAFE_LOG_META_FIELDS = new Set([
   "ackDurationMs",
   "attempt",
@@ -186,16 +167,6 @@ function sanitizeHealthToken(value) {
   return typeof value === "string" && SAFE_HEALTH_TOKEN.test(value) ? value : undefined;
 }
 
-export function getPublishedPort(inspect, containerPort = "3000/tcp") {
-  const bindings = inspect.NetworkSettings?.Ports?.[containerPort] ?? inspect.HostConfig?.PortBindings?.[containerPort];
-  const firstBinding = Array.isArray(bindings) ? bindings[0] : undefined;
-  if (!firstBinding?.HostPort) {
-    throw new Error(`Could not resolve published port for ${containerPort}`);
-  }
-
-  return Number(firstBinding.HostPort);
-}
-
 export function summarizeOpsHostPath(filePath) {
   const basename = sanitizeOpsPathBasename(filePath);
   return withoutUndefined({
@@ -223,12 +194,12 @@ export function summarizeOpsDisplayPath(filePath) {
   return hostPath.basename ? `${hostPath.basename} (path redacted)` : undefined;
 }
 
-export function sanitizeOpsDockerLogsForEvidence(text) {
+export function sanitizeOpsLogsForEvidence(text) {
   const lines =
     readString(text)
       ?.split(/\r?\n/u)
       .filter((line) => line.trim()) ?? [];
-  return lines.map((line) => JSON.stringify(sanitizeOpsDockerLogLine(line))).join("\n") + (lines.length > 0 ? "\n" : "");
+  return lines.map((line) => JSON.stringify(sanitizeOpsLogLine(line))).join("\n") + (lines.length > 0 ? "\n" : "");
 }
 
 function formatCommandForError(command, args) {
@@ -277,109 +248,6 @@ function sanitizeOpsMetadataValue(value) {
   return value;
 }
 
-export async function readSessionStatsFromHost(dataRootSource) {
-  const sessionsDir = path.join(dataRootSource, "state", "sessions");
-  try {
-    const entries = await fsp.readdir(sessionsDir);
-    let activeCount = 0;
-    let sessionCount = 0;
-    for (const entry of entries) {
-      if (!entry.endsWith(".json")) {
-        continue;
-      }
-
-      sessionCount += 1;
-      const record = JSON.parse(await fsp.readFile(path.join(sessionsDir, entry), "utf8"));
-      if (record.activeTurnId) {
-        activeCount += 1;
-      }
-    }
-
-    return {
-      activeCount,
-      sessionCount,
-    };
-  } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-      return {
-        activeCount: 0,
-        sessionCount: 0,
-      };
-    }
-
-    throw error;
-  }
-}
-
-function toMountArg(mount) {
-  const type = mount.Type ?? "bind";
-  const source = type === "volume" ? (mount.Name ?? mount.Source) : mount.Source;
-  if (!source || !mount.Destination) {
-    throw new Error(`Unsupported mount: ${JSON.stringify(mount)}`);
-  }
-
-  const parts = [`type=${type}`, `src=${source}`, `dst=${mount.Destination}`];
-  if (mount.RW === false) {
-    parts.push("readonly");
-  }
-
-  return `--mount=${parts.join(",")}`;
-}
-
-function toPortArgs(inspect) {
-  const bindings = inspect.HostConfig?.PortBindings ?? {};
-  return Object.entries(bindings).flatMap(([containerPort, hostBindings]) => {
-    if (!Array.isArray(hostBindings)) {
-      return [];
-    }
-
-    const containerPortNumber = containerPort.split("/")[0];
-    return hostBindings.map((binding) => {
-      const prefix = binding.HostIp ? `${binding.HostIp}:` : "";
-      return `-p=${prefix}${binding.HostPort}:${containerPortNumber}`;
-    });
-  });
-}
-
-export async function writeEnvFileFromInspect(inspect, filePath) {
-  const ignoredEnvKeys = new Set(["HOSTNAME"]);
-  const envLines = (inspect.Config?.Env ?? []).filter((entry) => {
-    const [key] = entry.split("=", 1);
-    return !ignoredEnvKeys.has(key);
-  });
-  await fsp.writeFile(filePath, `${envLines.join("\n")}\n`);
-}
-
-export function getRestartPolicy(inspect) {
-  return inspect.HostConfig?.RestartPolicy?.Name || "unless-stopped";
-}
-
-export function getRunArgumentsFromInspect(inspect) {
-  return {
-    mountArgs: (inspect.Mounts ?? []).map(toMountArg),
-    portArgs: toPortArgs(inspect),
-    restartPolicy: getRestartPolicy(inspect),
-  };
-}
-
-export async function createTempEnvFile(inspect) {
-  const tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), "slack-codex-broker-rollout-"));
-  const envFile = path.join(tempDir, "container.env");
-  await writeEnvFileFromInspect(inspect, envFile);
-  return {
-    envFile,
-    cleanup: async () => {
-      await fsp.rm(tempDir, { recursive: true, force: true });
-    },
-  };
-}
-
-export function dockerExecNode(containerName, source) {
-  return runCommand("docker", ["exec", containerName, "node", "-e", source], {
-    capture: true,
-  });
-}
-
 function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -403,133 +271,6 @@ async function retryUntil(label, operation, options = {}) {
 
   const reason = lastError instanceof Error ? lastError.message : String(lastError);
   throw new Error(`${label} did not succeed within ${timeoutMs}ms: ${reason}`);
-}
-
-export async function checkContainer(containerName, options = {}) {
-  const inspect = inspectContainer(containerName);
-  const status = inspect.State?.Status;
-  if (status !== "running") {
-    throw new Error(`Container ${containerName} is not running (status=${status ?? "unknown"})`);
-  }
-
-  const hostPort = getPublishedPort(inspect);
-  const healthPayload = await retryUntil(
-    "host health check",
-    async () => {
-      const healthResponse = await fetch(`http://127.0.0.1:${hostPort}/`);
-      if (!healthResponse.ok) {
-        throw new Error(`Health endpoint returned ${healthResponse.status}`);
-      }
-
-      const payload = await healthResponse.json();
-      if (!payload?.ok) {
-        throw new Error(`Unexpected health payload: ${JSON.stringify(payload)}`);
-      }
-
-      return payload;
-    },
-    options,
-  );
-
-  const adminStatus = await retryUntil(
-    "admin platform status check",
-    async () => {
-      const statusResponse = await fetch(`http://127.0.0.1:${hostPort}/admin/api/status`, {
-        headers: getAdminHeadersFromInspect(inspect),
-      });
-      if (!statusResponse.ok) {
-        throw new Error(`Admin status endpoint returned ${statusResponse.status}`);
-      }
-
-      const payload = await statusResponse.json();
-      if (!payload?.platforms) {
-        throw new Error(`Unexpected admin status payload: ${JSON.stringify(payload)}`);
-      }
-
-      return payload;
-    },
-    options,
-  );
-  const platformHealth = summarizePlatformHealth(adminStatus);
-
-  const readyPayload = await retryUntil(
-    "embedded Codex readyz check",
-    async () =>
-      dockerExecNode(
-        containerName,
-        [
-          'fetch("http://127.0.0.1:4590/readyz")',
-          "  .then(async (response) => {",
-          "    const text = await response.text();",
-          "    console.log(JSON.stringify({ status: response.status, body: text }));",
-          "    if (!response.ok) process.exit(1);",
-          "  })",
-          "  .catch((error) => {",
-          "    console.error(error.stack || String(error));",
-          "    process.exit(1);",
-          "  });",
-        ].join("\n"),
-      ),
-    options,
-  );
-
-  const fileChecks = JSON.parse(
-    dockerExecNode(
-      containerName,
-      [
-        "const fs = require('fs');",
-        "const checks = [",
-        "  '/app/.data/codex-home/AGENT.md',",
-        "  '/app/.data/codex-home/config.toml',",
-        "  '/app/.data/runtime-home/.codex/AGENT.md',",
-        "  '/app/.data/state/sessions',",
-        "  '/app/.data/state/inbound-messages',",
-        "  '/app/.data/state/background-jobs',",
-        "  '/app/.data/repos',",
-        "  '/app/.data/sessions'",
-        "];",
-        "const result = Object.fromEntries(checks.map((item) => [item, fs.existsSync(item)]));",
-        "result.runtimeAgentLink = fs.readlinkSync('/app/.data/runtime-home/.codex/AGENT.md');",
-        "console.log(JSON.stringify(result));",
-      ].join("\n"),
-    ),
-  );
-
-  const missing = Object.entries(fileChecks)
-    .filter(([key, value]) => key !== "runtimeAgentLink" && value !== true)
-    .map(([key]) => key);
-  if (missing.length > 0) {
-    throw new Error(`Missing expected runtime paths: ${missing.join(", ")}`);
-  }
-
-  await retryUntil(
-    "startup log markers",
-    async () => {
-      const logs = runCommand("docker", ["logs", "--tail", String(options.logsTail ?? 200), containerName], {
-        capture: true,
-      });
-      const requiredLogMarkers = ["Codex app-server client connected", "Connected to Slack Socket Mode", "Service booted"];
-      const missingMarkers = requiredLogMarkers.filter((marker) => !logs.includes(marker));
-      if (missingMarkers.length > 0) {
-        throw new Error(`Missing expected log markers: ${missingMarkers.join(", ")}`);
-      }
-    },
-    options,
-  );
-
-  const dataRootSource = getDataRootSource(inspect);
-  const sessionStats = await readSessionStatsFromHost(dataRootSource);
-
-  return {
-    containerName,
-    hostPort,
-    dataRootSource: summarizeOpsHostPath(dataRootSource),
-    sessionStats,
-    healthPayload,
-    platformHealth,
-    readyPayload: JSON.parse(readyPayload),
-    runtimeAgentLink: fileChecks.runtimeAgentLink,
-  };
 }
 
 export async function writeRolloutMetadata(directory, payload) {
@@ -703,12 +444,12 @@ function sanitizeOpsBrokerLogRecord(record) {
   });
 }
 
-function sanitizeOpsDockerLogLine(line) {
+function sanitizeOpsLogLine(line) {
   const trimmed = line.trim();
   try {
     return sanitizeOpsBrokerLogRecord(JSON.parse(trimmed));
   } catch {
-    // Docker logs may include the human console formatter rather than JSONL.
+    // Raw logs may include the human console formatter rather than JSONL.
   }
 
   const textRecord = parseOpsTextLogLine(trimmed);
@@ -716,10 +457,10 @@ function sanitizeOpsDockerLogLine(line) {
     return textRecord;
   }
 
-  const marker = OPS_SAFE_DOCKER_TEXT_LOG_MARKERS.find((candidate) => trimmed.includes(candidate));
+  const marker = OPS_SAFE_TEXT_LOG_MARKERS.find((candidate) => trimmed.includes(candidate));
   return withoutUndefined({
     type: "log_text_redacted",
-    message: marker ?? "non-structured docker log line redacted",
+    message: marker ?? "non-structured log line redacted",
     length: trimmed.length,
   });
 }

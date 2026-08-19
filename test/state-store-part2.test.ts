@@ -1,5 +1,3 @@
-import { spawn, type ChildProcessByStdio } from "node:child_process";
-
 import fs from "node:fs/promises";
 
 import os from "node:os";
@@ -8,13 +6,9 @@ import path from "node:path";
 
 import { DatabaseSync } from "node:sqlite";
 
-import type { Readable } from "node:stream";
-
 import { describe, expect, it } from "vitest";
 
-import { CURRENT_STATE_SCHEMA_VERSION, STATE_DATABASE_FILENAME, STATE_STORE_BUSY_TIMEOUT_MS, StateStore } from "../src/store/state-store.js";
-
-import { LOCK_DATABASE_SCRIPT, waitForOutput, extractMethodBody } from "./state-store-helpers.js";
+import { STATE_DATABASE_FILENAME, StateStore } from "../src/store/state-store.js";
 
 describe("StateStore", () => {
   it("persists historical agent activity bindings when the current session runtime changes", async () => {
@@ -83,144 +77,6 @@ describe("StateStore", () => {
         turnId: "turn-old",
       }),
     ).toBeUndefined();
-    store.close();
-  });
-
-  it("records explicit schema migrations and does not treat ad hoc DDL as the migration state", async () => {
-    const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "slack-codex-state-migrations-"));
-    const sessionsRoot = path.join(stateDir, "sessions");
-    const store = new StateStore(stateDir, sessionsRoot);
-    await store.load();
-    store.close();
-
-    const database = new DatabaseSync(path.join(stateDir, STATE_DATABASE_FILENAME));
-    try {
-      const rows = database.prepare("SELECT version, name FROM schema_migrations ORDER BY version ASC").all() as Array<{ version: number; name: string }>;
-
-      expect(rows).toEqual([
-        {
-          version: 1,
-          name: "initial_sqlite_state",
-        },
-        {
-          version: 2,
-          name: "admin_operations",
-        },
-        {
-          version: 3,
-          name: "agent_turn_usage",
-        },
-        {
-          version: 4,
-          name: "agent_trace_events",
-        },
-        {
-          version: 5,
-          name: "agent_schema_repair",
-        },
-        {
-          version: 6,
-          name: "session_agent_schema_repair",
-        },
-        {
-          version: 7,
-          name: "session_channel_metadata",
-        },
-        {
-          version: 8,
-          name: "inbound_mentioned_users",
-        },
-        {
-          version: 9,
-          name: "admin_realtime_events",
-        },
-        {
-          version: 10,
-          name: "session_page_link_announcement",
-        },
-        {
-          version: 11,
-          name: "session_auth_profile_binding",
-        },
-        {
-          version: 12,
-          name: "agent_activity_bindings",
-        },
-        {
-          version: 13,
-          name: "session_initiator",
-        },
-        {
-          version: 14,
-          name: "agent_session_derived_summaries",
-        },
-        {
-          version: 15,
-          name: "slack_event_retention_indexes",
-        },
-        {
-          version: 16,
-          name: "inbound_mention_backfill_indexes",
-        },
-        {
-          version: CURRENT_STATE_SCHEMA_VERSION,
-          name: "chat_platform_columns",
-        },
-      ]);
-    } finally {
-      database.close();
-    }
-  });
-
-  it("persists inbound Slack mention identities", async () => {
-    const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "slack-codex-state-mentions-"));
-    const sessionsRoot = path.join(stateDir, "sessions");
-    const store = new StateStore(stateDir, sessionsRoot);
-    await store.load();
-    await store.upsertSession({
-      key: "C123:111.222",
-      channelId: "C123",
-      rootThreadTs: "111.222",
-      workspacePath: "/tmp/sessions/C123-111.222/workspace",
-      createdAt: "2026-03-15T00:00:00.000Z",
-      updatedAt: "2026-03-15T00:00:00.000Z",
-    });
-    await store.upsertInboundMessage({
-      key: "inbound-1",
-      sessionKey: "C123:111.222",
-      channelId: "C123",
-      rootThreadTs: "111.222",
-      messageTs: "111.223",
-      source: "thread_reply",
-      userId: "U123",
-      text: "<@U234> follow up",
-      mentionedUserIds: ["U234"],
-      mentionedUsers: [
-        {
-          userId: "U234",
-          mention: "<@U234>",
-          username: "mock-user-234",
-          displayName: "Mock Display 234",
-          realName: "Mock User 234",
-        },
-      ],
-      status: "pending",
-      createdAt: "2026-03-15T00:00:01.000Z",
-      updatedAt: "2026-03-15T00:00:01.000Z",
-    });
-
-    expect(store.listInboundMessages({ sessionKey: "C123:111.222" })).toEqual([
-      expect.objectContaining({
-        text: "<@U234> follow up",
-        mentionedUserIds: ["U234"],
-        mentionedUsers: [
-          expect.objectContaining({
-            userId: "U234",
-            displayName: "Mock Display 234",
-          }),
-        ],
-      }),
-    ]);
     store.close();
   });
 

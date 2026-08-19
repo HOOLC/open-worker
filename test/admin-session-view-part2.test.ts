@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { activeBackgroundJobCount, renderSessionMeta, sessionActivityAt, sessionInboundIndicator, sessionQueueState, sessionWorkIndicator, shouldShowSessionState } from "../src/admin-ui/session-row-display.js";
 
-import { requestCancelSessionJob } from "../src/admin-ui/session-job-actions.js";
-
 import { filterVisibleTimelineEvents, getTimelineEventDisplay, isTimelineEventVisible } from "../src/admin-ui/timeline-display.js";
 
 describe("admin session row display", () => {

@@ -11,7 +11,7 @@ Feishu support runs in the same broker process as Slack. Feishu group `@bot ...`
 Feishu rollout:
 
 - run the preflight and smoke scripts against a China Feishu self-built app installed in the target group
-- capture a sanitized pre-rollout log snapshot; the snapshot redacts non-structured lines instead of copying raw Docker log text
+- capture a sanitized pre-rollout log snapshot; the snapshot redacts non-structured lines instead of copying raw runtime log text
 - verify metadata recursively redacts unsafe string fields while preserving safe posture text such as `FEISHU_APP_SECRET=missing`
 - Operator-facing auth status and replacement output summarize filesystem paths instead of echoing full host paths
 - Profile command output also summarizes auth/profile paths without full host filesystem paths
@@ -107,7 +107,7 @@ Copy `.env.example` to `.env` and fill in:
   candidate logs, and only set it to `false` after confirming the listed
   paths are expected rebuildable artifacts.
 - one Codex auth mode
-- optional host Codex home mount if you want the container to inherit your global `~/.codex` memory/instructions
+- optional host Codex home path if you want the runtime to inherit your global `~/.codex` memory/instructions
 
 ## Codex Auth Modes
 
@@ -123,22 +123,15 @@ This is the simplest automation setup.
 
 ### 2. Reuse Codex/ChatGPT OAuth
 
-Mount an existing `auth.json` into the container and set:
+Point the broker at an existing `auth.json` and set:
 
 ```env
-CODEX_AUTH_JSON_PATH=/auth/auth.json
-```
-
-Then add a read-only volume to `docker-compose.yml`:
-
-```yaml
-volumes:
-  - ~/.codex/auth.json:/auth/auth.json:ro
+CODEX_AUTH_JSON_PATH=/path/to/auth.json
 ```
 
 At startup the broker copies that file into its own `CODEX_HOME`/data directory and uses it to authenticate the embedded Codex app-server.
 
-The main Codex runtime disables all built-in MCP servers by default, and starts the Codex app-server with the `apps` feature disabled so Apps/Connectors are not exposed to model turns. Keep tool access outside the main runtime and use broker-managed integrations instead. MCP removal only affects the broker's container-local Codex config. It does not modify your host `~/.codex/config.toml`.
+The main Codex runtime disables all built-in MCP servers by default, and starts the Codex app-server with the `apps` feature disabled so Apps/Connectors are not exposed to model turns. Keep tool access outside the main runtime and use broker-managed integrations instead. MCP removal only affects the broker's runtime-local Codex config. It does not modify your host `~/.codex/config.toml`.
 
 ## Shared Codex Team Home
 
@@ -173,37 +166,32 @@ Runtime behavior:
 - If existing profile/source shared content is present while the team home is empty, the broker preserves the legacy local-copy behavior instead of linking profiles to empty team files.
 - Historical profile data migration is a one-off operator action and is intentionally not part of the runtime code path.
 - `HOST_AGENTS_PATH_HOST` plus `HOST_AGENTS_CONTAINER_PATH` lets relative skill symlinks like `../../.agents/...` resolve correctly if the team home contains those symlinks.
-- For docker-side skills that need to call a host-local helper service, either set an explicit container-safe URL such as `TEMPAD_LINK_SERVICE_URL=http://host.docker.internal:4320`, or leave it unset and let the broker probe the common host-local tempad endpoints automatically.
+- For skills that need to call a host-local helper service, either set an explicit service URL such as `TEMPAD_LINK_SERVICE_URL=http://127.0.0.1:4320`, or leave it unset and let the broker probe the common local tempad endpoints automatically.
 
 Before enabling this on an existing machine, seed `CODEX_TEAM_HOME` once from the reviewed canonical profile/global Codex files and keep an external backup of replaced profile-local shared entries. Do not move `auth.json` into the team home.
 
-## Run With Docker Compose
+## Run From Source
 
 ```bash
 cp .env.example .env
-docker compose up --build
+pnpm install
+pnpm build
+pnpm start
 ```
 
-Operational scripts for the real container:
+The broker expects a Node 22.13+ runtime with `git`, `gh`, and `rg` available on `PATH`, plus the Codex CLI installed globally (`npm install -g @openai/codex`). If you want to run the broker inside Docker or any other isolation layer, build and mount the runtime yourself; the repo no longer ships a compose or image definition.
+
+Operational scripts:
 
 ```bash
-pnpm ops:check:real
-pnpm ops:rollout:real
-pnpm ops:status:real
-pnpm ops:auth:real status
 pnpm ops:auth:profiles bootstrap
 pnpm ops:auth:profiles status
 pnpm ops:auth:profiles list
 pnpm ops:auth:profiles import-host --name backup-account
 pnpm ops:auth:profiles use backup-account
-pnpm ops:ui:real
 ```
 
-`ops:rollout:real` reuses the current `slack-codex-broker-real` container's env vars and bind mounts, refuses to restart while active turns exist unless you pass `--allow-active`, rebuilds the image, recreates the container, and then runs the fixed post-update checks. Each rollout also writes sanitized metadata plus pre-rollout logs under `.backups/rollouts/`.
-`ops:status:real` prints a structured runtime snapshot for the live container, including health, active sessions, open inbound messages, background jobs, and recent broker logs. Use `--open-inbound-limit` and `--log-lines` to tune output volume.
-`ops:auth:real status` prints the live container's Codex auth files, runtime account identity, any quota/usage fields exposed by `account/read`, plus the current session state snapshot.
-`ops:auth:profiles` manages a local auth-profile directory under the live data root. The host auth is kept as a reference copy, while the docker auth points at a selectable `active` profile. Use `bootstrap` once, then `import-host --name <profile>` or `import --name <profile> --from <path>` to add more docker-side auth profiles, and `use <profile>` to switch the live container.
-`ops:ui:real` starts a local-only admin page on `127.0.0.1` so you can inspect sessions/account state and upload a replacement `auth.json` without using CLI flags directly.
+`ops:auth:profiles` manages a local auth-profile directory under the data root (`DATA_ROOT`, default `.data`). The host auth is kept as a reference copy, while the active profile selects the auth used by the live worker. Use `bootstrap` once, then `import-host --name <profile>` or `import --name <profile> --from <path>` to add more auth profiles, and `use <profile>` to switch the live worker. The worker picks up the switch on its next Codex restart.
 
 ## Run On a macOS VM
 
@@ -320,24 +308,22 @@ The same admin page also exposes a `GitHub Authors` panel for manually maintaini
 
 If `BROKER_ADMIN_TOKEN` is set, `/admin/api/*` requires that token via `x-admin-token` or `Authorization: Bearer ...`. If it is unset, the admin API is still enabled, so only expose the broker port in environments you trust.
 
-The container image:
+The runtime environment:
 
-- uses Node 22.13+ for the built-in SQLite runtime state store and lint/format toolchain
-- installs `git`
-- installs `gh`
-- installs `rg` via `ripgrep`
-- installs the Codex CLI globally via `@openai/codex`
+- uses Node 22.13+ for the built-in SQLite runtime state store
+- needs `git`, `gh`, and `rg` available on `PATH`
+- needs the Codex CLI installed globally via `@openai/codex`
 - runs the broker with `node dist/src/index.js`
 
 ## Runtime Layout
 
-Inside the container:
+By default:
 
-- broker state lives under `/app/.data`
-- Codex state defaults to `/app/.data/codex-home`
-- session workspaces default to `/app/.data/sessions/<channel-thread>/workspace`
-- shared canonical repositories live under `/app/.data/repos`
-- structured logs default to `/app/.data/logs`
+- broker state lives under `<repo>/.data`
+- Codex state defaults to `<data root>/codex-home`
+- session workspaces default to `<data root>/sessions/<channel-thread>/workspace`
+- shared canonical repositories live under `<data root>/repos`
+- structured logs default to `<data root>/logs`
 
 In practice, `.data` is the broker's runtime data root. It contains both durable broker-owned identity/config data and disposable runtime state.
 
@@ -466,8 +452,7 @@ Optional fields:
 
 ## Notes
 
-- This compose file is intentionally minimal and does not pre-mount or pre-select any single target repository.
-- The runtime image already includes `gh`, `git`, and `rg`.
+- The runtime environment needs `gh`, `git`, and `rg` available on `PATH`.
 - The broker no longer manages repo selection or git worktree naming. That is now an agent-level responsibility inside the shared `repos/` cache and the current session workspace.
 
 ## GitHub Support

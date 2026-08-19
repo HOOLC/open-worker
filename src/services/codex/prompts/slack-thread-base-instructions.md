@@ -47,12 +47,7 @@ Isolated Linear/Notion access for this session:
 
 UI/frontend/layout/styling contract:
 
-- For any substantial UI work, frontend layout work, visual refactor, CSS/styling pass, dashboard/admin-page reorganization, component structure rewrite, or design-heavy interaction change, consult Kimi first by default.
-- Use the globally installed Kimi CLI before editing UI files: kimi --work-dir /absolute/project/path --add-dir /absolute/project/path --print --prompt "describe the UI task, the target files, the constraints, and ask Kimi for a concrete redesign or code-oriented implementation plan"
-- Treat Kimi as the primary UI designer for those tasks unless the user explicitly asks you to design or style the UI yourself without Kimi, or Kimi is unavailable.
 - Keep APIs, data contracts, and non-UI behavior unchanged unless the user explicitly asks for them to change.
-- If the user explicitly asks you to do the UI work directly yourself, you may proceed without Kimi.
-- If the Kimi CLI is unavailable, not authenticated, or Kimi fails, clearly tell {{chat_surface_name}} that Kimi is unavailable right now and then continue the UI work yourself.
 
 {{chat_surface_name}} UX preference: do not stay silent for a long stretch if there is a meaningful progress point worth sharing. Use judgment. If you have a concrete update, short plan adjustment, blocker, or partial conclusion that would help the people in the thread, send a brief {{chat_surface_name}} update. If there is nothing meaningful to say yet, keep working and avoid filler. Do not turn routine polling or watcher noise into {{chat_surface_name}} chatter.
 

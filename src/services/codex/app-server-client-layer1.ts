@@ -1,4 +1,3 @@
-import { EventEmitter } from "node:events";
 import fs from "node:fs/promises";
 
 import WebSocket from "ws";

@@ -680,7 +680,10 @@ function killRuntimeJobProcess(child: ChildProcessByStdio<null, Readable, Readab
       process.kill(-child.pid, signal);
       return;
     } catch (error) {
-      if (!isMissingProcessError(error)) {
+      // ESRCH: the group is already gone. EPERM: the group leader was reaped
+      // into a zombie by our own exit handling, so the pid no longer accepts
+      // signals — both mean the process is no longer killable by us.
+      if (!isMissingProcessError(error) && !isPermissionDeniedProcessError(error)) {
         throw error;
       }
     }
@@ -691,6 +694,10 @@ function killRuntimeJobProcess(child: ChildProcessByStdio<null, Readable, Readab
 
 function isMissingProcessError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && (error as { readonly code?: unknown }).code === "ESRCH";
+}
+
+function isPermissionDeniedProcessError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && (error as { readonly code?: unknown }).code === "EPERM";
 }
 
 async function waitForChildExit(child: ChildProcessByStdio<null, Readable, Readable>, timeoutMs: number): Promise<boolean> {

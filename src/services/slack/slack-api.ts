@@ -1,6 +1,6 @@
 import { logger } from "../../logger.js";
-import type { JsonLike, SlackImageAttachment, SlackSenderKind, SlackThreadMessage, SlackUserIdentity } from "../../types.js";
-import { parseRetryAfterMs, normalizeSlackFileAttachments, normalizeSlackImageAttachments, normalizeSlackJson, resolveSlackMessageAuthor, isSupportedSlackMessageSubtype, pickSlackFileUrl, normalizeSlackField, conversationType, normalizeSlackNumber } from "./slack-api-helpers.js";
+import type { SlackImageAttachment, SlackThreadMessage, SlackUserIdentity } from "../../types.js";
+import { parseRetryAfterMs, normalizeSlackFileAttachments, normalizeSlackJson, resolveSlackMessageAuthor, isSupportedSlackMessageSubtype, normalizeSlackField, conversationType, normalizeSlackNumber } from "./slack-api-helpers.js";
 
 interface SlackApiResponse<T> {
   readonly ok: boolean;

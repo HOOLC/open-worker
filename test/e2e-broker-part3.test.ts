@@ -1,26 +1,16 @@
 import fs from "node:fs/promises";
 
-import http from "node:http";
-
 import os from "node:os";
 
 import path from "node:path";
 
-import { once } from "node:events";
-
-import { spawn } from "node:child_process";
-
-import { fileURLToPath } from "node:url";
-
 import { afterEach, describe, expect, it } from "vitest";
-
-import type { CodexInputItem } from "../src/services/codex/app-server-client.js";
 
 import { SessionManager } from "../src/services/session-manager.js";
 
 import { StateStore } from "../src/store/state-store.js";
 
-import type { PersistedAgentTraceEvent, PersistedInboundMessage, SlackSessionRecord } from "../src/types.js";
+import type { PersistedInboundMessage } from "../src/types.js";
 
 import { MockCodexAppServer } from "./helpers/mock-codex-app-server.js";
 
@@ -39,6 +29,7 @@ import {
   readSessionRecord,
   readInboundMessages,
   readAgentTraceEvents,
+  readBackgroundJobs,
   delay,
   pathExists,
   removeTempRoot,
@@ -442,6 +433,20 @@ describe.sequential("slack-codex-broker e2e", () => {
     expect(registerResponse.ok).toBe(true);
     expect(registerBody.job?.id).toBeTruthy();
     expect(registerBody.job?.token).toBeTruthy();
+    await waitFor(async () => {
+      const jobs = await readBackgroundJobs(tempRoot, "C123:333.220");
+      return jobs.some((job) => job.id === registerBody.job!.id && job.kind === "watch_ci");
+    }, "background job persisted");
+    await expect(readBackgroundJobs(tempRoot, "C123:333.220")).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: registerBody.job!.id,
+          kind: "watch_ci",
+          sessionKey: "C123:333.220",
+        }),
+      ]),
+    );
+    expect(["registered", "running"]).toContain((await readBackgroundJobs(tempRoot, "C123:333.220")).find((job) => job.id === registerBody.job!.id)?.status);
 
     await postJson(`${broker.baseUrl}/jobs/${registerBody.job!.id}/event`, {
       token: registerBody.job!.token,
@@ -459,7 +464,14 @@ describe.sequential("slack-codex-broker e2e", () => {
     }, "background job event delivery");
     const deliveredTexts = [...mockCodex.turnsStarted.slice(1).map((turn) => collectTextInput(turn.input)), ...mockCodex.steers.map((steer) => collectTextInput(steer.input))];
     expect(deliveredTexts.some((text) => text.includes("background_job_event_json"))).toBe(true);
+    expect(deliveredTexts.some((text) => text.includes("A broker-managed background job reported a new asynchronous event"))).toBe(true);
     expect(deliveredTexts.some((text) => text.includes("CI turned green."))).toBe(true);
     expect(deliveredTexts.some((text) => text.includes('"job_kind": "watch_ci"'))).toBe(true);
+    expect(deliveredTexts.some((text) => text.includes('"event_kind": "state_changed"'))).toBe(true);
+    expect(deliveredTexts.some((text) => text.includes(`"job_id": "${registerBody.job!.id}"`))).toBe(true);
+    expect(deliveredTexts.some((text) => text.includes("Most watcher events do not need a Slack reply"))).toBe(true);
+    expect(deliveredTexts.some((text) => text.includes("/slack/post-state"))).toBe(true);
+    expect(deliveredTexts.some((text) => text.includes("silent final state"))).toBe(true);
+    expect(deliveredTexts.every((text) => !text.includes("background_job_event_json") || !text.includes('"sender":'))).toBe(true);
   }, 60_000);
 });

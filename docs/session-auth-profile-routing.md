@@ -8,7 +8,7 @@ New sessions automatically select the usable profile with the most remaining Cod
 
 ## Current State
 
-The broker already manages auth profiles under `.data/auth-profiles/docker/profiles`. `AuthProfileService` can list profiles, probe account and quota state, and change the global active profile.
+The broker already manages auth profiles under `.data/auth-profiles/profiles`. `AuthProfileService` can list profiles, probe account and quota state, and change the global active profile.
 
 The agent runtime is currently global. A worker process creates one Codex app-server runtime with one `CODEX_HOME/auth.json`. Admin profile activation changes the global active auth and restarts the worker runtime. That is not session binding. It is unsafe for concurrent sessions because one session can change the auth identity used by another.
 

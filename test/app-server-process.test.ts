@@ -69,7 +69,6 @@ describe("AppServerProcess", () => {
     const fakeGhPath = path.join(fakeBinDir, "gh");
     const argsFile = path.join(tempRoot, "codex-args.txt");
     const hostCodexHomePath = path.join(tempRoot, "host-codex-home");
-    const hostGeminiHomePath = path.join(tempRoot, "host-gemini-home");
     const codexHome = path.join(tempRoot, "codex-home");
     const operatorHome = path.join(tempRoot, "operator-home");
     const previousHome = process.env.HOME;
@@ -79,9 +78,6 @@ describe("AppServerProcess", () => {
       recursive: true,
     });
     await fs.mkdir(hostCodexHomePath, {
-      recursive: true,
-    });
-    await fs.mkdir(hostGeminiHomePath, {
       recursive: true,
     });
     await fs.mkdir(operatorHome, {
@@ -130,7 +126,6 @@ describe("AppServerProcess", () => {
       codexHome,
       port: 4590,
       hostCodexHomePath,
-      hostGeminiHomePath,
       tempadLinkServiceUrl: tempadServer.url,
     });
 
@@ -169,7 +164,6 @@ describe("AppServerProcess", () => {
     const operatorHome = path.join(tempRoot, "operator-home");
     const codexHome = path.join(tempRoot, "auth-profile-runtimes", "profile-a", "codex-home");
     const hostCodexHomePath = path.join(tempRoot, "host-codex-home");
-    const hostGeminiHomePath = path.join(tempRoot, "host-gemini-home");
     const previousEnv = {
       PATH: process.env.PATH,
       HOME: process.env.HOME,
@@ -181,7 +175,6 @@ describe("AppServerProcess", () => {
     await fs.mkdir(fakeBinDir, { recursive: true });
     await fs.mkdir(operatorHome, { recursive: true });
     await fs.mkdir(hostCodexHomePath, { recursive: true });
-    await fs.mkdir(hostGeminiHomePath, { recursive: true });
     await fs.writeFile(authSourcePath, '{"tokens":{"account_id":"acc-test"}}\n');
 
     await fs.writeFile(
@@ -220,7 +213,6 @@ describe("AppServerProcess", () => {
       codexHome,
       port: 4592,
       hostCodexHomePath,
-      hostGeminiHomePath,
       authJsonPath: authSourcePath,
       tempadLinkServiceUrl: tempadServer.url,
     });
@@ -293,7 +285,6 @@ describe("AppServerProcess", () => {
     const operatorHome = path.join(tempRoot, "operator-home");
     const codexHome = path.join(tempRoot, "codex-home");
     const hostCodexHomePath = path.join(tempRoot, "host-codex-home");
-    const hostGeminiHomePath = path.join(tempRoot, "host-gemini-home");
     const previousEnv = {
       PATH: process.env.PATH,
       HOME: process.env.HOME,
@@ -302,7 +293,6 @@ describe("AppServerProcess", () => {
     await fs.mkdir(fakeBinDir, { recursive: true });
     await fs.mkdir(operatorHome, { recursive: true });
     await fs.mkdir(hostCodexHomePath, { recursive: true });
-    await fs.mkdir(hostGeminiHomePath, { recursive: true });
 
     await fs.writeFile(
       fakeCodexPath,
@@ -336,7 +326,6 @@ describe("AppServerProcess", () => {
       codexHome,
       port: 4593,
       hostCodexHomePath,
-      hostGeminiHomePath,
       tempadLinkServiceUrl: tempadServer.url,
     });
 

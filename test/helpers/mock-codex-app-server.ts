@@ -30,9 +30,12 @@ export interface MockTurnContext {
   readonly cwd: string;
   readonly input: readonly CodexInputItem[];
   readonly thread: MockThreadRecord;
+  notify: (method: string, params?: Record<string, unknown>) => void;
   complete: (message?: string, usage?: unknown) => void;
   fail: (message: string) => void;
   interrupt: (message?: string) => void;
+  emitToolStart: (name: string, callId?: string) => void;
+  emitToolEnd: (callId?: string) => void;
 }
 
 export interface MockTurnSteerRequest {
@@ -47,6 +50,19 @@ export class MockCodexAppServer {
   readonly #connections = new Set<WebSocket>();
   readonly #threads = new Map<string, MockThreadRecord>();
   readonly turnsStarted: MockTurnRecord[] = [];
+  readonly threadStarts: Array<{
+    readonly threadId: string;
+    readonly cwd: string;
+    readonly baseInstructions: string | null;
+    readonly experimentalRawEvents: unknown;
+    readonly params: Record<string, unknown>;
+  }> = [];
+  readonly threadResumes: Array<{
+    readonly threadId: string;
+    readonly cwd: string;
+    readonly baseInstructions: unknown;
+    readonly params: Record<string, unknown>;
+  }> = [];
   readonly steers: Array<{
     readonly threadId: string;
     readonly turnId: string;
@@ -60,12 +76,20 @@ export class MockCodexAppServer {
   readonly onTurnSteer: ((context: MockTurnContext) => Promise<void> | void) | undefined;
   readonly onTurnSteerRequest: ((request: MockTurnSteerRequest) => string | undefined) | undefined;
   readonly #emitThreadTokenUsage: boolean;
+  delayThreadReadMs: number;
 
-  constructor(options?: { readonly onTurnStart?: (context: MockTurnContext) => Promise<void> | void; readonly onTurnSteer?: (context: MockTurnContext) => Promise<void> | void; readonly onTurnSteerRequest?: (request: MockTurnSteerRequest) => string | undefined; readonly emitThreadTokenUsage?: boolean }) {
+  constructor(options?: {
+    readonly onTurnStart?: ((context: MockTurnContext) => Promise<void> | void) | undefined;
+    readonly onTurnSteer?: ((context: MockTurnContext) => Promise<void> | void) | undefined;
+    readonly onTurnSteerRequest?: ((request: MockTurnSteerRequest) => string | undefined) | undefined;
+    readonly emitThreadTokenUsage?: boolean | undefined;
+    readonly delayThreadReadMs?: number | undefined;
+  }) {
     this.onTurnStart = options?.onTurnStart;
     this.onTurnSteer = options?.onTurnSteer;
     this.onTurnSteerRequest = options?.onTurnSteerRequest;
     this.#emitThreadTokenUsage = options?.emitThreadTokenUsage ?? false;
+    this.delayThreadReadMs = options?.delayThreadReadMs ?? 0;
 
     this.#wsServer.on("connection", (socket) => {
       this.#connections.add(socket);
@@ -80,7 +104,9 @@ export class MockCodexAppServer {
             readonly method?: string;
             readonly params?: Record<string, unknown>;
           },
-        );
+        ).catch((error) => {
+          process.stderr.write(`[mock-codex] handleMessage failed: ${error instanceof Error ? error.message : String(error)}\n`);
+        });
       });
     });
   }
@@ -129,40 +155,20 @@ export class MockCodexAppServer {
     const method = message.method;
     const params = message.params ?? {};
 
-    switch (method) {
-      case "initialize":
-        this.#respond(socket, message.id, { ok: true });
-        return;
-      case "account/read":
-        this.#respond(socket, message.id, {
-          account: { type: "apiKey" },
-          requiresOpenaiAuth: false,
-        });
-        return;
-      case "account/rateLimits/read":
-        this.#respond(socket, message.id, {
-          rateLimits: {
-            limitId: "codex",
-            limitName: "Codex",
-            primary: {
-              usedPercent: 12,
-              windowDurationMins: 300,
-              resetsAt: 1_777_777_777,
-            },
-            secondary: {
-              usedPercent: 3,
-              windowDurationMins: 10_080,
-              resetsAt: 1_778_888_888,
-            },
-            credits: {
-              hasCredits: true,
-              unlimited: false,
-              balance: "42.5",
-            },
-            planType: "team",
-          },
-          rateLimitsByLimitId: {
-            codex: {
+    try {
+      switch (method) {
+        case "initialize":
+          this.#respond(socket, message.id, { ok: true });
+          return;
+        case "account/read":
+          this.#respond(socket, message.id, {
+            account: { type: "apiKey" },
+            requiresOpenaiAuth: false,
+          });
+          return;
+        case "account/rateLimits/read":
+          this.#respond(socket, message.id, {
+            rateLimits: {
               limitId: "codex",
               limitName: "Codex",
               primary: {
@@ -182,141 +188,181 @@ export class MockCodexAppServer {
               },
               planType: "team",
             },
-          },
-        });
-        return;
-      case "thread/start": {
-        const threadId = randomUUID();
-        this.#threads.set(threadId, {
-          id: threadId,
-          cwd: String(params.cwd ?? ""),
-          baseInstructions: typeof params.baseInstructions === "string" ? params.baseInstructions : null,
-          turns: [],
-        });
-        this.#respond(socket, message.id, {
-          thread: { id: threadId },
-        });
-        return;
-      }
-      case "thread/resume": {
-        const threadId = String(params.threadId ?? "");
-        const thread = this.#threads.get(threadId);
-        if (!thread) {
+            rateLimitsByLimitId: {
+              codex: {
+                limitId: "codex",
+                limitName: "Codex",
+                primary: {
+                  usedPercent: 12,
+                  windowDurationMins: 300,
+                  resetsAt: 1_777_777_777,
+                },
+                secondary: {
+                  usedPercent: 3,
+                  windowDurationMins: 10_080,
+                  resetsAt: 1_778_888_888,
+                },
+                credits: {
+                  hasCredits: true,
+                  unlimited: false,
+                  balance: "42.5",
+                },
+                planType: "team",
+              },
+            },
+          });
+          return;
+        case "thread/start": {
+          const threadId = randomUUID();
+          const cwd = String(params.cwd ?? "");
+          const baseInstructions = typeof params.baseInstructions === "string" ? params.baseInstructions : null;
+          this.#threads.set(threadId, {
+            id: threadId,
+            cwd,
+            baseInstructions,
+            turns: [],
+          });
+          this.threadStarts.push({
+            threadId,
+            cwd,
+            baseInstructions,
+            experimentalRawEvents: params.experimentalRawEvents,
+            params,
+          });
           this.#respond(socket, message.id, {
             thread: { id: threadId },
           });
           return;
         }
+        case "thread/resume": {
+          const threadId = String(params.threadId ?? "");
+          const thread = this.#threads.get(threadId);
+          this.threadResumes.push({
+            threadId,
+            cwd: String(params.cwd ?? thread?.cwd ?? ""),
+            baseInstructions: params.baseInstructions,
+            params,
+          });
+          if (!thread) {
+            this.#error(socket, message.id, `no rollout found for thread id ${threadId}`);
+            return;
+          }
 
-        thread.cwd = String(params.cwd ?? thread.cwd);
-        this.#respond(socket, message.id, {
-          thread: { id: threadId },
-        });
-        return;
-      }
-      case "turn/start": {
-        const threadId = String(params.threadId ?? "");
-        const thread = this.#requireThread(threadId);
-        const turnId = randomUUID();
-        const turn: MockTurnRecord = {
-          threadId,
-          turnId,
-          cwd: String(params.cwd ?? thread.cwd),
-          input: normalizeInput(params.input),
-          status: "inProgress",
-          finalMessage: "",
-        };
-        thread.turns.push(turn);
-        thread.activeTurnId = turnId;
-        this.turnsStarted.push(turn);
-        this.#respond(socket, message.id, {
-          turn: { id: turnId },
-        });
-
-        const context = this.#createTurnContext(socket, thread, turn);
-        setTimeout(() => {
-          void this.#runTurnStart(context, turn);
-        }, 10);
-        return;
-      }
-      case "turn/steer": {
-        const threadId = String(params.threadId ?? "");
-        const expectedTurnId = String(params.expectedTurnId ?? "");
-        const thread = this.#requireThread(threadId);
-
-        if (!thread.activeTurnId) {
-          this.#error(socket, message.id, "no active turn to steer");
+          thread.cwd = String(params.cwd ?? thread.cwd);
+          this.#respond(socket, message.id, {
+            thread: { id: threadId },
+          });
           return;
         }
+        case "turn/start": {
+          const threadId = String(params.threadId ?? "");
+          const thread = this.#requireThread(threadId);
+          const turnId = randomUUID();
+          const turn: MockTurnRecord = {
+            threadId,
+            turnId,
+            cwd: String(params.cwd ?? thread.cwd),
+            input: normalizeInput(params.input),
+            status: "inProgress",
+            finalMessage: "",
+          };
+          thread.turns.push(turn);
+          thread.activeTurnId = turnId;
+          this.turnsStarted.push(turn);
+          this.#respond(socket, message.id, {
+            turn: { id: turnId },
+          });
 
-        if (thread.activeTurnId !== expectedTurnId) {
-          this.#error(socket, message.id, `expected active turn id \`${expectedTurnId}\` but found \`${thread.activeTurnId}\``);
+          const context = this.#createTurnContext(socket, thread, turn);
+          setTimeout(() => {
+            void this.#runTurnStart(context, turn);
+          }, 10);
           return;
         }
+        case "turn/steer": {
+          const threadId = String(params.threadId ?? "");
+          const expectedTurnId = String(params.expectedTurnId ?? "");
+          const thread = this.#requireThread(threadId);
 
-        const turn = this.#requireTurn(thread, expectedTurnId);
-        const input = normalizeInput(params.input);
-        const requestError = this.onTurnSteerRequest?.({
-          threadId,
-          expectedTurnId,
-          input,
-        });
-        if (requestError) {
-          this.#error(socket, message.id, requestError);
+          if (!thread.activeTurnId) {
+            this.#error(socket, message.id, "no active turn to steer");
+            return;
+          }
+
+          if (thread.activeTurnId !== expectedTurnId) {
+            this.#error(socket, message.id, `expected active turn id \`${expectedTurnId}\` but found \`${thread.activeTurnId}\``);
+            return;
+          }
+
+          const turn = this.#requireTurn(thread, expectedTurnId);
+          const input = normalizeInput(params.input);
+          const requestError = this.onTurnSteerRequest?.({
+            threadId,
+            expectedTurnId,
+            input,
+          });
+          if (requestError) {
+            this.#error(socket, message.id, requestError);
+            return;
+          }
+
+          this.steers.push({
+            threadId,
+            turnId: expectedTurnId,
+            input,
+          });
+          this.#respond(socket, message.id, { ok: true });
+
+          const context = this.#createTurnContext(socket, thread, turn);
+          setTimeout(() => {
+            void this.onTurnSteer?.(context);
+          }, 10);
           return;
         }
-
-        this.steers.push({
-          threadId,
-          turnId: expectedTurnId,
-          input,
-        });
-        this.#respond(socket, message.id, { ok: true });
-
-        const context = this.#createTurnContext(socket, thread, turn);
-        setTimeout(() => {
-          void this.onTurnSteer?.(context);
-        }, 10);
-        return;
+        case "turn/interrupt": {
+          const threadId = String(params.threadId ?? "");
+          const turnId = String(params.turnId ?? "");
+          const thread = this.#requireThread(threadId);
+          const turn = this.#requireTurn(thread, turnId);
+          this.interrupts.push({
+            threadId,
+            turnId,
+          });
+          this.#respond(socket, message.id, { ok: true });
+          this.#interruptTurn(socket, thread, turn, "interrupted");
+          return;
+        }
+        case "thread/read": {
+          if (this.delayThreadReadMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, this.delayThreadReadMs));
+          }
+          const threadId = String(params.threadId ?? "");
+          const thread = this.#requireThread(threadId);
+          this.#respond(socket, message.id, {
+            thread: {
+              turns: thread.turns.map((turn) => ({
+                id: turn.turnId,
+                status: turn.status,
+                error: turn.errorMessage ? { message: turn.errorMessage } : null,
+                usage: turn.usage,
+                items: turn.finalMessage
+                  ? [
+                      {
+                        type: "agentMessage",
+                        text: turn.finalMessage,
+                      },
+                    ]
+                  : [],
+              })),
+            },
+          });
+          return;
+        }
+        default:
+          this.#error(socket, message.id, `unsupported method: ${method ?? "unknown"}`);
       }
-      case "turn/interrupt": {
-        const threadId = String(params.threadId ?? "");
-        const turnId = String(params.turnId ?? "");
-        const thread = this.#requireThread(threadId);
-        const turn = this.#requireTurn(thread, turnId);
-        this.interrupts.push({
-          threadId,
-          turnId,
-        });
-        this.#respond(socket, message.id, { ok: true });
-        this.#interruptTurn(socket, thread, turn, "interrupted");
-        return;
-      }
-      case "thread/read": {
-        const threadId = String(params.threadId ?? "");
-        const thread = this.#requireThread(threadId);
-        this.#respond(socket, message.id, {
-          thread: {
-            turns: thread.turns.map((turn) => ({
-              id: turn.turnId,
-              status: turn.status,
-              error: turn.errorMessage ? { message: turn.errorMessage } : null,
-              usage: turn.usage,
-              items: turn.finalMessage
-                ? [
-                    {
-                      type: "agentMessage",
-                      text: turn.finalMessage,
-                    },
-                  ]
-                : [],
-            })),
-          },
-        });
-        return;
-      }
-      default:
-        this.#error(socket, message.id, `unsupported method: ${method ?? "unknown"}`);
+    } catch (error) {
+      this.#error(socket, message.id, error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -327,6 +373,14 @@ export class MockCodexAppServer {
       cwd: turn.cwd,
       input: turn.input,
       thread,
+      notify: (method, params = {}) => {
+        socket.send(
+          JSON.stringify({
+            method,
+            params,
+          }),
+        );
+      },
       complete: (message = "", usage?: unknown) => {
         if (turn.status !== "inProgress") {
           return;
@@ -383,6 +437,31 @@ export class MockCodexAppServer {
       },
       interrupt: (message = "") => {
         this.#interruptTurn(socket, thread, turn, message);
+      },
+      emitToolStart: (name, callId = "call-1") => {
+        socket.send(
+          JSON.stringify({
+            method: "codex/event/tool_start",
+            params: {
+              threadId: thread.id,
+              turnId: turn.turnId,
+              callId,
+              name,
+            },
+          }),
+        );
+      },
+      emitToolEnd: (callId = "call-1") => {
+        socket.send(
+          JSON.stringify({
+            method: "codex/event/tool_end",
+            params: {
+              threadId: thread.id,
+              turnId: turn.turnId,
+              callId,
+            },
+          }),
+        );
       },
     };
   }

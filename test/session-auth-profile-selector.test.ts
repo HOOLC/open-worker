@@ -156,7 +156,7 @@ describe("session auth profile selector", () => {
 function profileStatus(profiles: readonly AuthProfileSummary[]): AuthProfilesStatus {
   return {
     managedRoot: "/tmp/auth-profiles",
-    profilesRoot: "/tmp/auth-profiles/docker/profiles",
+    profilesRoot: "/tmp/auth-profiles/profiles",
     profiles,
   };
 }
@@ -176,7 +176,7 @@ function profile(
   const rateLimitsOk = options.rateLimitsOk ?? true;
   return {
     name,
-    path: `/tmp/auth-profiles/docker/profiles/${name}.json`,
+    path: `/tmp/auth-profiles/profiles/${name}.json`,
     source: "probe",
     checkedAt: "2026-05-09T00:00:00.000Z",
     account: {

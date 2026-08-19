@@ -1,11 +1,7 @@
-import { EventEmitter } from "node:events";
-import fs from "node:fs/promises";
-
 import WebSocket from "ws";
 
 import { logger } from "../../logger.js";
-import type { AgentTurnTokenUsage, GeneratedImageArtifact, JsonLike, SlackUserIdentity } from "../../types.js";
-import { buildSlackThreadBaseInstructions } from "./slack-thread-base-instructions.js";
+import type { AgentTurnTokenUsage, GeneratedImageArtifact, JsonLike } from "../../types.js";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 

@@ -24,6 +24,29 @@ export interface ReactionOperation {
   readonly name: string;
 }
 
+export interface UploadedThreadFile {
+  readonly fileId: string;
+  readonly channelId: string;
+  readonly threadTs: string;
+  readonly filename: string;
+  readonly title?: string | undefined;
+  readonly initialComment?: string | undefined;
+  readonly bytes: Buffer;
+}
+
+export interface EphemeralPost {
+  readonly channel: string;
+  readonly user: string;
+  readonly threadTs?: string | undefined;
+  readonly text: string;
+  readonly blocks?: string | undefined;
+}
+
+export interface OpenedView {
+  readonly triggerId: string;
+  readonly view: Record<string, unknown>;
+}
+
 export interface MockThreadMessage {
   readonly channel: string;
   readonly threadTs: string;
@@ -67,6 +90,7 @@ export class MockSlackServer {
       readonly profile: {
         readonly display_name: string;
         readonly real_name: string;
+        readonly email?: string | undefined;
       };
     }
   >([
@@ -79,6 +103,7 @@ export class MockSlackServer {
         profile: {
           display_name: "Mock Display 123",
           real_name: "Mock User 123",
+          email: "alice@example.com",
         },
       },
     ],
@@ -91,6 +116,7 @@ export class MockSlackServer {
         profile: {
           display_name: "Mock Display 234",
           real_name: "Mock User 234",
+          email: "bob@example.com",
         },
       },
     ],
@@ -108,6 +134,20 @@ export class MockSlackServer {
     ],
   ]);
   readonly #threadMessages = new Map<string, MockThreadMessage[]>();
+  readonly #downloadableFiles = new Map<string, { readonly bytes: Buffer; readonly contentType: string }>();
+  readonly #pendingUploads = new Map<string, { readonly filename: string; bytes?: Buffer }>();
+  #port = 0;
+  #nextFileSeq = 1;
+  conversationsRepliesCalls = 0;
+  conversationsRepliesFailure:
+    | {
+        readonly status: number;
+        readonly retryAfterSec?: number | undefined;
+      }
+    | undefined;
+  readonly uploadedFiles: UploadedThreadFile[] = [];
+  readonly ephemeralPosts: EphemeralPost[] = [];
+  readonly openedViews: OpenedView[] = [];
 
   constructor(
     private readonly botUserId: string,
@@ -158,7 +198,12 @@ export class MockSlackServer {
       throw new Error("Mock Slack server did not bind to a TCP port");
     }
 
+    this.#port = address.port;
     return address.port;
+  }
+
+  get port(): number {
+    return this.#port;
   }
 
   async stop(): Promise<void> {
@@ -197,16 +242,22 @@ export class MockSlackServer {
     };
 
     process.stdout.write(`[mock-slack] server->client event ${eventId}\n`);
-    await new Promise<void>((resolve, reject) => {
-      this.#socket?.send(JSON.stringify(envelope), (error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
+    await this.#sendSocketJson(envelope);
+  }
 
-        resolve();
-      });
+  async sendInteractive(envelopeId: string, payload: Record<string, unknown>): Promise<void> {
+    await this.waitForSocket();
+    process.stdout.write(`[mock-slack] server->client interactive ${envelopeId}\n`);
+    await this.#sendSocketJson({
+      envelope_id: envelopeId,
+      type: "interactive",
+      payload,
     });
+  }
+
+  addDownloadableFile(fileId: string, bytes: Buffer, contentType = "application/octet-stream"): string {
+    this.#downloadableFiles.set(fileId, { bytes, contentType });
+    return `http://127.0.0.1:${this.#port}/files/${encodeURIComponent(fileId)}`;
   }
 
   async waitForPostedMessage(predicate: (message: PostedMessage) => boolean, timeoutMs = 30_000): Promise<PostedMessage> {
@@ -232,7 +283,46 @@ export class MockSlackServer {
     this.#threadMessages.set(key, messages);
   }
 
+  async #sendSocketJson(payload: Record<string, unknown>): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      this.#socket?.send(JSON.stringify(payload), (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve();
+      });
+    });
+  }
+
   async #handleHttp(request: http.IncomingMessage, response: http.ServerResponse): Promise<void> {
+    const url = request.url ?? "";
+
+    if (request.method === "GET" && url.startsWith("/files/")) {
+      const fileId = decodeURIComponent(url.slice("/files/".length).split("?")[0] ?? "");
+      const file = this.#downloadableFiles.get(fileId);
+      if (!file) {
+        response.writeHead(404).end();
+        return;
+      }
+
+      response.writeHead(200, { "content-type": file.contentType });
+      response.end(file.bytes);
+      return;
+    }
+
+    if (request.method === "POST" && url.startsWith("/upload/")) {
+      const fileId = decodeURIComponent(url.slice("/upload/".length).split("?")[0] ?? "");
+      const bytes = await readRawBody(request);
+      const pending = this.#pendingUploads.get(fileId);
+      if (pending) {
+        this.#pendingUploads.set(fileId, { ...pending, bytes });
+      }
+      response.writeHead(200).end("ok");
+      return;
+    }
+
     if (request.method !== "POST") {
       response.writeHead(405).end();
       return;
@@ -373,6 +463,18 @@ export class MockSlackServer {
     }
 
     if (request.url === "/api/conversations.replies") {
+      this.conversationsRepliesCalls += 1;
+      if (this.conversationsRepliesFailure) {
+        const failure = this.conversationsRepliesFailure;
+        const headers: Record<string, string> = { "content-type": "application/json" };
+        if (failure.retryAfterSec != null) {
+          headers["retry-after"] = String(failure.retryAfterSec);
+        }
+        response.writeHead(failure.status, headers);
+        response.end(JSON.stringify({ ok: false, error: "ratelimited" }));
+        return;
+      }
+
       const channel = String(body.channel);
       const threadTs = String(body.ts);
       const messages = this.#threadMessages.get(getThreadKey(channel, threadTs)) ?? [];
@@ -382,6 +484,95 @@ export class MockSlackServer {
         JSON.stringify({
           ok: true,
           messages,
+        }),
+      );
+      return;
+    }
+
+    if (request.url === "/api/files.getUploadURLExternal") {
+      const fileId = `FUPLOAD${this.#nextFileSeq++}`;
+      const filename = String(body.filename ?? "upload.bin");
+      this.#pendingUploads.set(fileId, { filename });
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          ok: true,
+          upload_url: `http://127.0.0.1:${this.#port}/upload/${encodeURIComponent(fileId)}`,
+          file_id: fileId,
+        }),
+      );
+      return;
+    }
+
+    if (request.url === "/api/files.completeUploadExternal") {
+      const filesJson = typeof body.files === "string" ? body.files : "[]";
+      const parsedFiles = JSON.parse(filesJson) as Array<{ id?: string; title?: string }>;
+      const first = parsedFiles[0];
+      const fileId = String(first?.id ?? "");
+      const pending = this.#pendingUploads.get(fileId);
+      const uploaded: UploadedThreadFile = {
+        fileId,
+        channelId: String(body.channel_id ?? ""),
+        threadTs: String(body.thread_ts ?? ""),
+        filename: pending?.filename ?? "upload.bin",
+        title: first?.title,
+        initialComment: typeof body.initial_comment === "string" ? body.initial_comment : undefined,
+        bytes: pending?.bytes ?? Buffer.alloc(0),
+      };
+      this.uploadedFiles.push(uploaded);
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          ok: true,
+          files: [
+            {
+              id: fileId,
+              title: uploaded.title ?? uploaded.filename,
+              name: uploaded.filename,
+              mimetype: "application/octet-stream",
+              permalink: `https://slack.test/files/${fileId}`,
+              url_private: `https://slack.test/private/${fileId}`,
+              url_private_download: `https://slack.test/private/${fileId}/download`,
+              size: uploaded.bytes.byteLength,
+            },
+          ],
+        }),
+      );
+      return;
+    }
+
+    if (request.url === "/api/chat.postEphemeral") {
+      this.ephemeralPosts.push({
+        channel: String(body.channel ?? ""),
+        user: String(body.user ?? ""),
+        threadTs: typeof body.thread_ts === "string" ? body.thread_ts : undefined,
+        text: String(body.text ?? ""),
+        blocks: typeof body.blocks === "string" ? body.blocks : undefined,
+      });
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ ok: true, message_ts: `${this.#nextTs++}.000000` }));
+      return;
+    }
+
+    if (request.url === "/api/views.open") {
+      const rawView = typeof body.view === "string" ? body.view : "{}";
+      this.openedViews.push({
+        triggerId: String(body.trigger_id ?? ""),
+        view: JSON.parse(rawView) as Record<string, unknown>,
+      });
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (request.url === "/api/chat.getPermalink") {
+      const channel = String(body.channel ?? "");
+      const messageTs = String(body.message_ts ?? "");
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          ok: true,
+          permalink: `https://workspace.slack.com/archives/${channel}/p${messageTs.replace(".", "")}`,
         }),
       );
       return;
@@ -420,18 +611,21 @@ export class MockSlackServer {
   }
 }
 
-async function readRequestBody(request: http.IncomingMessage): Promise<Record<string, unknown>> {
+async function readRawBody(request: http.IncomingMessage): Promise<Buffer> {
   const chunks: Buffer[] = [];
-
   for await (const chunk of request) {
     chunks.push(Buffer.from(chunk));
   }
+  return Buffer.concat(chunks);
+}
 
-  if (chunks.length === 0) {
+async function readRequestBody(request: http.IncomingMessage): Promise<Record<string, unknown>> {
+  const rawBuffer = await readRawBody(request);
+  if (rawBuffer.byteLength === 0) {
     return {};
   }
 
-  const rawBody = Buffer.concat(chunks).toString("utf8");
+  const rawBody = rawBuffer.toString("utf8");
   const contentType = request.headers["content-type"] ?? "";
 
   if (contentType.includes("application/json")) {

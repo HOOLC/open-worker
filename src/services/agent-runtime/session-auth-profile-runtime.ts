@@ -251,14 +251,10 @@ function createDefaultProfileRuntime(options: { readonly config: AppConfig; read
     teamCodexHomePath: options.teamCodexHomePath,
     reposRoot: options.config.reposRoot,
     hostCodexHomePath: options.config.codexHostHomePath,
-    hostGeminiHomePath: options.config.geminiHostHomePath,
     codexAppServerPort: options.port,
     codexAuthJsonPath: options.profile.path,
     codexDisabledMcpServers: options.config.codexDisabledMcpServers,
     tempadLinkServiceUrl: options.config.tempadLinkServiceUrl,
-    geminiHttpProxy: options.config.geminiHttpProxy,
-    geminiHttpsProxy: options.config.geminiHttpsProxy,
-    geminiAllProxy: options.config.geminiAllProxy,
     openAiApiKey: options.config.codexOpenAiApiKey,
   });
   return new CodexAppServerRuntime({

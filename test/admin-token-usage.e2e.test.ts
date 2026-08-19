@@ -82,7 +82,7 @@ describe("admin token usage e2e", () => {
       authProfiles: {
         listProfilesStatus: async () => ({
           managedRoot: path.join(dataRoot, "auth-profiles"),
-          profilesRoot: path.join(dataRoot, "auth-profiles", "docker", "profiles"),
+          profilesRoot: path.join(dataRoot, "auth-profiles", "profiles"),
           profiles: [],
         }),
       } as never,
@@ -134,7 +134,7 @@ describe("admin token usage e2e", () => {
       authProfiles: {
         listProfilesStatus: async () => ({
           managedRoot: path.join(dataRoot, "auth-profiles"),
-          profilesRoot: path.join(dataRoot, "auth-profiles", "docker", "profiles"),
+          profilesRoot: path.join(dataRoot, "auth-profiles", "profiles"),
           profiles: [],
         }),
         addProfile: async () => ({ name: "profile" }),

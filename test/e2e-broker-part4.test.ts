@@ -1,24 +1,10 @@
 import fs from "node:fs/promises";
 
-import http from "node:http";
-
 import os from "node:os";
 
 import path from "node:path";
 
-import { once } from "node:events";
-
-import { spawn } from "node:child_process";
-
-import { fileURLToPath } from "node:url";
-
 import { afterEach, describe, expect, it } from "vitest";
-
-import type { CodexInputItem } from "../src/services/codex/app-server-client.js";
-
-import { SessionManager } from "../src/services/session-manager.js";
-
-import { StateStore } from "../src/store/state-store.js";
 
 import type { PersistedAgentTraceEvent, PersistedInboundMessage, SlackSessionRecord } from "../src/types.js";
 
@@ -281,8 +267,17 @@ describe.sequential("slack-codex-broker e2e", () => {
       "unexpected stop wake turn",
       120_000,
     );
+    expect(wakeText).toContain("The previous run for this Slack thread appears to have stopped unexpectedly.");
     expect(wakeText).toContain("unexpected_turn_stop_json");
+    expect(wakeText).toContain('"source": "unexpected_turn_stop"');
+    expect(wakeText).toContain('"turn_id":');
     expect(wakeText).toContain("explicit final, block, or wait state");
+    expect(wakeText).toContain("kind=block");
+    expect(wakeText).toContain("kind=wait");
+    expect(wakeText).toContain("/slack/post-state");
+    expect(wakeText).toContain("silent block state");
+    expect(wakeText).toContain("silent final state");
+    expect(wakeText).toContain("Do not send a normal Slack reply and then a second '[block]' or '[wait]' line");
     await waitForSessionIdle(tempRoot, "C123:666.220");
     expect(turnCount).toBeGreaterThanOrEqual(2);
   }, 150_000);

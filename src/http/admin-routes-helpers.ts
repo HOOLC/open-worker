@@ -11,7 +11,7 @@ import type { AppConfig } from "../config.js";
 
 import type { AdminService } from "../services/admin-service.js";
 
-import { readJsonBody, readString, respondJson } from "./common.js";
+import { readJsonBody, respondJson } from "./common.js";
 
 import { renderAdminPage } from "./admin-page.js";
 

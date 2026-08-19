@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 // @ts-expect-error ops scripts are plain ESM JavaScript without generated declarations.
 const opsLib = await import("../scripts/ops/lib.mjs");
-const { getAdminHeadersFromInspect, getEnvObjectFromInspect, readDetailedStateFromHost, runCommand, sanitizeOpsDockerLogsForEvidence, summarizeOpsDisplayPath, summarizeOpsEvidencePath, summarizeOpsHostPath, summarizePlatformHealth, shouldRunFeishuPreflight, writeRolloutMetadata } = opsLib;
+const { getAdminHeadersFromInspect, getEnvObjectFromInspect, readDetailedStateFromHost, runCommand, sanitizeOpsLogsForEvidence, summarizeOpsDisplayPath, summarizeOpsEvidencePath, summarizeOpsHostPath, summarizePlatformHealth, shouldRunFeishuPreflight, writeRolloutMetadata } = opsLib;
 
 const tempDirs: string[] = [];
 
@@ -15,7 +15,7 @@ afterEach(async () => {
 });
 
 describe("ops Feishu preflight helpers", () => {
-  it("parses docker inspect env entries without losing values containing equals signs", () => {
+  it("parses inspected env entries without losing values containing equals signs", () => {
     const env = getEnvObjectFromInspect({
       Config: {
         Env: ["FEISHU_ENABLED=true", "BROKER_ADMIN_TOKEN=abc=def", "MALFORMED"],
@@ -481,7 +481,7 @@ describe("ops Feishu preflight helpers", () => {
     expect(message).not.toContain("xoxb-ops-secret");
   });
 
-  it("sanitizes rollout preflight docker logs before writing evidence", () => {
+  it("sanitizes rollout preflight broker logs before writing evidence", () => {
     const rawLogs = [
       JSON.stringify({
         ts: "2026-05-29T00:00:00.000Z",
@@ -502,7 +502,7 @@ describe("ops Feishu preflight helpers", () => {
       "raw line with /tmp/OPS_ROLLOUT_PATH_SECRET/operator@example.com/message-body.txt and OPS_ROLLOUT_BODY_SECRET",
     ].join("\n");
 
-    const sanitized = sanitizeOpsDockerLogsForEvidence(rawLogs);
+    const sanitized = sanitizeOpsLogsForEvidence(rawLogs);
     const records = (sanitized as string)
       .trim()
       .split("\n")
@@ -536,7 +536,7 @@ describe("ops Feishu preflight helpers", () => {
       }),
       expect.objectContaining({
         type: "log_text_redacted",
-        message: "non-structured docker log line redacted",
+        message: "non-structured log line redacted",
       }),
     ]);
     expect(serialized).not.toContain("OPS_ROLLOUT_LOG_BODY_SECRET");

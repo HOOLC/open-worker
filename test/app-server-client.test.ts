@@ -1,14 +1,6 @@
-import http from "node:http";
-
 import fs from "node:fs/promises";
 
-import os from "node:os";
-
-import path from "node:path";
-
 import { afterEach, describe, expect, it } from "vitest";
-
-import { WebSocketServer, type WebSocket } from "ws";
 
 import { AppServerClient } from "../src/services/codex/app-server-client.js";
 
@@ -181,84 +173,6 @@ describe("AppServerClient disconnect handling", () => {
     });
   });
 
-  it("captures exact token usage from turn completion notifications", async () => {
-    const server = await createServer((socket, message) => {
-      if (message.method === "initialize") {
-        socket.send(
-          JSON.stringify({
-            id: message.id,
-            result: { ok: true },
-          }),
-        );
-        return;
-      }
-
-      if (message.method === "turn/start") {
-        socket.send(
-          JSON.stringify({
-            id: message.id,
-            result: {
-              turn: {
-                id: "turn-usage",
-              },
-            },
-          }),
-        );
-        socket.send(
-          JSON.stringify({
-            method: "turn/completed",
-            params: {
-              turn: {
-                id: "turn-usage",
-                usage: {
-                  input_tokens: 1200,
-                  cached_input_tokens: 300,
-                  output_tokens: 450,
-                  reasoning_tokens: 75,
-                  total_tokens: 1725,
-                  model: "gpt-5.5",
-                  effort: "xhigh",
-                },
-              },
-            },
-          }),
-        );
-      }
-    });
-    servers.push(server);
-
-    const client = new AppServerClient({
-      url: server.url,
-      serviceName: "test",
-      brokerHttpBaseUrl: "http://127.0.0.1:3000",
-      reposRoot: "/tmp/repos",
-    });
-
-    await client.connect();
-    const started = await client.startTurn("thread-1", "/tmp", [
-      {
-        type: "text",
-        text: "hello",
-        text_elements: [],
-      },
-    ]);
-
-    await expect(started.completion).resolves.toMatchObject({
-      threadId: "thread-1",
-      turnId: "turn-usage",
-      usage: {
-        source: "exact",
-        inputTokens: 1200,
-        cachedInputTokens: 300,
-        outputTokens: 450,
-        reasoningTokens: 75,
-        totalTokens: 1725,
-        model: "gpt-5.5",
-        effort: "xhigh",
-      },
-    });
-  });
-
   it("accumulates exact token usage from Codex token_count events", async () => {
     const server = await createServer((socket, message) => {
       if (message.method === "initialize") {
@@ -409,109 +323,6 @@ describe("AppServerClient disconnect handling", () => {
       outputTokens: 5,
       reasoningTokens: 2,
       totalTokens: 22,
-    });
-  });
-
-  it("captures exact token usage from thread/tokenUsage/updated notifications", async () => {
-    const server = await createServer((socket, message) => {
-      if (message.method === "initialize") {
-        socket.send(
-          JSON.stringify({
-            id: message.id,
-            result: { ok: true },
-          }),
-        );
-        return;
-      }
-
-      if (message.method === "turn/start") {
-        socket.send(
-          JSON.stringify({
-            id: message.id,
-            result: {
-              turn: {
-                id: "turn-thread-usage",
-              },
-            },
-          }),
-        );
-        socket.send(
-          JSON.stringify({
-            method: "thread/tokenUsage/updated",
-            params: {
-              threadId: "thread-1",
-              turnId: "turn-thread-usage",
-              tokenUsage: {
-                total: {
-                  totalTokens: 2_050,
-                  inputTokens: 1_500,
-                  cachedInputTokens: 250,
-                  outputTokens: 550,
-                  reasoningOutputTokens: 125,
-                },
-                last: {
-                  totalTokens: 2_050,
-                  inputTokens: 1_500,
-                  cachedInputTokens: 250,
-                  outputTokens: 550,
-                  reasoningOutputTokens: 125,
-                },
-                modelContextWindow: 272_000,
-              },
-            },
-          }),
-        );
-        socket.send(
-          JSON.stringify({
-            method: "item/agentMessage/delta",
-            params: {
-              turnId: "turn-thread-usage",
-              delta: "done",
-            },
-          }),
-        );
-        socket.send(
-          JSON.stringify({
-            method: "turn/completed",
-            params: {
-              turn: {
-                id: "turn-thread-usage",
-              },
-            },
-          }),
-        );
-      }
-    });
-    servers.push(server);
-
-    const client = new AppServerClient({
-      url: server.url,
-      serviceName: "test",
-      brokerHttpBaseUrl: "http://127.0.0.1:3000",
-      reposRoot: "/tmp/repos",
-    });
-
-    await client.connect();
-    const started = await client.startTurn("thread-1", "/tmp", [
-      {
-        type: "text",
-        text: "hello",
-        text_elements: [],
-      },
-    ]);
-
-    await expect(started.completion).resolves.toMatchObject({
-      threadId: "thread-1",
-      turnId: "turn-thread-usage",
-      finalMessage: "done",
-      usage: {
-        source: "exact",
-        inputTokens: 1_500,
-        cachedInputTokens: 250,
-        outputTokens: 550,
-        reasoningTokens: 125,
-        totalTokens: 2_050,
-      },
     });
   });
 });

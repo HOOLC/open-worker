@@ -1,16 +1,8 @@
 import http from "node:http";
 
-import fs from "node:fs/promises";
-
-import os from "node:os";
-
-import path from "node:path";
-
 import { afterEach, describe, expect, it } from "vitest";
 
 import { WebSocketServer, type WebSocket } from "ws";
-
-import { AppServerClient } from "../src/services/codex/app-server-client.js";
 
 export interface TestServer {
   readonly url: string;

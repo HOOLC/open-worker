@@ -33,15 +33,11 @@ export class CodexBroker extends EventEmitter {
     readonly teamCodexHomePath?: string | undefined;
     readonly reposRoot: string;
     readonly hostCodexHomePath?: string | undefined;
-    readonly hostGeminiHomePath?: string | undefined;
     readonly codexAppServerPort: number;
     readonly codexAppServerUrl?: string | undefined;
     readonly codexAuthJsonPath?: string | undefined;
     readonly codexDisabledMcpServers: string[];
     readonly tempadLinkServiceUrl?: string | undefined;
-    readonly geminiHttpProxy?: string | undefined;
-    readonly geminiHttpsProxy?: string | undefined;
-    readonly geminiAllProxy?: string | undefined;
     readonly openAiApiKey?: string | undefined;
   }) {
     super();
@@ -67,14 +63,10 @@ export class CodexBroker extends EventEmitter {
       codexHome: options.codexHome,
       teamCodexHomePath: options.teamCodexHomePath,
       hostCodexHomePath: options.hostCodexHomePath,
-      hostGeminiHomePath: options.hostGeminiHomePath,
       port: options.codexAppServerPort,
       authJsonPath: options.codexAuthJsonPath,
       disabledMcpServers: options.codexDisabledMcpServers,
       tempadLinkServiceUrl: options.tempadLinkServiceUrl,
-      geminiHttpProxy: options.geminiHttpProxy,
-      geminiHttpsProxy: options.geminiHttpsProxy,
-      geminiAllProxy: options.geminiAllProxy,
       openAiApiKey: options.openAiApiKey,
     });
     this.#client = this.#createClient(this.#appServerProcess.url);

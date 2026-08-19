@@ -31,10 +31,6 @@ export interface AppConfig {
   readonly codexTeamHomePath: string;
   readonly codexHostHomePath?: string | undefined;
   readonly codexAuthJsonPath?: string | undefined;
-  readonly geminiHostHomePath?: string | undefined;
-  readonly geminiHttpProxy?: string | undefined;
-  readonly geminiHttpsProxy?: string | undefined;
-  readonly geminiAllProxy?: string | undefined;
   readonly isolatedMcpServers: string[];
   readonly codexDisabledMcpServers: string[];
   readonly codexAppServerUrl?: string | undefined;
@@ -292,10 +288,6 @@ export function loadConfig(env = process.env): AppConfig {
     codexTeamHomePath,
     codexHostHomePath: getOptional(env, "CODEX_HOST_HOME_PATH"),
     codexAuthJsonPath: getOptional(env, "CODEX_AUTH_JSON_PATH"),
-    geminiHostHomePath: getOptional(env, "GEMINI_HOST_HOME_PATH"),
-    geminiHttpProxy: getOptional(env, "GEMINI_HTTP_PROXY"),
-    geminiHttpsProxy: getOptional(env, "GEMINI_HTTPS_PROXY"),
-    geminiAllProxy: getOptional(env, "GEMINI_ALL_PROXY"),
     isolatedMcpServers: effectiveIsolatedMcpServers,
     codexDisabledMcpServers,
     codexAppServerUrl: getOptional(env, "CODEX_APP_SERVER_URL"),
