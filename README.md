@@ -157,7 +157,7 @@ Shared entries include:
 
 Runtime behavior:
 
-- `CODEX_TEAM_HOME` defaults to `.data/team-codex-home`.
+- `CODEX_TEAM_HOME` defaults to `~/.zork/team-codex-home`.
 - Each auth profile still has its own `CODEX_HOME` for `auth.json`, generated images, cache, logs, and runtime state.
 - Shared entries in each profile `CODEX_HOME` are symlinks to `CODEX_TEAM_HOME`.
 - New Slack sessions inject personal memory from `CODEX_TEAM_HOME/AGENT.md` once at `thread/start`; later turns reuse the existing session context instead of re-sending it.
@@ -191,7 +191,7 @@ pnpm ops:auth:profiles import-host --name backup-account
 pnpm ops:auth:profiles use backup-account
 ```
 
-`ops:auth:profiles` manages a local auth-profile directory under the data root (`DATA_ROOT`, default `.data`). The host auth is kept as a reference copy, while the active profile selects the auth used by the live worker. Use `bootstrap` once, then `import-host --name <profile>` or `import --name <profile> --from <path>` to add more auth profiles, and `use <profile>` to switch the live worker. The worker picks up the switch on its next Codex restart.
+`ops:auth:profiles` manages a local auth-profile directory under the data root (`DATA_ROOT`, default `~/.zork`). The host auth is kept as a reference copy, while the active profile selects the auth used by the live worker. Use `bootstrap` once, then `import-host --name <profile>` or `import --name <profile> --from <path>` to add more auth profiles, and `use <profile>` to switch the live worker. The worker picks up the switch on its next Codex restart.
 
 ## Run On a macOS VM
 
@@ -226,7 +226,7 @@ What it prepares:
 - `releases/admin/npm-<version>/` and `releases/worker/npm-<version>/` package installs
 - `current-admin`, `previous-admin`, `failed-admin` release links
 - `current-worker`, `previous-worker`, `failed-worker` release links
-- shared runtime state under `.data/`
+- shared runtime state under `~/.zork/`
 - support homes under `runtime-support/`
 - launchd agents for:
   - `io.github.hoolc.agent-session-broker` (admin/control plane)
@@ -255,7 +255,7 @@ their target-specific current release links, not from a source checkout.
   - symlinks to the last good release for each target
 - `<service-root>/failed-admin` and `<service-root>/failed-worker`:
   - symlinks to the most recent failed cutover for each target
-- `<service-root>/.data/`:
+- `~/.zork/`:
   - shared broker state, sessions, jobs, logs, repos, auth profiles, codex home
 
 ### Deploy and rollback
@@ -319,13 +319,13 @@ The runtime environment:
 
 By default:
 
-- broker state lives under `<repo>/.data`
-- Codex state defaults to `<data root>/codex-home`
-- session workspaces default to `<data root>/sessions/<channel-thread>/workspace`
-- shared canonical repositories live under `<data root>/repos`
-- structured logs default to `<data root>/logs`
+- broker state lives under `~/.zork`
+- Codex state defaults to `~/.zork/codex-home`
+- session workspaces default to `~/.zork/sessions/<channel-thread>/workspace`
+- shared canonical repositories live under `~/.zork/repos`
+- structured logs default to `~/.zork/logs`
 
-In practice, `.data` is the broker's runtime data root. It contains both durable broker-owned identity/config data and disposable runtime state.
+In practice, `~/.zork` is the broker's runtime data root. It contains both durable broker-owned identity/config data and disposable runtime state. Override with `DATA_ROOT`.
 
 Durable broker-owned identity/config data:
 
@@ -335,7 +335,9 @@ Durable broker-owned identity/config data:
 Disposable runtime state:
 
 - `state/broker.sqlite`
-- `sessions/`
+- `state/spool.sqlite`
+- `sessions/<id>/workspace/`
+- `sessions/<id>/trace/`
 - `jobs/`
 - `logs/`
 - `repos/`

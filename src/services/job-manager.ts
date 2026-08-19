@@ -5,9 +5,9 @@ import path from "node:path";
 import type { Readable } from "node:stream";
 
 import { logger } from "../logger.js";
-import type { BackgroundJobEventPayload, JsonLike, PersistedBackgroundJob } from "../types.js";
+import type { BackgroundJobEventPayload, PersistedBackgroundJob } from "../types.js";
 import { ensureDir } from "../utils/fs.js";
-import { resolveRuntimeToolPath } from "../utils/runtime-paths.js";
+import { ensureZorkCallBin } from "../utils/zork-call-bin.js";
 import { SessionManager } from "./session-manager.js";
 import type { ChatPlatform } from "./chat/chat-types.js";
 
@@ -24,13 +24,14 @@ interface RuntimeBackgroundJob {
   stopping: boolean;
 }
 
-const DEFAULT_BACKGROUND_JOB_MAX_RUNTIME_MS = 5 * 60 * 60 * 1000;
+const DEFAULT_BACKGROUND_JOB_MAX_RUNTIME_MS = 12 * 60 * 60 * 1000;
 
 export class JobManager {
   readonly #sessions: SessionManager;
   readonly #jobsRoot: string;
   readonly #reposRoot: string;
   readonly #brokerHttpBaseUrl: string;
+  readonly #zorkBinDir: string;
   readonly #maxRuntimeMs: number;
   readonly #runtimeJobs = new Map<string, RuntimeBackgroundJob>();
   readonly #onEvent: (event: { readonly platform: ChatPlatform; readonly conversationId: string; readonly rootMessageId: string; readonly payload: BackgroundJobEventPayload }) => Promise<void>;
@@ -40,6 +41,7 @@ export class JobManager {
     readonly jobsRoot: string;
     readonly reposRoot: string;
     readonly brokerHttpBaseUrl: string;
+    readonly zorkBinDir: string;
     readonly maxRuntimeMs?: number | undefined;
     readonly onEvent: (event: { readonly platform: ChatPlatform; readonly conversationId: string; readonly rootMessageId: string; readonly payload: BackgroundJobEventPayload }) => Promise<void>;
   }) {
@@ -47,12 +49,14 @@ export class JobManager {
     this.#jobsRoot = options.jobsRoot;
     this.#reposRoot = options.reposRoot;
     this.#brokerHttpBaseUrl = options.brokerHttpBaseUrl;
+    this.#zorkBinDir = options.zorkBinDir;
     this.#maxRuntimeMs = options.maxRuntimeMs ?? DEFAULT_BACKGROUND_JOB_MAX_RUNTIME_MS;
     this.#onEvent = options.onEvent;
   }
 
   async start(): Promise<void> {
     await ensureDir(this.#jobsRoot);
+    await ensureZorkCallBin(this.#zorkBinDir);
 
     for (const job of this.#sessions.listBackgroundJobs()) {
       if (!job.restartOnBoot) {
@@ -133,116 +137,50 @@ export class JobManager {
     return this.#requireJob(id);
   }
 
-  async heartbeatJob(id: string, token: string): Promise<PersistedBackgroundJob> {
-    const job = this.#authorizeJob(id, token);
-    return await this.#persistJob({
-      ...job,
-      heartbeatAt: new Date().toISOString(),
-    });
-  }
-
-  async emitJobEvent(
-    id: string,
-    token: string,
-    payload: {
-      readonly eventKind: string;
-      readonly summary: string;
-      readonly detailsText?: string | undefined;
-      readonly detailsJson?: JsonLike | undefined;
-    },
-  ): Promise<PersistedBackgroundJob> {
-    const job = this.#authorizeJob(id, token);
-    const updated = await this.#persistJob({
-      ...job,
-      lastEventAt: new Date().toISOString(),
-      lastEventKind: payload.eventKind,
-      lastEventSummary: payload.summary.trim(),
-    });
-
-    if (this.#shouldSuppressEventForFinalizedSession(updated)) {
-      await this.cancelJob(updated.id, undefined, {
-        skipTokenCheck: true,
-        skipEvent: true,
+  async notify(options: {
+    readonly jobId?: string | undefined;
+    readonly summary: string;
+    readonly platform: ChatPlatform;
+    readonly conversationId: string;
+    readonly rootMessageId: string;
+  }): Promise<"emitted" | "suppressed"> {
+    const summary = options.summary.trim();
+    const job = options.jobId ? this.#sessions.getBackgroundJob(options.jobId) : undefined;
+    if (job) {
+      const updated = await this.#persistJob({
+        ...job,
+        lastEventAt: new Date().toISOString(),
+        lastEventKind: "notify",
+        lastEventSummary: summary,
       });
-      return this.#requireJob(updated.id);
-    }
-
-    await this.#emitEvent(updated, {
-      jobId: updated.id,
-      jobKind: updated.kind,
-      eventKind: payload.eventKind,
-      summary: payload.summary.trim(),
-      detailsText: payload.detailsText?.trim() || undefined,
-      detailsJson: payload.detailsJson,
-    });
-
-    return updated;
-  }
-
-  async completeJob(
-    id: string,
-    token: string,
-    payload?: {
-      readonly summary?: string | undefined;
-      readonly detailsText?: string | undefined;
-      readonly detailsJson?: JsonLike | undefined;
-    },
-  ): Promise<PersistedBackgroundJob> {
-    const job = this.#authorizeJob(id, token);
-    const now = new Date().toISOString();
-    const updated = await this.#persistJob({
-      ...job,
-      status: "completed",
-      completedAt: now,
-      lastEventKind: payload?.summary?.trim() ? "job_completed" : job.lastEventKind,
-      lastEventSummary: payload?.summary?.trim() || job.lastEventSummary,
-    });
-
-    if (payload?.summary?.trim() && !this.#shouldSuppressEventForFinalizedSession(updated)) {
+      if (this.#shouldSuppressEventForFinalizedSession(updated)) {
+        await this.cancelJob(updated.id, undefined, {
+          skipTokenCheck: true,
+          skipEvent: true,
+        });
+        return "suppressed";
+      }
       await this.#emitEvent(updated, {
         jobId: updated.id,
         jobKind: updated.kind,
-        eventKind: "job_completed",
-        summary: payload.summary.trim(),
-        detailsText: payload.detailsText?.trim() || undefined,
-        detailsJson: payload.detailsJson,
+        eventKind: "notify",
+        summary,
       });
+      return "emitted";
     }
 
-    await this.#stopRuntimeJob(updated.id);
-    return updated;
-  }
-
-  async failJob(
-    id: string,
-    token: string,
-    payload: {
-      readonly summary?: string | undefined;
-      readonly error?: string | undefined;
-      readonly detailsText?: string | undefined;
-      readonly detailsJson?: JsonLike | undefined;
-    },
-  ): Promise<PersistedBackgroundJob> {
-    const job = this.#authorizeJob(id, token);
-    const now = new Date().toISOString();
-    const updated = await this.#persistJob({
-      ...job,
-      status: "failed",
-      completedAt: now,
-      error: payload.error?.trim() || payload.summary?.trim() || job.error,
+    await this.#onEvent({
+      platform: options.platform,
+      conversationId: options.conversationId,
+      rootMessageId: options.rootMessageId,
+      payload: {
+        jobId: options.jobId ?? "notify",
+        jobKind: "notify",
+        eventKind: "notify",
+        summary,
+      },
     });
-
-    await this.#emitEvent(updated, {
-      jobId: updated.id,
-      jobKind: updated.kind,
-      eventKind: "job_failed",
-      summary: payload.summary?.trim() || `Background job ${updated.id} failed.`,
-      detailsText: payload.detailsText?.trim() || payload.error?.trim() || undefined,
-      detailsJson: payload.detailsJson,
-    });
-
-    await this.#stopRuntimeJob(updated.id);
-    return updated;
+    return "emitted";
   }
 
   async cancelJob(
@@ -319,10 +257,9 @@ export class JobManager {
     const session = this.#sessions.getSessionByKey(job.sessionKey);
     const env: NodeJS.ProcessEnv = {
       ...process.env,
+      PATH: `${this.#zorkBinDir}${path.delimiter}${process.env.PATH ?? ""}`,
       BROKER_JOB_ID: job.id,
-      BROKER_JOB_TOKEN: job.token,
       BROKER_API_BASE: this.#brokerHttpBaseUrl,
-      BROKER_JOB_HELPER: process.env.BROKER_JOB_HELPER?.trim() || resolveRuntimeToolPath("job-callback.js"),
       CHAT_PLATFORM: coordinates.platform,
       CHAT_CONVERSATION_ID: coordinates.conversationId,
       CHAT_ROOT_MESSAGE_ID: coordinates.rootMessageId,
@@ -431,31 +368,29 @@ export class JobManager {
       return;
     }
 
-    if ((code ?? 0) === 0 && !signalText) {
-      await this.#persistJob({
-        ...job,
-        status: "completed",
-        completedAt: new Date().toISOString(),
-        exitCode,
-      });
+    const failed = (code ?? 0) !== 0 || Boolean(signalText);
+    const errorText = [exitCode != null ? `exit code ${exitCode}` : undefined, signalText ? `signal ${signalText}` : undefined, runtime?.stderrTail?.trim() || undefined].filter(Boolean).join("; ");
+    const updated = await this.#persistJob({
+      ...job,
+      status: failed ? "failed" : "completed",
+      completedAt: new Date().toISOString(),
+      exitCode,
+      error: failed ? errorText || job.error : job.error,
+      lastEventKind: failed ? "job_failed" : "job_exited",
+      lastEventSummary: failed ? `Background job ${job.id} exited unexpectedly.` : `Background job ${job.id} exited (code ${exitCode ?? 0}).`,
+      lastEventAt: new Date().toISOString(),
+    });
+
+    if (this.#shouldSuppressEventForFinalizedSession(updated)) {
       return;
     }
 
-    const errorText = [exitCode != null ? `exit code ${exitCode}` : undefined, signalText ? `signal ${signalText}` : undefined, runtime?.stderrTail?.trim() || undefined].filter(Boolean).join("; ");
-
-    const failed = await this.#persistJob({
-      ...job,
-      status: "failed",
-      completedAt: new Date().toISOString(),
-      exitCode,
-      error: errorText || job.error,
-    });
-    await this.#emitEvent(failed, {
-      jobId: failed.id,
-      jobKind: failed.kind,
-      eventKind: "job_failed",
-      summary: `Background job ${failed.id} exited unexpectedly.`,
-      detailsText: failed.error,
+    await this.#emitEvent(updated, {
+      jobId: updated.id,
+      jobKind: updated.kind,
+      eventKind: failed ? "job_failed" : "job_exited",
+      summary: updated.lastEventSummary ?? `Background job ${updated.id} exited.`,
+      detailsText: errorText || undefined,
     });
   }
 
@@ -522,7 +457,7 @@ export class JobManager {
     }
 
     const now = new Date().toISOString();
-    const summary = `Background job ${job.id} exceeded the runtime limit (${formatRuntimeLimit(this.#maxRuntimeMs)}) and was cancelled.`;
+    const summary = `Background job ${job.id} stopped after ${formatRuntimeLimit(this.#maxRuntimeMs)}. Register it again if it should keep running.`;
     const updated = await this.#persistJob({
       ...job,
       status: "cancelled",

@@ -20,7 +20,7 @@ import type {
   SlackSessionRecord,
 } from "../types.js";
 import { ensureDir } from "../utils/fs.js";
-import { DEFAULT_TRACE_SEGMENT_MAX_BYTES, TraceJsonlStore, traceToolEventKey, type TraceSummarySnapshotRecord } from "./trace-jsonl-store.js";
+import { DEFAULT_TRACE_SEGMENT_MAX_BYTES, TRACE_DIRECTORY_NAME, TraceJsonlStore, traceToolEventKey, type TraceSummarySnapshotRecord } from "./trace-jsonl-store.js";
 
 export const STATE_DATABASE_FILENAME = "broker.sqlite";
 export const CURRENT_STATE_SCHEMA_VERSION = 18;
@@ -695,20 +695,23 @@ export class StateStore {
     this.#sessionsRoot = sessionsRoot;
     this.#traceSummarySnapshotInterval = options?.traceSummarySnapshotInterval ?? TRACE_SUMMARY_SNAPSHOT_INTERVAL;
     this.#traces = new TraceJsonlStore({
-      stateDir,
+      sessionsRoot,
+      resolveWorkspacePath: (sessionKey) => this.getSession(sessionKey)?.workspacePath,
+      legacyTraceRoot: path.join(stateDir, TRACE_DIRECTORY_NAME),
       segmentMaxBytes: options?.traceSegmentMaxBytes ?? DEFAULT_TRACE_SEGMENT_MAX_BYTES,
     });
   }
 
   async load(): Promise<void> {
     await ensureDir(this.#stateDir);
-    this.#traces.ensureLayout();
     if (this.#loaded) {
+      this.#traces.ensureLayout();
       return;
     }
     this.#openDatabase();
     this.#migrate();
     this.#loaded = true;
+    this.#traces.ensureLayout();
   }
 
   close(): void {
@@ -1270,7 +1273,7 @@ export class StateStore {
   rebuildTraceSummaries(): void {
     this.#transaction(() => {
       this.#databaseRequired().prepare("DELETE FROM agent_session_trace_summaries").run();
-      for (const sessionKey of this.#traces.listSessionKeys()) {
+      for (const sessionKey of this.#traces.listSessionKeys(this.listSessions().map((session) => session.key))) {
         const summary = this.#rebuildSessionTraceSummaryFromJsonl(sessionKey);
         if (summary) {
           this.#writeAgentSessionTraceSummary(summary);
@@ -2459,7 +2462,13 @@ function migrateAgentTraceEventsToJsonl(database: DatabaseSync, traces: TraceJso
 
   // The summary cache is derived state; refill it from the new JSONL SSOT so
   // counts survive the migration instead of waiting for the next rebuild.
-  for (const sessionKey of new Set([...migratedSessionKeys, ...traces.listSessionKeys()])) {
+  const sessionKeys = new Set(migratedSessionKeys);
+  if (tableExists(database, "sessions")) {
+    for (const row of database.prepare("SELECT key FROM sessions").all() as SqlRow[]) {
+      sessionKeys.add(stringColumn(row, "key"));
+    }
+  }
+  for (const sessionKey of sessionKeys) {
     const summary = rebuildSessionTraceSummaryFromJsonl(traces, sessionKey);
     if (summary) {
       upsertAgentSessionTraceSummaryRow(database, summary);

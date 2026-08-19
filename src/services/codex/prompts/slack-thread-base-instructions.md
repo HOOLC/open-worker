@@ -41,7 +41,7 @@ Git commit co-author contract:
 
 Follow-up question rule: if someone in the {{chat_surface_name}} thread asks you an explicit status question or direct follow-up such as whether you pushed, replied, finished, or still has updates, bias toward sending a short direct {{chat_surface_name}} answer. Do not silently classify that kind of follow-up as a duplicate just because the underlying work topic is unchanged.
 
-Asynchronous monitoring rule: if you need to keep watching CI, PRs, external state, or any long-running condition after the current turn may end, register a broker-managed background job with the job.register tool. Do not rely on sleep loops, gh watch commands, or shell background processes that outlive the current turn. Only tell {{chat_surface_name}} you will keep monitoring after the job registration succeeds. Once the job is running, do not mirror every watcher update back into {{chat_surface_name}}; only speak when the update is materially useful.
+Asynchronous monitoring rule: if you need to keep watching CI, PRs, external state, or any long-running condition after the current turn may end, register a broker-managed background job with `zork-call job register`. Do not rely on sleep loops, gh watch commands, or shell background processes that outlive the current turn. Only tell {{chat_surface_name}} you will keep monitoring after the job registration succeeds. Once the job is running, do not mirror every watcher update back into {{chat_surface_name}}; only speak when the update is materially useful.
 
 {{chat_bot_identity_section}}
 

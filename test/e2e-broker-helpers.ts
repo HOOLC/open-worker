@@ -6,7 +6,8 @@ import path from "node:path";
 
 import { once } from "node:events";
 
-import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -56,6 +57,28 @@ export async function startBrokerProcess(options: { readonly port: number; reado
   readonly logs: readonly string[];
 }> {
   const logs: string[] = [];
+  const stateDir = path.join(options.tempRoot, "state");
+  const slackEnv = {
+    SLACK_APP_TOKEN: "xapp-test",
+    SLACK_BOT_TOKEN: "xoxb-test",
+    SLACK_API_BASE_URL: `http://127.0.0.1:${options.slackPort}/api`,
+    SLACK_SOCKET_OPEN_URL: "apps.connections.open",
+    STATE_DIR: stateDir,
+  };
+  const gatewayPort = await getFreePort();
+  const gateway = spawnGatewayProcess({
+    port: gatewayPort,
+    env: slackEnv,
+    logs,
+  });
+
+  try {
+    await waitForHttpReady(`http://127.0.0.1:${gatewayPort}/readyz`, logs);
+  } catch (error) {
+    await stopChildProcess(gateway);
+    throw error;
+  }
+
   const importOption = (options.nodeImports ?? []).map((specifier) => `--import ${specifier}`).join(" ");
   const nodeOptions = [options.extraEnv?.NODE_OPTIONS ?? process.env.NODE_OPTIONS, importOption].filter((value) => Boolean(value)).join(" ");
   const child = spawn("pnpm", ["exec", "tsx", "src/index.ts"], {
@@ -63,20 +86,17 @@ export async function startBrokerProcess(options: { readonly port: number; reado
     env: {
       ...process.env,
       ...options.extraEnv,
-      SLACK_APP_TOKEN: "xapp-test",
-      SLACK_BOT_TOKEN: "xoxb-test",
-      SLACK_API_BASE_URL: `http://127.0.0.1:${options.slackPort}/api`,
-      SLACK_SOCKET_OPEN_URL: "apps.connections.open",
+      ...slackEnv,
       SLACK_INITIAL_THREAD_HISTORY_COUNT: "8",
       SLACK_HISTORY_API_MAX_LIMIT: "50",
       FEISHU_ENABLED: options.extraEnv?.FEISHU_ENABLED ?? "false",
-      STATE_DIR: path.join(options.tempRoot, "state"),
       SESSIONS_ROOT: path.join(options.tempRoot, "sessions"),
       REPOS_ROOT: path.join(options.tempRoot, "repos"),
       JOBS_ROOT: path.join(options.tempRoot, "jobs"),
       LOG_DIR: path.join(options.tempRoot, "logs"),
       CODEX_HOME: path.join(options.tempRoot, "codex-home"),
       PORT: String(options.port),
+      GATEWAY_URL: `http://127.0.0.1:${gatewayPort}`,
       BROKER_HTTP_BASE_URL: `http://127.0.0.1:${options.port}`,
       CODEX_APP_SERVER_URL: options.codexUrl,
       DEBUG: "1",
@@ -92,26 +112,76 @@ export async function startBrokerProcess(options: { readonly port: number; reado
     logs.push(chunk.toString());
   });
 
-  await waitForHttpReady(`http://127.0.0.1:${options.port}`, logs);
+  try {
+    await waitForHttpReady(`http://127.0.0.1:${options.port}`, logs);
+  } catch (error) {
+    await stopChildProcess(child);
+    await stopChildProcess(gateway);
+    throw error;
+  }
 
   return {
     baseUrl: `http://127.0.0.1:${options.port}`,
     logs,
     stop: async () => {
-      if (child.exitCode !== null || child.signalCode !== null) {
-        return;
-      }
-
-      child.kill("SIGTERM");
-      const graceful = await Promise.race([once(child, "exit").then(() => true), delay(5_000).then(() => false)]);
-      if (graceful) {
-        return;
-      }
-
-      child.kill("SIGKILL");
-      await once(child, "exit");
+      await stopChildProcess(child);
+      await stopChildProcess(gateway);
     },
   };
+}
+
+function gatewayBinaryPath(): string {
+  return path.join(brokerRoot, "target/debug/zork-gateway");
+}
+
+function ensureGatewayBinary(): void {
+  if (existsSync(gatewayBinaryPath())) {
+    return;
+  }
+
+  const result = spawnSync("cargo", ["build", "-p", "zork-gateway"], {
+    cwd: brokerRoot,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error(`failed to build zork-gateway:\n${result.stderr || result.stdout}`);
+  }
+}
+
+function spawnGatewayProcess(options: { readonly port: number; readonly env: Record<string, string>; readonly logs: string[] }): ChildProcess {
+  ensureGatewayBinary();
+  const child = spawn(gatewayBinaryPath(), [], {
+    cwd: brokerRoot,
+    env: {
+      ...process.env,
+      ...options.env,
+      PORT: String(options.port),
+      RUST_LOG: "info",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout.on("data", (chunk) => {
+    options.logs.push(chunk.toString());
+  });
+  child.stderr.on("data", (chunk) => {
+    options.logs.push(chunk.toString());
+  });
+  return child;
+}
+
+async function stopChildProcess(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+
+  child.kill("SIGTERM");
+  const graceful = await Promise.race([once(child, "exit").then(() => true), delay(5_000).then(() => false)]);
+  if (graceful) {
+    return;
+  }
+
+  child.kill("SIGKILL");
+  await once(child, "exit");
 }
 
 export async function waitForHttpReady(url: string, logs: readonly string[], timeoutMs = DEFAULT_E2E_TIMEOUT_MS): Promise<void> {

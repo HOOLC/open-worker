@@ -15,25 +15,4 @@ export type {
   AppServerRateLimitSnapshot,
   AppServerRateLimitsResponse,
 } from "./app-server-client-base.js";
-export type { ThreadCoordinates } from "./dynamic-tools.js";
-export type {
-  DynamicToolDeclaration,
-  DynamicToolNamespace,
-  DynamicToolFunction,
-  DynamicToolBackend,
-  DynamicToolCallRequest,
-  DynamicToolCallResult,
-  DynamicToolContentItem,
-  DynamicToolCallContext,
-  BrokerToolBackend,
-  PostMessageArgs,
-  PostStateArgs,
-  PostFileArgs,
-  ThreadHistoryArgs,
-  CoauthorStatusArgs,
-  CoauthorConfigureArgs,
-  RegisterJobArgs,
-  ListIntegrationToolsArgs,
-  CallIntegrationArgs,
-} from "./dynamic-tools.js";
-export { RESERVED_DYNAMIC_TOOL_NAMESPACES, isReservedDynamicToolNamespace, toDynamicToolCallRequest, toDynamicToolCallResult, toDynamicToolDeclarationsJson, buildDynamicToolsDeclaration, handleToolCall } from "./dynamic-tools.js";
+export type { ThreadCoordinates } from "./thread-coordinates.js";

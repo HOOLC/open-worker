@@ -131,15 +131,17 @@ describe.sequential("slack-codex-broker e2e", () => {
     expect(registeredJobToken).not.toBe("");
 
     const postedMessageCountAfterIdle = mockSlack.postedMessages.length;
-    const eventResponse = await fetch(`${brokerBaseUrl}/jobs/${registeredJobId}/event`, {
+    const eventResponse = await fetch(`${brokerBaseUrl}/notify`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        token: registeredJobToken,
-        event_kind: "state_changed",
-        summary: "PR merged on main",
+        platform: "slack",
+        conversationId: "C123",
+        rootMessageId: "780.220",
+        text: "PR merged on main",
+        jobId: registeredJobId,
       }),
     });
     expect(eventResponse.ok).toBe(true);

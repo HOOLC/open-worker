@@ -25,7 +25,9 @@ export interface TraceSummarySnapshotRecord {
 export type TraceJsonlRecord = { readonly kind: "event"; readonly event: PersistedAgentTraceEvent } | { readonly kind: "snapshot"; readonly snapshot: TraceSummarySnapshotRecord };
 
 export interface TraceJsonlStoreOptions {
-  readonly stateDir: string;
+  readonly sessionsRoot: string;
+  readonly resolveWorkspacePath: (sessionKey: string) => string | undefined;
+  readonly legacyTraceRoot?: string | undefined;
   readonly segmentMaxBytes?: number | undefined;
 }
 
@@ -56,8 +58,20 @@ export function sanitizeTraceSessionKey(sessionKey: string): string {
   return encodeURIComponent(sessionKey);
 }
 
-export function traceSessionDirectory(stateDir: string, sessionKey: string): string {
-  return path.join(stateDir, TRACE_DIRECTORY_NAME, sanitizeTraceSessionKey(sessionKey));
+export function sessionDiskRootFromWorkspace(workspacePath: string): string {
+  const resolved = path.resolve(workspacePath);
+  return path.basename(resolved) === "workspace" ? path.dirname(resolved) : resolved;
+}
+
+export function sessionTraceDirectory(workspacePath: string): string {
+  return path.join(sessionDiskRootFromWorkspace(workspacePath), TRACE_DIRECTORY_NAME);
+}
+
+export function traceSessionDirectory(sessionsRoot: string, sessionKey: string, workspacePath?: string | undefined): string {
+  if (workspacePath) {
+    return sessionTraceDirectory(workspacePath);
+  }
+  return path.join(sessionsRoot, sanitizeTraceSessionKey(sessionKey), TRACE_DIRECTORY_NAME);
 }
 
 export function isZstdAvailable(): boolean {
@@ -70,17 +84,22 @@ export function isZstdAvailable(): boolean {
 }
 
 export class TraceJsonlStore {
-  readonly #stateDir: string;
+  readonly #sessionsRoot: string;
+  readonly #resolveWorkspacePath: (sessionKey: string) => string | undefined;
+  readonly #legacyTraceRoot: string | undefined;
   readonly #segmentMaxBytes: number;
   readonly #sessions = new Map<string, SessionTraceState>();
 
   constructor(options: TraceJsonlStoreOptions) {
-    this.#stateDir = options.stateDir;
+    this.#sessionsRoot = options.sessionsRoot;
+    this.#resolveWorkspacePath = options.resolveWorkspacePath;
+    this.#legacyTraceRoot = options.legacyTraceRoot;
     this.#segmentMaxBytes = options.segmentMaxBytes ?? DEFAULT_TRACE_SEGMENT_MAX_BYTES;
   }
 
   ensureLayout(): void {
-    fs.mkdirSync(this.#traceRoot(), { recursive: true });
+    fs.mkdirSync(this.#sessionsRoot, { recursive: true });
+    this.#migrateLegacyTraceRoot();
   }
 
   appendEvent(event: PersistedAgentTraceEvent): void {
@@ -166,16 +185,9 @@ export class TraceJsonlStore {
     }
   }
 
-  listSessionKeys(): string[] {
+  listSessionKeys(knownSessionKeys: readonly string[] = []): string[] {
     this.ensureLayout();
-    const sessionKeys: string[] = [];
-    for (const entry of fs.readdirSync(this.#traceRoot(), { withFileTypes: true })) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      sessionKeys.push(sessionKeyFromDirectoryName(entry.name));
-    }
-    return sessionKeys;
+    return [...new Set(knownSessionKeys.filter((sessionKey) => fs.existsSync(this.#sessionDir(sessionKey))))];
   }
 
   deleteSession(sessionKey: string): void {
@@ -291,11 +303,38 @@ export class TraceJsonlStore {
   }
 
   #sessionDir(sessionKey: string): string {
-    return traceSessionDirectory(this.#stateDir, sessionKey);
+    const workspacePath = this.#resolveWorkspacePath(sessionKey);
+    if (workspacePath) {
+      return sessionTraceDirectory(workspacePath);
+    }
+    return traceSessionDirectory(this.#sessionsRoot, sessionKey);
   }
 
-  #traceRoot(): string {
-    return path.join(this.#stateDir, TRACE_DIRECTORY_NAME);
+  #migrateLegacyTraceRoot(): void {
+    const legacyRoot = this.#legacyTraceRoot;
+    if (!legacyRoot || !fs.existsSync(legacyRoot)) {
+      return;
+    }
+    for (const entry of fs.readdirSync(legacyRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      const sessionKey = sessionKeyFromDirectoryName(entry.name);
+      const source = path.join(legacyRoot, entry.name);
+      const destination = this.#sessionDir(sessionKey);
+      if (path.resolve(source) === path.resolve(destination)) {
+        continue;
+      }
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      if (fs.existsSync(destination)) {
+        continue;
+      }
+      fs.renameSync(source, destination);
+    }
+    const leftover = fs.readdirSync(legacyRoot);
+    if (leftover.length === 0) {
+      fs.rmdirSync(legacyRoot);
+    }
   }
 }
 

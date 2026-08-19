@@ -1,4 +1,11 @@
+import os from "node:os";
 import path from "node:path";
+
+export const DEFAULT_DATA_ROOT_NAME = ".zork";
+
+export function defaultDataRoot(): string {
+  return path.join(os.homedir(), DEFAULT_DATA_ROOT_NAME);
+}
 
 export interface AppConfig {
   readonly serviceRoot?: string | undefined;
@@ -47,6 +54,8 @@ export interface AppConfig {
   readonly workerBindHost: string;
   readonly workerBaseUrl: string;
   readonly brokerHttpBaseUrl: string;
+  readonly gatewayUrl?: string | undefined;
+  readonly zorkBinDir: string;
   readonly serviceName: string;
   readonly brokerAdminToken?: string | undefined;
   readonly adminLaunchdLabel?: string | undefined;
@@ -223,7 +232,7 @@ function getFeishuApiBaseUrl(env: NodeJS.ProcessEnv): string {
 
 export function loadConfig(env = process.env): AppConfig {
   const serviceRoot = env.SERVICE_ROOT ? path.resolve(env.SERVICE_ROOT) : undefined;
-  const dataRoot = env.DATA_ROOT ? path.resolve(env.DATA_ROOT) : path.resolve(".data");
+  const dataRoot = env.DATA_ROOT ? path.resolve(env.DATA_ROOT) : defaultDataRoot();
   const stateDir = env.STATE_DIR ? path.resolve(env.STATE_DIR) : path.join(dataRoot, "state");
   const jobsRoot = env.JOBS_ROOT ? path.resolve(env.JOBS_ROOT) : path.join(dataRoot, "jobs");
   const sessionsRoot = env.SESSIONS_ROOT ? path.resolve(env.SESSIONS_ROOT) : path.join(dataRoot, "sessions");
@@ -304,6 +313,8 @@ export function loadConfig(env = process.env): AppConfig {
     workerBaseUrl: env.WORKER_BASE_URL ?? `http://${workerBindHost}:${workerPort}`,
     adminBaseUrl: env.ADMIN_BASE_URL ?? `http://127.0.0.1:${port}`,
     brokerHttpBaseUrl: env.BROKER_HTTP_BASE_URL ?? `http://127.0.0.1:${port}`,
+    gatewayUrl: getOptional(env, "GATEWAY_URL")?.replace(/\/+$/u, ""),
+    zorkBinDir: env.ZORK_BIN_DIR ? path.resolve(env.ZORK_BIN_DIR) : path.join(path.dirname(stateDir), "bin"),
     serviceName: env.SERVICE_NAME ?? "slack-codex-broker",
     brokerAdminToken: getOptional(env, "BROKER_ADMIN_TOKEN"),
     adminLaunchdLabel: getOptional(env, "ADMIN_LAUNCHD_LABEL"),

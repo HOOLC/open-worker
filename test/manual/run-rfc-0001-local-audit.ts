@@ -185,7 +185,7 @@ export const RFC0001_REQUIRED_LOCAL_EVIDENCE_PATTERNS: ReadonlyArray<{
   {
     id: "prompt.feishu_platform_runtime_instructions",
     file: "src/services/codex/slack-thread-base-instructions.ts",
-    snippets: ["chat.post_message", "SLACK_CHANNEL_ID", "SLACK_THREAD_TS", "CHAT_PLATFORM", "CHAT_CONVERSATION_ID", "CHAT_ROOT_MESSAGE_ID"],
+    snippets: ["zork-call chat post-message", "SLACK_CHANNEL_ID", "SLACK_THREAD_TS", "CHAT_PLATFORM", "CHAT_CONVERSATION_ID", "CHAT_ROOT_MESSAGE_ID"],
   },
   {
     id: "smoke.final_evidence_gates",

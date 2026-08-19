@@ -8,7 +8,6 @@ import type { SlackSessionRecord, SlackUserIdentity } from "../../types.js";
 import type { AppServerAccountSummary, CodexInputItem, AppServerRateLimitsResponse, ReadTurnResultOptions, ReadTurnResult, StartedTurn } from "./app-server-client.js";
 import { logger } from "../../logger.js";
 import { getPersonalMemoryPath } from "./codex-home.js";
-import { buildDynamicToolsDeclaration, handleToolCall, type BrokerToolBackend, type DynamicToolCallResult } from "./dynamic-tools.js";
 
 export class CodexBroker extends EventEmitter {
   readonly #appServerProcess?: AppServerProcess;
@@ -22,7 +21,6 @@ export class CodexBroker extends EventEmitter {
   readonly #reposRoot: string;
   readonly #codexGeneratedImagesRoot: string;
   #slackBotIdentity: SlackUserIdentity | null = null;
-  #toolBackend: BrokerToolBackend | undefined;
   #reconnectPromise: Promise<void> | undefined;
   #connectQueue: Promise<void> = Promise.resolve();
   #stopping = false;
@@ -31,6 +29,7 @@ export class CodexBroker extends EventEmitter {
   constructor(options: {
     readonly serviceName: string;
     readonly brokerHttpBaseUrl: string;
+    readonly zorkBinDir: string;
     readonly codexHome: string;
     readonly teamCodexHomePath?: string | undefined;
     readonly reposRoot: string;
@@ -62,6 +61,7 @@ export class CodexBroker extends EventEmitter {
 
     this.#appServerProcess = new AppServerProcess({
       brokerHttpBaseUrl: options.brokerHttpBaseUrl,
+      zorkBinDir: options.zorkBinDir,
       codexHome: options.codexHome,
       teamCodexHomePath: options.teamCodexHomePath,
       hostCodexHomePath: options.hostCodexHomePath,
@@ -95,15 +95,6 @@ export class CodexBroker extends EventEmitter {
   setSlackBotIdentity(identity: SlackUserIdentity | null): void {
     this.#slackBotIdentity = identity;
     this.#client.setSlackBotIdentity(identity);
-  }
-
-  // Constructor order is broker -> runtime -> bridge -> job manager, so the
-  // backend that needs the bridge and job manager can only be attached here,
-  // after construction. Applying it to the current client also covers a client
-  // created before the backend existed.
-  setToolBackend(backend: BrokerToolBackend | undefined): void {
-    this.#toolBackend = backend;
-    this.#applyToolBackend(this.#client);
   }
 
   async ensureThread(session: SlackSessionRecord): Promise<string> {
@@ -180,23 +171,7 @@ export class CodexBroker extends EventEmitter {
       codexGeneratedImagesRoot: this.#codexGeneratedImagesRoot,
     });
     client.setSlackBotIdentity(this.#slackBotIdentity);
-    this.#applyToolBackend(client);
     return client;
-  }
-
-  #applyToolBackend(client: AppServerClient): void {
-    const backend = this.#toolBackend;
-    if (!backend) {
-      client.setDynamicToolBackend(undefined);
-      return;
-    }
-
-    const resolveCoords = (threadId: string) => client.readThreadCoordinates(threadId);
-    client.setDynamicToolBackend({
-      listDeclarations: () => buildDynamicToolsDeclaration(),
-      handleCall: async (call) => handleToolCall(call, resolveCoords, backend),
-    });
-    client.setServerRequestHandler("item/tool/call", async (params) => toServerToolCallResult(await handleToolCall(params, resolveCoords, backend)));
   }
 
   #bindClient(client: AppServerClient): void {
@@ -333,14 +308,6 @@ export class CodexBroker extends EventEmitter {
       });
     }
   }
-}
-
-function toServerToolCallResult(result: DynamicToolCallResult): Record<string, unknown> {
-  return {
-    contentItems: result.contentItems.map((item) => ({ type: item.type, text: item.text })),
-    success: result.success,
-    ...(result.reason === undefined ? {} : { reason: result.reason }),
-  };
 }
 
 function choosePersonalMemoryFilePath(options: { readonly codexHome: string; readonly teamCodexHomePath?: string | undefined }): string {

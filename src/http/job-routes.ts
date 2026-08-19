@@ -3,8 +3,7 @@ import { URL } from "node:url";
 
 import type { JobManager } from "../services/job-manager.js";
 import { logger } from "../logger.js";
-import type { JsonLike } from "../types.js";
-import { parseJsonLikeRequestField, readBoolean, readJsonBody, readString, respondJson } from "./common.js";
+import { readBoolean, readJsonBody, readString, respondJson } from "./common.js";
 import { redactHttpRequestBody } from "./request-log-redaction.js";
 
 const JOB_COORDINATE_REQUIRED_FIELDS = ["platform", "conversationId (alias: conversation_id)", "rootMessageId (alias: root_message_id)", "kind", "script"];
@@ -27,12 +26,6 @@ export async function handleJobRequest(
   const matchedAdminCancel = matchJobAdminCancel(url.pathname);
   if (method === "POST" && matchedAdminCancel) {
     await handleJobAdminCancelRequest(request, response, options, matchedAdminCancel);
-    return true;
-  }
-
-  const matchedJobAction = matchJobAction(url.pathname);
-  if (method === "POST" && matchedJobAction) {
-    await handleJobActionRequest(request, response, options, matchedJobAction);
     return true;
   }
 
@@ -200,152 +193,12 @@ async function handleJobAdminCancelRequest(
   }
 }
 
-async function handleJobActionRequest(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  options: {
-    readonly jobManager: JobManager;
-  },
-  action: {
-    readonly jobId: string;
-    readonly action: "heartbeat" | "event" | "complete" | "fail" | "cancel";
-  },
-): Promise<void> {
-  let body: Record<string, unknown>;
-
-  try {
-    body = await readJsonBody(request);
-  } catch (error) {
-    respondJson(response, 400, {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return;
-  }
-  logger.raw(
-    "http-requests",
-    {
-      method: "POST",
-      path: `/jobs/${action.jobId}/${action.action}`,
-      body: redactHttpRequestBody(body),
-    },
-    {
-      jobId: action.jobId,
-    },
-  );
-
-  const token = readString(body.token);
-
-  try {
-    let job;
-
-    switch (action.action) {
-      case "heartbeat":
-        if (!token) {
-          throw new Error("missing_job_token");
-        }
-        job = await options.jobManager.heartbeatJob(action.jobId, token);
-        break;
-      case "event":
-        if (!token) {
-          throw new Error("missing_job_token");
-        }
-        if (!readString(body.event_kind) || !readString(body.summary)) {
-          throw new Error("missing_required_body:event_kind,summary");
-        }
-        {
-          const parsed = parseJobDetailsJson(body);
-          if (!parsed.ok) {
-            respondJson(response, 400, {
-              ok: false,
-              error: "invalid_json_field",
-              field: parsed.field,
-            });
-            return;
-          }
-          job = await options.jobManager.emitJobEvent(action.jobId, token, {
-            eventKind: readString(body.event_kind)!,
-            summary: readString(body.summary)!,
-            detailsText: readString(body.details_text) || undefined,
-            detailsJson: parsed.value,
-          });
-        }
-        break;
-      case "complete":
-        if (!token) {
-          throw new Error("missing_job_token");
-        }
-        {
-          const parsed = parseJobDetailsJson(body);
-          if (!parsed.ok) {
-            respondJson(response, 400, {
-              ok: false,
-              error: "invalid_json_field",
-              field: parsed.field,
-            });
-            return;
-          }
-          job = await options.jobManager.completeJob(action.jobId, token, {
-            summary: readString(body.summary) || undefined,
-            detailsText: readString(body.details_text) || undefined,
-            detailsJson: parsed.value,
-          });
-        }
-        break;
-      case "fail":
-        if (!token) {
-          throw new Error("missing_job_token");
-        }
-        {
-          const parsed = parseJobDetailsJson(body);
-          if (!parsed.ok) {
-            respondJson(response, 400, {
-              ok: false,
-              error: "invalid_json_field",
-              field: parsed.field,
-            });
-            return;
-          }
-          job = await options.jobManager.failJob(action.jobId, token, {
-            summary: readString(body.summary) || undefined,
-            error: readString(body.error) || undefined,
-            detailsText: readString(body.details_text) || undefined,
-            detailsJson: parsed.value,
-          });
-        }
-        break;
-      case "cancel":
-        if (!token) {
-          throw new Error("missing_job_token");
-        }
-        job = await options.jobManager.cancelJob(action.jobId, token);
-        break;
-    }
-
-    respondJson(response, 200, {
-      ok: true,
-      job,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    respondJson(response, message.startsWith("missing_") || message === "invalid_job_token" ? 400 : 500, {
-      ok: false,
-      error: message,
-    });
-  }
-}
-
 function readPlatform(value: unknown): "slack" | "feishu" | undefined {
   return value === "slack" || value === "feishu" ? value : undefined;
 }
 
 function isInvalidPlatformValue(value: unknown): boolean {
   return value != null && value !== "" && !readPlatform(value);
-}
-
-function parseJobDetailsJson(body: Record<string, unknown>): { readonly ok: true; readonly value: JsonLike | undefined } | { readonly ok: false; readonly field: string } {
-  const result = parseJsonLikeRequestField(body.details_json ?? body.detailsJson, "detailsJson (alias: details_json)");
-  return result.ok ? { ok: true, value: result.value } : { ok: false, field: result.field };
 }
 
 function matchJobAdminCancel(pathname: string): {
@@ -358,25 +211,5 @@ function matchJobAdminCancel(pathname: string): {
 
   return {
     jobId: decodeURIComponent(match[1]),
-  };
-}
-
-function matchJobAction(pathname: string): {
-  readonly jobId: string;
-  readonly action: "heartbeat" | "event" | "complete" | "fail" | "cancel";
-} | null {
-  const match = pathname.match(/^\/jobs\/([^/]+)\/(heartbeat|event|complete|fail|cancel)$/);
-  if (!match) {
-    return null;
-  }
-
-  const [, jobId, action] = match;
-  if (!jobId || !action) {
-    return null;
-  }
-
-  return {
-    jobId,
-    action: action as "heartbeat" | "event" | "complete" | "fail" | "cancel",
   };
 }

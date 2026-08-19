@@ -448,14 +448,12 @@ describe.sequential("slack-codex-broker e2e", () => {
     );
     expect(["registered", "running"]).toContain((await readBackgroundJobs(tempRoot, "C123:333.220")).find((job) => job.id === registerBody.job!.id)?.status);
 
-    await postJson(`${broker.baseUrl}/jobs/${registerBody.job!.id}/event`, {
-      token: registerBody.job!.token,
-      event_kind: "state_changed",
-      summary: "CI turned green.",
-    });
-    await postJson(`${broker.baseUrl}/jobs/${registerBody.job!.id}/complete`, {
-      token: registerBody.job!.token,
-      summary: "job done",
+    await postJson(`${broker.baseUrl}/notify`, {
+      platform: "slack",
+      conversationId: "C123",
+      rootMessageId: "333.220",
+      text: "CI turned green.",
+      jobId: registerBody.job!.id,
     });
 
     await waitFor(() => {
@@ -467,10 +465,10 @@ describe.sequential("slack-codex-broker e2e", () => {
     expect(deliveredTexts.some((text) => text.includes("A broker-managed background job reported a new asynchronous event"))).toBe(true);
     expect(deliveredTexts.some((text) => text.includes("CI turned green."))).toBe(true);
     expect(deliveredTexts.some((text) => text.includes('"job_kind": "watch_ci"'))).toBe(true);
-    expect(deliveredTexts.some((text) => text.includes('"event_kind": "state_changed"'))).toBe(true);
+    expect(deliveredTexts.some((text) => text.includes('"event_kind": "notify"'))).toBe(true);
     expect(deliveredTexts.some((text) => text.includes(`"job_id": "${registerBody.job!.id}"`))).toBe(true);
     expect(deliveredTexts.some((text) => text.includes("Most watcher events do not need a Slack reply"))).toBe(true);
-    expect(deliveredTexts.some((text) => text.includes("/slack/post-state"))).toBe(true);
+    expect(deliveredTexts.some((text) => text.includes("zork-call chat post-state"))).toBe(true);
     expect(deliveredTexts.some((text) => text.includes("silent final state"))).toBe(true);
     expect(deliveredTexts.every((text) => !text.includes("background_job_event_json") || !text.includes('"sender":'))).toBe(true);
   }, 60_000);

@@ -1,4 +1,3 @@
-import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -9,6 +8,7 @@ import { logger } from "../../logger.js";
 import { ensureDir, fileExists } from "../../utils/fs.js";
 import { withoutGlobalGitHubTokenEnv } from "../../utils/github-env.js";
 import { resolveRuntimeToolPath } from "../../utils/runtime-paths.js";
+import { ensureZorkCallBin } from "../../utils/zork-call-bin.js";
 import { syncUserCodexHome } from "./codex-home.js";
 
 const ALL_MCP_SERVERS = "*";
@@ -21,6 +21,7 @@ function resolveRuntimeHomePath(): string {
 
 export class AppServerProcess {
   readonly #brokerHttpBaseUrl: string;
+  readonly #zorkBinDir: string;
   readonly #codexHome: string;
   readonly #teamCodexHomePath: string | undefined;
   readonly #runtimeHome: string;
@@ -36,6 +37,7 @@ export class AppServerProcess {
 
   constructor(options: {
     readonly brokerHttpBaseUrl: string;
+    readonly zorkBinDir: string;
     readonly codexHome: string;
     readonly teamCodexHomePath?: string | undefined;
     readonly port: number;
@@ -46,6 +48,7 @@ export class AppServerProcess {
     readonly tempadLinkServiceUrl?: string | undefined;
   }) {
     this.#brokerHttpBaseUrl = options.brokerHttpBaseUrl;
+    this.#zorkBinDir = options.zorkBinDir;
     this.#codexHome = options.codexHome;
     this.#teamCodexHomePath = options.teamCodexHomePath;
     this.#runtimeHome = resolveRuntimeHomePath();
@@ -87,7 +90,7 @@ export class AppServerProcess {
     await this.#bootstrapAuth();
     await this.#disableConfiguredMcpServers();
     await this.#ensureGitCommitHook();
-    const githubCliWrapper = await this.#ensureGitHubCliWrapper();
+    const githubCliWrapper = await ensureZorkCallBin(this.#zorkBinDir);
     const tempadLinkServiceUrl = await this.#resolveTempadLinkServiceUrl();
 
     const env: NodeJS.ProcessEnv = withoutGlobalGitHubTokenEnv({
@@ -100,7 +103,7 @@ export class AppServerProcess {
       BROKER_REAL_GH_PATH: process.env.BROKER_REAL_GH_PATH?.trim() || githubCliWrapper.realGhPath || "",
       TEMPAD_LINK_SERVICE_URL: tempadLinkServiceUrl,
       BROKER_GIT_COAUTHOR_HELPER: process.env.BROKER_GIT_COAUTHOR_HELPER?.trim() || resolveRuntimeToolPath("git-coauthor.js"),
-      PATH: `${githubCliWrapper.binDir}:${process.env.PATH ?? ""}`,
+      PATH: `${githubCliWrapper.binDir}${path.delimiter}${process.env.PATH ?? ""}`,
     });
 
     if (this.#openAiApiKey) {
@@ -214,22 +217,6 @@ export class AppServerProcess {
     await fs.writeFile(hookPath, `${hookScript}\n`, { mode: 0o755 });
     await fs.chmod(hookPath, 0o755);
     await this.#runGit(["config", "--global", "core.hooksPath", hooksDir]);
-  }
-
-  async #ensureGitHubCliWrapper(): Promise<{
-    readonly binDir: string;
-    readonly realGhPath?: string | undefined;
-  }> {
-    const binDir = path.join(this.#runtimeHome, ".local", "broker-bin");
-    await ensureDir(binDir);
-    const wrapperPath = path.join(binDir, "gh");
-    const wrapperScript = ["#!/usr/bin/env bash", "set -euo pipefail", 'if [ -z "${BROKER_GH_HELPER:-}" ]; then', "  printf '%s\\n' 'BROKER_GH_HELPER is required for broker gh wrapper.' >&2", "  exit 1", "fi", 'exec node "$BROKER_GH_HELPER" "$@"'].join("\n");
-    await fs.writeFile(wrapperPath, `${wrapperScript}\n`, { mode: 0o755 });
-    await fs.chmod(wrapperPath, 0o755);
-    return {
-      binDir,
-      realGhPath: process.env.BROKER_REAL_GH_PATH?.trim() || (await findExecutableOnPath("gh", process.env.PATH)),
-    };
   }
 
   async #disableConfiguredMcpServers(): Promise<void> {
@@ -629,17 +616,4 @@ async function isHealthyHttpService(baseUrl: string): Promise<boolean> {
 
 function uniqueStrings(values: readonly (string | undefined)[]): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
-}
-
-async function findExecutableOnPath(command: string, pathValue: string | undefined): Promise<string | undefined> {
-  for (const dir of (pathValue ?? "").split(path.delimiter).filter(Boolean)) {
-    const candidate = path.join(dir, command);
-    try {
-      await fs.access(candidate, fsConstants.X_OK);
-      return candidate;
-    } catch {
-      // Keep searching PATH.
-    }
-  }
-  return undefined;
 }

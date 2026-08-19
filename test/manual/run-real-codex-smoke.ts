@@ -8,6 +8,7 @@ async function main(): Promise<void> {
   const codexHome = path.join(os.tmpdir(), `codex-smoke-${Date.now()}`);
   const processManager = new AppServerProcess({
     brokerHttpBaseUrl: "http://127.0.0.1:3300",
+    zorkBinDir: path.join(codexHome, "bin"),
     codexHome,
     port: 4599,
     authJsonPath: path.join(os.homedir(), ".codex", "auth.json"),

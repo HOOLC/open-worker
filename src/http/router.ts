@@ -5,11 +5,14 @@ import type { AppConfig } from "../config.js";
 import type { AdminService } from "../services/admin-service.js";
 import type { IsolatedMcpService } from "../services/codex/isolated-mcp-service.js";
 import type { JobManager } from "../services/job-manager.js";
+import type { SessionManager } from "../services/session-manager.js";
 import type { SlackAgentBridge } from "../services/slack/slack-agent-bridge.js";
 import { handleAdminRequest } from "./admin-routes.js";
 import { handleChatRequest } from "./chat-routes.js";
+import { handleCliRequest } from "./cli-routes.js";
 import { handleIntegrationRequest } from "./integration-routes.js";
 import { handleJobRequest } from "./job-routes.js";
+import { handleNotifyRequest } from "./notify-routes.js";
 import { runWithResponseDeferredTasks } from "./response-deferred-tasks.js";
 import { handleSlackRequest } from "./slack-routes.js";
 
@@ -18,6 +21,7 @@ export function createHttpHandler(options: {
   readonly bridge?: SlackAgentBridge | undefined;
   readonly isolatedMcp?: IsolatedMcpService | undefined;
   readonly jobManager?: JobManager | undefined;
+  readonly sessions?: SessionManager | undefined;
   readonly config: AppConfig;
 }): (request: http.IncomingMessage, response: http.ServerResponse) => void {
   return (request, response) => {
@@ -48,6 +52,7 @@ async function handleHttpRequest(
     readonly bridge?: SlackAgentBridge | undefined;
     readonly isolatedMcp?: IsolatedMcpService | undefined;
     readonly jobManager?: JobManager | undefined;
+    readonly sessions?: SessionManager | undefined;
     readonly config: AppConfig;
   },
 ): Promise<void> {
@@ -67,6 +72,20 @@ async function handleHttpRequest(
       config: options.config,
     }))
   ) {
+    return;
+  }
+
+  if (
+    options.bridge &&
+    (await handleNotifyRequest(method, url, request, response, {
+      bridge: options.bridge,
+      jobManager: options.jobManager,
+    }))
+  ) {
+    return;
+  }
+
+  if (options.sessions && (await handleCliRequest(method, url, response, { sessions: options.sessions }))) {
     return;
   }
 

@@ -25,10 +25,8 @@ export interface BuildSlackThreadBaseInstructionsOptions {
   readonly personalMemory?: string | undefined;
 }
 
-// Platform tool guidance is taught as the injected dynamicTools only. The
-// migrated broker HTTP routes still exist for job scripts and helper
-// processes, but the prompt no longer teaches curl for them. Tool names are
-// identical on Slack and Feishu.
+// Platform guidance is taught as the zork-call CLI. Native Codex tools are not
+// injected. Commands are identical on Slack and Feishu.
 export async function buildSlackThreadBaseInstructions(options: BuildSlackThreadBaseInstructionsOptions): Promise<string> {
   const template = await loadTemplate();
   const platform = options.platform === "feishu" ? "feishu" : "slack";
@@ -63,9 +61,9 @@ export async function buildSlackThreadBaseInstructions(options: BuildSlackThread
 
 function buildDynamicToolsVariant(options: BuildSlackThreadBaseInstructionsOptions, chatSurfaceName: string, platform: "slack" | "feishu"): PromptVariant {
   return {
-    dynamic_tools_section: buildDynamicToolsSection(options, chatSurfaceName, platform),
-    turn_stopping_contract: turnStoppingContract(chatSurfaceName, "chat.post_state"),
-    coauthor_contract: ["- Use the coauthor.status and coauthor.configure tools to inspect or update session co-author state when needed; the agent can operate these directly.", ...coauthorContractTail("coauthor.configure")].join("\n"),
+    dynamic_tools_section: buildCliSection(options, chatSurfaceName, platform),
+    turn_stopping_contract: turnStoppingContract(chatSurfaceName, "`zork-call chat post-state`"),
+    coauthor_contract: ["- Use `zork-call coauthor status` and `zork-call coauthor configure` to inspect or update session co-author state when needed.", ...coauthorContractTail("`zork-call coauthor configure`")].join("\n"),
   };
 }
 
@@ -75,31 +73,31 @@ interface PromptVariant {
   readonly coauthor_contract: string;
 }
 
-function buildDynamicToolsSection(options: BuildSlackThreadBaseInstructionsOptions, chatSurfaceName: string, platform: "slack" | "feishu"): string {
+function buildCliSection(options: BuildSlackThreadBaseInstructionsOptions, chatSurfaceName: string, platform: "slack" | "feishu"): string {
   return [
-    `${chatSurfaceName} tools for this session. Thread coordinates are already bound; do not pass channel, conversation, or thread ids.`,
+    `${chatSurfaceName} CLI for this session. \`zork-call\` is on PATH. Thread coordinates are already bound; do not pass channel, conversation, or thread ids.`,
     "",
-    "- chat.post_message: send a visible update. Set kind to progress, final, block, or wait. For block/wait, include a short reason field.",
-    `- ${markdownNote(chatSurfaceName, "chat.post_message")}`,
-    `- ${postFileNote(chatSurfaceName, "chat.post_file")}`,
-    `- When sending a terminal ${chatSurfaceName} state, set kind to final, block, or wait. For block/wait, include a short reason field.`,
-    "- chat.post_state: record a silent final, wait, or block state without posting another message.",
-    "- chat.post_file: upload a local image or file. Prefer an absolute filePath.",
-    `- Built-in Codex image-generation outputs are saved under \`${options.codexGeneratedImagesRoot}/<thread-id>/...\`. When you want to share one in ${chatSurfaceName}, upload it yourself with chat.post_file and an absolute file path.`,
-    "- chat.thread_history: read earlier thread context when you need to backfill messages that were not forwarded into this turn. Paginate with beforeMessageId or beforeCursor.",
-    `- job.register: register a broker-managed background job. Only tell ${chatSurfaceName} you will keep monitoring after the job registration succeeds.`,
-    "- coauthor.status: inspect the current session's co-author status.",
-    "- coauthor.configure: configure the current session's co-authors. Accepts current-session contributors by Slack user id, @mention, display name, real name, username, email, GitHub login, or GitHub email. GitHub author identity comes only from the user's GitHub OAuth binding.",
-    "- Prefer absolute filePath values when uploading local artifacts.",
-    `- Registered background jobs receive environment variables including ${registeredJobEnvVars(platform)}.`,
-    '- Inside a background job script, prefer `node "$BROKER_JOB_HELPER" ...` for heartbeat/event/complete/fail/cancel callbacks instead of hand-writing nested curl JSON payloads.',
+    "- `zork-call chat post-message --text TEXT --kind progress|final|block|wait`: send a visible update. For block/wait, include `--reason`.",
+    `- ${markdownNote(chatSurfaceName, "`zork-call chat post-message`")}`,
+    `- ${postFileNote(chatSurfaceName, "`zork-call chat post-file`")}`,
+    `- When sending a terminal ${chatSurfaceName} state, set kind to final, block, or wait. For block/wait, include a short reason.`,
+    "- `zork-call chat post-state --kind wait|block|final`: record a silent final, wait, or block state without posting another message.",
+    "- `zork-call chat post-file --file-path ABS`: upload a local image or file. Prefer an absolute path.",
+    `- Built-in Codex image-generation outputs are saved under \`${options.codexGeneratedImagesRoot}/<thread-id>/...\`. When you want to share one in ${chatSurfaceName}, upload it yourself with \`zork-call chat post-file\`.`,
+    "- `zork-call chat thread-history`: read earlier thread context when you need to backfill messages that were not forwarded into this turn. Paginate with `--before-message-id` or `--before-cursor`.",
+    `- \`zork-call job register --kind KIND --script SCRIPT\`: register a broker-managed background job. It runs for at most 12 hours, then stops and wakes this session. Register again if it should keep running. Only tell ${chatSurfaceName} you will keep monitoring after the job registration succeeds.`,
+    "- `zork-call notify --text TEXT`: wake this session from a running job script. Do not use it to post to the thread.",
+    "- `zork-call coauthor status`: inspect the current session's co-author status.",
+    "- `zork-call coauthor configure --coauthor NAME`: configure the current session's co-authors. Accepts current-session contributors by Slack user id, @mention, display name, real name, username, email, GitHub login, or GitHub email. GitHub author identity comes only from the user's GitHub OAuth binding.",
+    "- Prefer absolute `--file-path` values when uploading local artifacts.",
+    `- Registered background jobs receive environment variables including ${registeredJobEnvVars(platform)}. \`zork-call\` is on PATH. When the script exits, this session is woken automatically with the exit code and stderr. Mid-run, use \`zork-call notify\`.`,
     "",
     "Isolated Linear/Notion access for this session:",
     "",
     `- The main Codex runtime for this ${chatSurfaceName} broker does not load the linear or notion MCPs directly.`,
-    "- To use Linear or Notion, first call integration.list_tools, then integration.call for the specific tool you need.",
-    '- integration.list_tools: list isolated tools for server "linear" or "notion".',
-    "- integration.call: call a listed Linear or Notion tool with server, name, and a JSON arguments object.",
+    "- To use Linear or Notion, first run `zork-call integration list-tools`, then `zork-call integration call` for the specific tool you need.",
+    '- `zork-call integration list-tools --server linear|notion`: list isolated tools.',
+    "- `zork-call integration call --server linear|notion --name NAME [--json '{...}']`: call a listed Linear or Notion tool.",
     `- If the isolated integration call fails, tell ${chatSurfaceName} that the specific integration is unavailable right now. Do not assume the whole runtime is broken.`,
   ].join("\n");
 }
@@ -141,8 +139,8 @@ function coauthorContractTail(missingBindingAction: string): readonly string[] {
 
 function registeredJobEnvVars(platform: "slack" | "feishu"): string {
   return platform === "slack"
-    ? "BROKER_JOB_ID, BROKER_JOB_TOKEN, BROKER_API_BASE, BROKER_JOB_HELPER, CHAT_PLATFORM, CHAT_CONVERSATION_ID, CHAT_ROOT_MESSAGE_ID, SLACK_CHANNEL_ID, SLACK_THREAD_TS, SESSION_KEY, SESSION_WORKSPACE, and REPOS_ROOT"
-    : "BROKER_JOB_ID, BROKER_JOB_TOKEN, BROKER_API_BASE, BROKER_JOB_HELPER, CHAT_PLATFORM, CHAT_CONVERSATION_ID, CHAT_ROOT_MESSAGE_ID, SESSION_KEY, SESSION_WORKSPACE, and REPOS_ROOT";
+    ? "BROKER_JOB_ID, BROKER_API_BASE, CHAT_PLATFORM, CHAT_CONVERSATION_ID, CHAT_ROOT_MESSAGE_ID, SLACK_CHANNEL_ID, SLACK_THREAD_TS, SESSION_KEY, SESSION_WORKSPACE, and REPOS_ROOT"
+    : "BROKER_JOB_ID, BROKER_API_BASE, CHAT_PLATFORM, CHAT_CONVERSATION_ID, CHAT_ROOT_MESSAGE_ID, SESSION_KEY, SESSION_WORKSPACE, and REPOS_ROOT";
 }
 
 function formatThreadCoordinatesSection(options: {

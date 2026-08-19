@@ -52,6 +52,7 @@ async function main(): Promise<void> {
 
   const processManager = new AppServerProcess({
     brokerHttpBaseUrl: "http://127.0.0.1:3300",
+    zorkBinDir: path.join(codexHome, "bin"),
     codexHome,
     port: 4601,
     openAiApiKey: process.env.OPENAI_API_KEY,

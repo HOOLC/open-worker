@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { AgentTraceRecorder } from "../src/services/agent-runtime/agent-trace-recorder.js";
 import { STATE_DATABASE_FILENAME, StateStore } from "../src/store/state-store.js";
-import { isZstdAvailable, TRACE_DIRECTORY_NAME, traceSessionDirectory } from "../src/store/trace-jsonl-store.js";
+import { isZstdAvailable, sessionTraceDirectory } from "../src/store/trace-jsonl-store.js";
 import type { PersistedAgentTraceEvent } from "../src/types.js";
 import { readJson, startAdminFixture } from "./admin-control-plane.e2e-helpers.js";
 
@@ -335,7 +335,7 @@ describe("agent trace jsonl store e2e", () => {
 
     const before = store.getAgentSessionTraceSummary(sessionKey);
     expect(before?.eventCount).toBeGreaterThan(0);
-    const snapshotLines = readTraceLines(storeStateDir(store), sessionKey).filter((line) => {
+    const snapshotLines = readTraceLines(store, sessionKey).filter((line) => {
       try {
         return (JSON.parse(line) as { type?: string }).type === "summary_snapshot";
       } catch {
@@ -420,7 +420,7 @@ describe("agent trace jsonl store e2e", () => {
         sequence: 3,
       }),
     ]);
-    const lines = readTraceLines(storeStateDir(store), sessionKey);
+    const lines = readTraceLines(migrated, sessionKey);
     expect(lines.some((line) => line.includes("legacy-1"))).toBe(true);
     // Rows were streamed oldest-first, so the newest row is the last JSONL line.
     expect(lines.at(-1)).toContain("legacy-newest");
@@ -507,7 +507,7 @@ describe("agent trace jsonl store e2e", () => {
       migrated.close();
     });
 
-    const files = listTraceSegmentFiles(stateDir, sessionKey);
+    const files = listTraceSegmentFiles(migrated, sessionKey);
     expect(files.length).toBeGreaterThan(1);
     if (isZstdAvailable()) {
       expect(files.some((name) => name.endsWith(".jsonl.zst"))).toBe(true);
@@ -529,7 +529,7 @@ describe("agent trace jsonl store e2e", () => {
     // The active (uncompressed, highest-index) segment holds the newest rows.
     const activeSegment = files.filter((name) => name.endsWith(".jsonl")).at(-1);
     expect(activeSegment).toBeTruthy();
-    const activeLines = readTraceSegmentLines(stateDir, sessionKey, activeSegment!);
+    const activeLines = readTraceSegmentLines(migrated, sessionKey, activeSegment!);
     expect(activeLines.length).toBeGreaterThan(0);
     expect(activeLines.at(-1)).toContain("legacy-8");
     expect(activeLines.some((line) => line.includes("legacy-1"))).toBe(false);
@@ -550,7 +550,7 @@ describe("agent trace jsonl store e2e", () => {
       await store.upsertAgentTraceEvent(event);
     }
 
-    const files = listTraceSegmentFiles(storeStateDir(store), sessionKey);
+    const files = listTraceSegmentFiles(store, sessionKey);
     expect(files.length).toBeGreaterThan(1);
     if (isZstdAvailable()) {
       expect(files.some((name) => name.endsWith(".jsonl.zst"))).toBe(true);
@@ -568,11 +568,11 @@ describe("agent trace jsonl store e2e", () => {
     });
     const session = await sessions.ensureSession("C123", "111.222");
     await sessions.upsertAgentTraceEvent(fakeTraceEvent(session.key, 1));
-    expect(fs.existsSync(traceSessionDirectory(config.stateDir, session.key))).toBe(true);
+    expect(fs.existsSync(sessionTraceDirectory(session.workspacePath))).toBe(true);
 
     await sessions.deleteSessionByKey(session.key);
     expect(sessions.listAgentTraceEvents(session.key)).toEqual([]);
-    expect(fs.existsSync(traceSessionDirectory(config.stateDir, session.key))).toBe(false);
+    expect(fs.existsSync(sessionTraceDirectory(session.workspacePath))).toBe(false);
   });
 });
 
@@ -648,8 +648,16 @@ function storeSessionsRoot(store: StateStore): string {
   return roots.sessionsRoot;
 }
 
-function readTraceLines(stateDir: string, sessionKey: string): string[] {
-  const directory = traceSessionDirectory(stateDir, sessionKey);
+function sessionWorkspacePath(store: StateStore, sessionKey: string): string {
+  const session = store.getSession(sessionKey);
+  if (!session) {
+    throw new Error(`Unknown session: ${sessionKey}`);
+  }
+  return session.workspacePath;
+}
+
+function readTraceLines(store: StateStore, sessionKey: string): string[] {
+  const directory = sessionTraceDirectory(sessionWorkspacePath(store, sessionKey));
   if (!fs.existsSync(directory)) {
     return [];
   }
@@ -668,16 +676,16 @@ function readTraceLines(stateDir: string, sessionKey: string): string[] {
   return lines;
 }
 
-function listTraceSegmentFiles(stateDir: string, sessionKey: string): string[] {
-  const directory = path.join(stateDir, TRACE_DIRECTORY_NAME, path.basename(traceSessionDirectory(stateDir, sessionKey)));
+function listTraceSegmentFiles(store: StateStore, sessionKey: string): string[] {
+  const directory = sessionTraceDirectory(sessionWorkspacePath(store, sessionKey));
   if (!fs.existsSync(directory)) {
     return [];
   }
   return fs.readdirSync(directory).sort();
 }
 
-function readTraceSegmentLines(stateDir: string, sessionKey: string, segmentName: string): string[] {
-  const directory = path.join(stateDir, TRACE_DIRECTORY_NAME, path.basename(traceSessionDirectory(stateDir, sessionKey)));
+function readTraceSegmentLines(store: StateStore, sessionKey: string, segmentName: string): string[] {
+  const directory = sessionTraceDirectory(sessionWorkspacePath(store, sessionKey));
   const text = fs.readFileSync(path.join(directory, segmentName), "utf8");
   return text
     .split("\n")

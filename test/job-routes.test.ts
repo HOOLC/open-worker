@@ -32,7 +32,7 @@ describe.sequential("job routes", () => {
       rootMessageId: "om_root",
       kind: "watch_ci",
       cwd: ".",
-      script: 'node "$BROKER_JOB_HELPER" event --kind state_changed --summary done',
+      script: "sleep 30",
       restart_on_boot: false,
     });
 
@@ -173,7 +173,7 @@ describe.sequential("job routes", () => {
     });
   }, 60_000);
 
-  it("rejects invalid job details JSON fields before delegation", async () => {
+  it("does not expose script job callback routes", async () => {
     const { baseUrl } = await startJobBroker(cleanups, [
       {
         conversationId: "C123",
@@ -186,79 +186,12 @@ describe.sequential("job routes", () => {
       kind: "watch_ci",
       script: "#!/bin/sh\nsleep 30",
     });
-    const job = registered.body.job as { id: string; token: string };
+    const job = registered.body.job as { id: string };
 
-    const actionBodies: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
-      [
-        "event",
-        {
-          token: job.token,
-          event_kind: "state_changed",
-          summary: "changed",
-          details_json: "{not json",
-        },
-      ],
-      [
-        "complete",
-        {
-          token: job.token,
-          summary: "done",
-          detailsJson: "{not json",
-        },
-      ],
-      [
-        "fail",
-        {
-          token: job.token,
-          summary: "failed",
-          error: "failed",
-          details_json: "{not json",
-        },
-      ],
-    ];
-
-    for (const [action, body] of actionBodies) {
-      const response = await fetchJson(`${baseUrl}/jobs/${job.id}/${action}`, body);
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual({
-        ok: false,
-        error: "invalid_json_field",
-        field: "detailsJson (alias: details_json)",
-      });
+    for (const action of ["heartbeat", "event", "complete", "fail", "cancel"]) {
+      const response = await fetchJson(`${baseUrl}/jobs/${job.id}/${action}`, {});
+      expect(response.status).toBe(405);
     }
-  }, 60_000);
-
-  it("accepts canonical job details JSON aliases before delegation", async () => {
-    const { baseUrl } = await startJobBroker(cleanups, [
-      {
-        conversationId: "C123",
-        rootMessageId: "111.222",
-      },
-    ]);
-    const registered = await fetchJson(`${baseUrl}/jobs/register`, {
-      channel_id: "C123",
-      thread_ts: "111.222",
-      kind: "watch_ci",
-      script: "#!/bin/sh\nsleep 30",
-    });
-    const job = registered.body.job as { id: string; token: string };
-
-    const response = await fetchJson(`${baseUrl}/jobs/${job.id}/complete`, {
-      token: job.token,
-      summary: "done",
-      detailsJson: JSON.stringify({
-        conclusion: "success",
-      }),
-    });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({
-      ok: true,
-      job: {
-        id: job.id,
-        status: "completed",
-      },
-    });
   }, 60_000);
 });
 

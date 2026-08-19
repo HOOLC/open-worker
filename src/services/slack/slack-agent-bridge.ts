@@ -8,19 +8,20 @@ import type { GitHubPrIdentityService, GitHubPrTokenResolution } from "../github
 import { SessionManager } from "../session-manager.js";
 import type { SessionChannelMetadata } from "../session-manager.js";
 import { type ParsedSlackEvent, isSlackMessageEffectivelyEmpty, parseSlackEvent } from "./slack-event-parser.js";
-import { SlackApi } from "./slack-api.js";
+import { SlackApi, slackApiOptions } from "./slack-api.js";
 import { SlackCoauthorService } from "./slack-coauthor-service.js";
 import { SlackConversationService } from "./slack-conversation-service.js";
 import { isSlackPlatformSession } from "./slack-conversation-utils.js";
 import { SlackSelfMessageFilter } from "./slack-self-filter.js";
-import { SlackSocketModeClient } from "./socket-mode-client.js";
+import { SpoolStore } from "../../store/spool-store.js";
 
 export class SlackAgentBridge {
   readonly #config: AppConfig;
   readonly #sessions: SessionManager;
   readonly #agentRuntime: AgentRuntime;
   readonly #slackApi: SlackApi;
-  readonly #slackSocket: SlackSocketModeClient;
+  readonly #spool: SpoolStore;
+  readonly #spoolOwner = `worker-${process.pid}`;
   readonly #selfMessageFilter = new SlackSelfMessageFilter();
   readonly #coauthors: SlackCoauthorService;
   readonly #githubPrIdentity: GitHubPrIdentityService;
@@ -31,20 +32,15 @@ export class SlackAgentBridge {
   #slackEventDrainPromise: Promise<void> | undefined;
   #slackEventDrainTimer: NodeJS.Timeout | undefined;
   #slackEventRetryTimer: NodeJS.Timeout | undefined;
+  #spoolDrainPromise: Promise<void> | undefined;
+  #spoolDrainTimer: NodeJS.Timeout | undefined;
 
   constructor(options: { readonly config: AppConfig; readonly sessions: SessionManager; readonly agentRuntime: AgentRuntime; readonly githubPrIdentity: GitHubPrIdentityService; readonly feishuBridge?: FeishuCodexBridge | undefined }) {
     this.#config = options.config;
     this.#sessions = options.sessions;
     this.#agentRuntime = options.agentRuntime;
-    this.#slackApi = new SlackApi({
-      baseUrl: this.#config.slackApiBaseUrl,
-      appToken: this.#config.slackAppToken,
-      botToken: this.#config.slackBotToken,
-    });
-    this.#slackSocket = new SlackSocketModeClient({
-      api: this.#slackApi,
-      socketOpenPath: this.#config.slackSocketOpenUrl,
-    });
+    this.#slackApi = new SlackApi(slackApiOptions(this.#config));
+    this.#spool = new SpoolStore(this.#config.stateDir);
     this.#coauthors = new SlackCoauthorService({
       sessions: this.#sessions,
       slackApi: this.#slackApi,
@@ -79,31 +75,20 @@ export class SlackAgentBridge {
     await this.#conversations.start();
     await this.#startFeishuBridge();
     await this.#drainPersistedSlackEvents("startup");
-
-    this.#slackSocket.on("ready", () => {
-      void this.#conversations.recoverMissedThreadMessages("socket_ready");
-    });
-    this.#slackSocket.on("events_api", (payload) =>
-      this.#acceptEventsApi(
-        payload as {
-          readonly event?: Record<string, any>;
-          readonly event_id?: string;
-        },
-      ),
-    );
-    this.#slackSocket.on("interactive", (payload) => this.#handleInteractive(payload as Record<string, unknown>));
-
-    await this.#slackSocket.start();
+    await this.#spool.load();
+    this.#startSpoolDrainLoop();
+    void this.#conversations.recoverMissedThreadMessages("socket_ready");
     logger.info("chat.platform.ready", {
       platform: "slack",
-      source: "socket_mode",
+      source: "spool",
     });
   }
 
   async stop(): Promise<void> {
     this.#clearSlackEventDrainTimer();
     this.#clearSlackEventRetryTimer();
-    await this.#slackSocket.stop();
+    this.#stopSpoolDrainLoop();
+    this.#spool.close();
     await this.#feishuBridge?.stop();
     await this.#conversations.stop();
     await this.#agentRuntime.stop();
@@ -434,6 +419,68 @@ export class SlackAgentBridge {
     }
     clearTimeout(this.#slackEventRetryTimer);
     this.#slackEventRetryTimer = undefined;
+  }
+
+  #startSpoolDrainLoop(): void {
+    if (this.#spoolDrainTimer) {
+      return;
+    }
+    this.#spoolDrainTimer = setInterval(() => {
+      void this.#drainInboundSpool();
+    }, 50);
+    this.#spoolDrainTimer.unref();
+    void this.#drainInboundSpool();
+  }
+
+  #stopSpoolDrainLoop(): void {
+    if (this.#spoolDrainTimer) {
+      clearInterval(this.#spoolDrainTimer);
+      this.#spoolDrainTimer = undefined;
+    }
+  }
+
+  async #drainInboundSpool(): Promise<void> {
+    if (this.#spoolDrainPromise) {
+      await this.#spoolDrainPromise;
+      return;
+    }
+
+    this.#spoolDrainPromise = this.#runInboundSpoolDrain().finally(() => {
+      this.#spoolDrainPromise = undefined;
+    });
+    await this.#spoolDrainPromise;
+  }
+
+  async #runInboundSpoolDrain(): Promise<void> {
+    const rows = this.#spool.claim({
+      direction: "inbound",
+      owner: this.#spoolOwner,
+      leaseMs: 30_000,
+    });
+    for (const row of rows) {
+      try {
+        await this.#ingestSpoolPayload(row.payload);
+        this.#spool.ack(row.id);
+      } catch (error) {
+        logger.error("Failed to ingest inbound spool row", {
+          id: row.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
+  async #ingestSpoolPayload(raw: string): Promise<void> {
+    const payload = JSON.parse(raw) as {
+      readonly event?: Record<string, any>;
+      readonly event_id?: string;
+    };
+    if (payload.event && payload.event_id) {
+      await this.#acceptEventsApi(payload);
+      return;
+    }
+
+    await this.#handleInteractive(payload);
   }
 
   async #drainPersistedSlackEvents(reason: "startup" | "socket_event" | "retry"): Promise<void> {

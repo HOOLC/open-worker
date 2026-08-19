@@ -1,6 +1,22 @@
+import type { AppConfig } from "../../config.js";
 import { logger } from "../../logger.js";
 import type { SlackImageAttachment, SlackThreadMessage, SlackUserIdentity } from "../../types.js";
 import { parseRetryAfterMs, normalizeSlackFileAttachments, normalizeSlackJson, resolveSlackMessageAuthor, isSupportedSlackMessageSubtype, normalizeSlackField, conversationType, normalizeSlackNumber } from "./slack-api-helpers.js";
+
+export function slackApiOptions(config: AppConfig): {
+  readonly baseUrl: string;
+  readonly appToken: string;
+  readonly botToken: string;
+  readonly viaGateway: boolean;
+} {
+  const gatewayUrl = config.gatewayUrl?.replace(/\/$/, "");
+  return {
+    baseUrl: gatewayUrl ? `${gatewayUrl}/slack` : config.slackApiBaseUrl.replace(/\/$/, ""),
+    appToken: config.slackAppToken,
+    botToken: config.slackBotToken,
+    viaGateway: Boolean(gatewayUrl),
+  };
+}
 
 interface SlackApiResponse<T> {
   readonly ok: boolean;
@@ -59,13 +75,15 @@ export class SlackApi {
   readonly #baseUrl: string;
   readonly #appToken: string;
   readonly #botToken: string;
+  readonly #viaGateway: boolean;
   readonly #userIdentityCache = new Map<string, Promise<SlackUserIdentity | null>>();
   readonly #conversationInfoCache = new Map<string, Promise<SlackConversationInfo | null>>();
 
-  constructor(options: { readonly baseUrl: string; readonly appToken: string; readonly botToken: string }) {
+  constructor(options: { readonly baseUrl: string; readonly appToken: string; readonly botToken: string; readonly viaGateway?: boolean | undefined }) {
     this.#baseUrl = options.baseUrl.replace(/\/$/, "");
     this.#appToken = options.appToken;
     this.#botToken = options.botToken;
+    this.#viaGateway = Boolean(options.viaGateway);
   }
 
   async openSocketConnection(path = "apps.connections.open"): Promise<string> {
@@ -370,11 +388,13 @@ export class SlackApi {
   }
 
   async downloadFileAttachment(file: SlackImageAttachment): Promise<SlackDownloadedFile> {
-    const response = await fetch(file.url, {
+    const response = await fetch(this.#viaGateway ? `${this.#baseUrl}/download?url=${encodeURIComponent(file.url)}` : file.url, {
       method: "GET",
-      headers: {
-        authorization: `Bearer ${this.#botToken}`,
-      },
+      headers: this.#viaGateway
+        ? {}
+        : {
+            authorization: `Bearer ${this.#botToken}`,
+          },
     });
 
     if (!response.ok) {

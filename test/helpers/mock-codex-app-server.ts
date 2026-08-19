@@ -4,7 +4,12 @@ import { randomUUID } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 
 import type { CodexInputItem } from "../../src/services/codex/app-server-client.js";
-import { toDynamicToolCallResult, type DynamicToolCallResult } from "../../src/services/codex/dynamic-tools.js";
+
+interface DynamicToolCallResult {
+  readonly contentItems: readonly { readonly type: "inputText"; readonly text: string }[];
+  readonly success: boolean;
+  readonly reason?: string | undefined;
+}
 
 interface MockTurnRecord {
   readonly threadId: string;
@@ -231,7 +236,7 @@ export class MockCodexAppServer {
       throw error;
     }
 
-    const normalized = toDynamicToolCallResult(result, "item/tool/call failed");
+    const normalized = normalizeToolCallResult(result, "item/tool/call failed");
     this.#notify(socket, "item/completed", {
       threadId,
       turnId,
@@ -707,6 +712,20 @@ export class MockCodexAppServer {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeToolCallResult(value: unknown, fallbackReason: string): DynamicToolCallResult {
+  if (!isRecord(value)) {
+    return { contentItems: [], success: false, reason: fallbackReason };
+  }
+  const success = value.success === undefined ? true : Boolean(value.success);
+  const contentItems = Array.isArray(value.contentItems)
+    ? value.contentItems
+        .map((item) => (isRecord(item) && typeof item.text === "string" ? { type: "inputText" as const, text: item.text } : undefined))
+        .filter((item): item is { type: "inputText"; text: string } => item !== undefined)
+    : [];
+  const reason = typeof value.reason === "string" && value.reason.trim() ? value.reason.trim() : undefined;
+  return success ? { contentItems, success: true } : { contentItems, success: false, reason: reason ?? fallbackReason };
 }
 
 function normalizeInput(value: unknown): readonly CodexInputItem[] {

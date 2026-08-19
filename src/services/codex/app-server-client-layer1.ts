@@ -5,9 +5,9 @@ import WebSocket from "ws";
 import { logger } from "../../logger.js";
 import type { AgentTurnTokenUsage, GeneratedImageArtifact, JsonLike, SlackUserIdentity } from "../../types.js";
 import { buildSlackThreadBaseInstructions } from "./slack-thread-base-instructions.js";
-import { toDynamicToolDeclarationsJson, type DynamicToolBackend, type ThreadCoordinates } from "./dynamic-tools.js";
+import type { ThreadCoordinates } from "./thread-coordinates.js";
 
-export type { ThreadCoordinates } from "./dynamic-tools.js";
+export type { ThreadCoordinates } from "./thread-coordinates.js";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -209,13 +209,6 @@ export class AppServerClientLayer1 extends AppServerClientBase {
     this.privateSlackBotIdentity = identity;
   }
 
-  // Dynamic tools are declared on thread/start only; declarations persist
-  // across thread/resume and are never resent. Pass undefined to clear the
-  // backend.
-  setDynamicToolBackend(backend: DynamicToolBackend | undefined): void {
-    this.privateDynamicToolBackend = backend;
-  }
-
   readThreadCoordinates(threadId: string): ThreadCoordinates | undefined {
     return this.privateThreadCoordinates.get(threadId);
   }
@@ -317,16 +310,11 @@ export class AppServerClientLayer1 extends AppServerClientBase {
       };
 
       this.privateRememberThreadRuntimeDefaults(result.thread.id, result);
-      // dynamicTools declarations persist server-side across resume, so resume
-      // never resends them.
       this.privateRememberThreadCoordinates(result.thread.id, session);
       return result.thread.id;
     }
 
     const baseInstructions = await this.privateBuildBaseInstructions(session);
-    // Declarations are attached to thread/start only; the app-server persists
-    // them across thread/resume, so resume must not resend them.
-    const dynamicTools = toDynamicToolDeclarationsJson(this.privateDynamicToolBackend?.listDeclarations());
     const threadStartParams: Record<string, JsonLike> = {
       cwd: session.workspacePath,
       approvalPolicy: "never",
@@ -342,9 +330,6 @@ export class AppServerClientLayer1 extends AppServerClientBase {
       experimentalRawEvents: true,
       persistExtendedHistory: true,
     };
-    if (dynamicTools) {
-      threadStartParams.dynamicTools = dynamicTools;
-    }
 
     const result = (await this.request("thread/start", threadStartParams)) as {
       thread: { id: string };
@@ -448,9 +433,8 @@ export class AppServerClientLayer1 extends AppServerClientBase {
   }
 
   privateRememberThreadCoordinates(threadId: string, session: PromptSessionCoordinates): void {
-    // Coordinates are recorded on both thread/start and thread/resume because
-    // the app-server keeps sending item/tool/call for a resumed thread and the
-    // broker restarts lose the in-memory map otherwise.
+    // Coordinates are recorded on both thread/start and thread/resume so
+    // process restarts can rebuild the in-memory map from session state later.
     this.privateThreadCoordinates.set(threadId, {
       threadId,
       platform: session.platform,

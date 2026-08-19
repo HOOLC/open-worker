@@ -1,7 +1,6 @@
 import { EventEmitter } from "node:events";
 
 import type { AgentRuntime, AgentRuntimeCapabilities, AgentRuntimeEvent, AgentInputItem, AgentSession, AgentSessionSnapshot, AgentSubmitInputResult, AgentTurnResult, ReadAgentTurnOptions, AgentTurnSnapshot, SubmitAgentInput } from "./types.js";
-import type { BrokerToolBackend } from "../codex/dynamic-tools.js";
 import { CodexBroker } from "../codex/codex-broker.js";
 import { SessionManager } from "../session-manager.js";
 import type { SlackSessionRecord, SlackUserIdentity } from "../../types.js";
@@ -45,10 +44,6 @@ export class CodexAppServerRuntime extends EventEmitter implements AgentRuntime 
 
   setSlackBotIdentity(identity: SlackUserIdentity | null): void {
     this.#codex.setSlackBotIdentity(identity);
-  }
-
-  setToolBackend(backend: BrokerToolBackend | undefined): void {
-    this.#codex.setToolBackend(backend);
   }
 
   async ensureSession(session: SlackSessionRecord): Promise<AgentSession> {

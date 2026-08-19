@@ -169,7 +169,7 @@ async function fileExists(filePath) {
 }
 
 function resolvePaths() {
-  const dataRootSource = path.resolve(process.env.DATA_ROOT?.trim() || ".data");
+  const dataRootSource = path.resolve(process.env.DATA_ROOT?.trim() || path.join(os.homedir(), ".zork"));
   const managedRoot = path.join(dataRootSource, "auth-profiles");
   const profilesRoot = path.join(managedRoot, "profiles");
   return {

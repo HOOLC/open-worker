@@ -274,7 +274,7 @@ describe.sequential("slack-codex-broker e2e", () => {
     expect(wakeText).toContain("explicit final, block, or wait state");
     expect(wakeText).toContain("kind=block");
     expect(wakeText).toContain("kind=wait");
-    expect(wakeText).toContain("/slack/post-state");
+    expect(wakeText).toContain("zork-call chat post-state");
     expect(wakeText).toContain("silent block state");
     expect(wakeText).toContain("silent final state");
     expect(wakeText).toContain("Do not send a normal Slack reply and then a second '[block]' or '[wait]' line");

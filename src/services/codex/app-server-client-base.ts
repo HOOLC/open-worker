@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import WebSocket from "ws";
 
 import type { AgentTurnTokenUsage, GeneratedImageArtifact, JsonLike, SlackUserIdentity } from "../../types.js";
-import type { DynamicToolBackend, ThreadCoordinates } from "./dynamic-tools.js";
+import type { ThreadCoordinates } from "./thread-coordinates.js";
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -173,15 +173,12 @@ export class AppServerClientBase extends EventEmitter {
 
   privateAwaitingPong = false;
 
-  // Handlers for JSON-RPC requests the app-server sends TO the client
-  // (e.g. item/tool/call for dynamicTools). Keyed by method name.
+  // Handlers for JSON-RPC requests the app-server sends TO the client.
   readonly privateServerRequestHandlers = new Map<string, (params: Record<string, any>) => Promise<Record<string, unknown>>>();
 
   // threadId -> platform coordinates, populated by both thread/start and
-  // thread/resume so reverse item/tool/call requests can be routed.
+  // thread/resume.
   readonly privateThreadCoordinates = new Map<string, ThreadCoordinates>();
-
-  privateDynamicToolBackend: DynamicToolBackend | undefined;
 
   constructor(
     readonly options: {

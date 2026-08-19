@@ -5,8 +5,6 @@ import type { AgentRuntime } from "./agent-runtime/types.js";
 import { CodexAppServerRuntime } from "./agent-runtime/codex-app-server-runtime.js";
 import { SessionAuthProfileRuntime } from "./agent-runtime/session-auth-profile-runtime.js";
 import type { AuthProfileService } from "./auth-profile-service.js";
-import { createBrokerToolBackend } from "./broker-tool-backend.js";
-import type { BrokerToolBackend } from "./codex/dynamic-tools.js";
 import { CodexBroker } from "./codex/codex-broker.js";
 import { IsolatedMcpService } from "./codex/isolated-mcp-service.js";
 import { DiskPressureCleanupService } from "./disk-pressure-cleanup-service.js";
@@ -16,7 +14,7 @@ import { GitHubAuthorMappingService } from "./github-author-mapping-service.js";
 import { GitHubPrIdentityService } from "./github-pr-identity-service.js";
 import { JobManager } from "./job-manager.js";
 import { SessionManager } from "./session-manager.js";
-import { SlackApi } from "./slack/slack-api.js";
+import { SlackApi, slackApiOptions } from "./slack/slack-api.js";
 import { SlackAgentBridge } from "./slack/slack-agent-bridge.js";
 
 export function configureServiceLogger(config: AppConfig): void {
@@ -48,11 +46,7 @@ export function createSessionServices(config: AppConfig): {
 }
 
 export function createSlackApi(config: AppConfig): SlackApi {
-  return new SlackApi({
-    baseUrl: config.slackApiBaseUrl,
-    appToken: config.slackAppToken,
-    botToken: config.slackBotToken,
-  });
+  return new SlackApi(slackApiOptions(config));
 }
 
 export async function createGitHubAuthorMappings(config: AppConfig): Promise<GitHubAuthorMappingService> {
@@ -79,6 +73,7 @@ export function createCodexBroker(config: AppConfig): CodexBroker {
   return new CodexBroker({
     serviceName: config.serviceName,
     brokerHttpBaseUrl: config.brokerHttpBaseUrl,
+    zorkBinDir: config.zorkBinDir,
     codexHome: config.codexHome,
     teamCodexHomePath: config.codexTeamHomePath,
     reposRoot: config.reposRoot,
@@ -92,7 +87,7 @@ export function createCodexBroker(config: AppConfig): CodexBroker {
   });
 }
 
-export function createAgentRuntime(options: { readonly config: AppConfig; readonly codex: CodexBroker; readonly sessions: SessionManager; readonly authProfiles: AuthProfileService; readonly toolBackend?: BrokerToolBackend | undefined }): AgentRuntime {
+export function createAgentRuntime(options: { readonly config: AppConfig; readonly codex: CodexBroker; readonly sessions: SessionManager; readonly authProfiles: AuthProfileService }): AgentRuntime {
   const legacyRuntime = options.config.codexAppServerUrl
     ? new CodexAppServerRuntime({
         codex: options.codex,
@@ -104,17 +99,7 @@ export function createAgentRuntime(options: { readonly config: AppConfig; readon
     sessions: options.sessions,
     authProfiles: options.authProfiles,
     legacyRuntime,
-    toolBackend: options.toolBackend,
   });
-}
-
-export { createBrokerToolBackend };
-
-export function bindBrokerToolBackend(options: { readonly codex: CodexBroker; readonly agentRuntime: AgentRuntime; readonly backend: BrokerToolBackend }): void {
-  options.codex.setToolBackend(options.backend);
-  if (options.agentRuntime instanceof SessionAuthProfileRuntime) {
-    options.agentRuntime.setToolBackend(options.backend);
-  }
 }
 
 export function createSlackBridge(options: {
@@ -188,6 +173,7 @@ export function createJobManager(options: { readonly config: AppConfig; readonly
     jobsRoot: options.config.jobsRoot,
     reposRoot: options.config.reposRoot,
     brokerHttpBaseUrl: options.config.brokerHttpBaseUrl,
+    zorkBinDir: options.config.zorkBinDir,
     onEvent: async (event) => {
       await options.bridge.acceptBackgroundJobEvent(event);
     },

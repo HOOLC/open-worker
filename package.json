@@ -22,6 +22,8 @@
     "dev:admin:server": "tsx watch src/admin-index.ts",
     "dev:admin-ui": "vp dev --host 127.0.0.1 --port 5173",
     "dev:worker": "tsx watch src/worker-index.ts",
+    "dev:gateway": "cargo run -p zork-gateway",
+    "build:gateway": "cargo build -p zork-gateway",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "hooks:install": "lefthook install",

@@ -182,40 +182,23 @@ describe.sequential("raw HTTP request log redaction", () => {
       script: "JOB_SECRET_SCRIPT",
       cwd: ".",
     });
-    await fetchJson(`${baseUrl}/jobs/job-1/event`, {
-      token: "JOB_SECRET_TOKEN",
-      event_kind: "state_changed",
-      summary: "JOB_SECRET_SUMMARY",
-      details_text: "JOB_SECRET_DETAILS",
-      details_json: {
-        value: "JOB_SECRET_JSON",
-      },
-    });
-    await fetchJson(`${baseUrl}/jobs/job-1/fail`, {
-      token: "JOB_SECRET_TOKEN",
-      summary: "JOB_SECRET_FAIL_SUMMARY",
-      error: "JOB_SECRET_ERROR",
+    await fetchJson(`${baseUrl}/notify`, {
+      platform: "feishu",
+      conversationId: "oc_group",
+      rootMessageId: "om_root",
+      text: "JOB_SECRET_SUMMARY",
+      jobId: "job-1",
     });
 
     const { raw, records } = await readRawHttpLog(logDir);
     expect(raw).not.toContain("JOB_SECRET_SCRIPT");
-    expect(raw).not.toContain("JOB_SECRET_TOKEN");
     expect(raw).not.toContain("JOB_SECRET_SUMMARY");
-    expect(raw).not.toContain("JOB_SECRET_DETAILS");
-    expect(raw).not.toContain("JOB_SECRET_JSON");
-    expect(raw).not.toContain("JOB_SECRET_ERROR");
 
     const registerBody = findRawBody(records, "/jobs/register");
     expect(registerBody.script).toMatch(/^\[redacted-script:\d+\]$/u);
 
-    const eventBody = findRawBody(records, "/jobs/job-1/event");
-    expect(eventBody.token).toMatch(/^\[redacted-token:\d+\]$/u);
-    expect(eventBody.summary).toMatch(/^\[redacted-summary:\d+\]$/u);
-    expect(eventBody.details_text).toMatch(/^\[redacted-details-text:\d+\]$/u);
-    expect(eventBody.details_json).toBe("[redacted-details-json]");
-
-    const failBody = findRawBody(records, "/jobs/job-1/fail");
-    expect(failBody.error).toMatch(/^\[redacted-error:\d+\]$/u);
+    const notifyBody = findRawBody(records, "/notify");
+    expect(notifyBody.text).toMatch(/^\[redacted-text:\d+\]$/u);
   }, 60_000);
 
   it("redacts MCP call arguments from integration route raw request logs", async () => {

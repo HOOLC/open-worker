@@ -17,7 +17,7 @@ describe.sequential("jobs and tools e2e", () => {
     }
   });
 
-  it("registers a broker-managed script job and forwards helper-emitted events", async () => {
+  it("registers a broker-managed script job and forwards zork-call notify", async () => {
     const harness = await startHarness(cleanups);
     await mention(harness, "817.220");
     const registered = await fetchJson(`${harness.baseUrl}/jobs/register`, {
@@ -27,22 +27,33 @@ describe.sequential("jobs and tools e2e", () => {
       script: "#!/bin/sh\nsleep 30",
     });
     expect(registered.status).toBe(200);
-    const job = registered.body.job as { id: string; token: string; scriptPath: string };
+    const job = registered.body.job as { id: string; scriptPath: string };
     expect(job.scriptPath).toContain(job.id);
 
-    const helperResult = await runJobHelper(harness, job, ["event", "--kind", "state_changed", "--summary", "CI turned green."]);
-    expect(helperResult.status, `${helperResult.stdout}\n${helperResult.stderr}`).toBe(0);
+    const notifyResult = await runTsxTool({
+      script: path.join(brokerRoot, "src/tools/zork-call.ts"),
+      cwd: (await readSessionRecord(harness.tempRoot, "C123:817.220")).workspacePath,
+      args: ["notify", "--text", "CI turned green."],
+      env: {
+        BROKER_API_BASE: harness.baseUrl,
+        BROKER_JOB_ID: job.id,
+        CHAT_PLATFORM: "slack",
+        CHAT_CONVERSATION_ID: "C123",
+        CHAT_ROOT_MESSAGE_ID: "817.220",
+      },
+    });
+    expect(notifyResult.status, `${notifyResult.stdout}\n${notifyResult.stderr}`).toBe(0);
 
     await waitFor(() => {
       const delivered = [...harness.mockCodex.turnsStarted.map((turn) => collectTextInput(turn.input)), ...harness.mockCodex.steers.map((steer) => collectTextInput(steer.input))];
       return delivered.some((text) => text.includes("CI turned green.") && text.includes("background_job_event_json"));
-    }, "job helper event delivery");
+    }, "zork-call notify delivery");
 
     expect(await readBackgroundJobs(harness.tempRoot)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: job.id,
-          lastEventKind: "state_changed",
+          lastEventKind: "notify",
           lastEventSummary: "CI turned green.",
         }),
       ]),
@@ -120,21 +131,38 @@ describe.sequential("jobs and tools e2e", () => {
     });
   }, 90_000);
 
-  it("injects a runtime-relative helper path into background jobs", async () => {
+  it("puts zork-call on PATH for background jobs", async () => {
     const harness = await startHarness(cleanups);
     await mention(harness, "820.220");
     const session = await readSessionRecord(harness.tempRoot, "C123:820.220");
-    const capturePath = path.join(session.workspacePath, "helper-path.txt");
+    const capturePath = path.join(session.workspacePath, "zork-call-path.txt");
     const registered = await fetchJson(`${harness.baseUrl}/jobs/register`, {
       channel_id: "C123",
       thread_ts: "820.220",
       kind: "watch_ci",
-      script: `#!/usr/bin/env bash\nprintf '%s' "$BROKER_JOB_HELPER" > '${capturePath}'\nsleep 30`,
+      script: `#!/usr/bin/env bash\ncommand -v zork-call > '${capturePath}'\nsleep 30`,
     });
     expect(registered.status).toBe(200);
-    const helperPath = await waitForFileContents(capturePath);
-    expect(helperPath.endsWith("job-callback.js") || helperPath.endsWith("job-callback.ts")).toBe(true);
-    expect(helperPath.startsWith("/app/")).toBe(false);
+    const zorkCallPath = await waitForFileContents(capturePath);
+    expect(zorkCallPath.trim().endsWith("/zork-call")).toBe(true);
+    expect(zorkCallPath.startsWith("/app/")).toBe(false);
+  }, 90_000);
+
+  it("wakes the session when a background job exits", async () => {
+    const harness = await startHarness(cleanups);
+    await mention(harness, "821.220");
+    const registered = await fetchJson(`${harness.baseUrl}/jobs/register`, {
+      channel_id: "C123",
+      thread_ts: "821.220",
+      kind: "watch_ci",
+      script: "#!/bin/sh\nexit 7",
+    });
+    expect(registered.status).toBe(200);
+
+    await waitFor(() => {
+      const delivered = [...harness.mockCodex.turnsStarted.map((turn) => collectTextInput(turn.input)), ...harness.mockCodex.steers.map((steer) => collectTextInput(steer.input))];
+      return delivered.some((text) => text.includes("exited unexpectedly") && text.includes("background_job_event_json"));
+    }, "job exit wake");
   }, 90_000);
 
   it("rejects isolated MCP servers that are not marked as isolated", async () => {
@@ -214,28 +242,6 @@ async function mention(
     text: `<@UBOT> start session ${threadTs}`,
   });
   await waitForSessionIdle(harness.tempRoot, `C123:${threadTs}`);
-}
-
-async function runJobHelper(
-  harness: { readonly baseUrl: string; readonly tempRoot: string },
-  job: { readonly id: string; readonly token: string },
-  args: readonly string[],
-): Promise<{
-  readonly status: number;
-  readonly stdout: string;
-  readonly stderr: string;
-}> {
-  const session = await readSessionRecord(harness.tempRoot, "C123:817.220");
-  return await runTsxTool({
-    script: path.join(brokerRoot, "src/tools/job-callback.ts"),
-    cwd: session.workspacePath,
-    args,
-    env: {
-      BROKER_API_BASE: harness.baseUrl,
-      BROKER_JOB_ID: job.id,
-      BROKER_JOB_TOKEN: job.token,
-    },
-  });
 }
 
 async function waitForFileContents(filePath: string): Promise<string> {

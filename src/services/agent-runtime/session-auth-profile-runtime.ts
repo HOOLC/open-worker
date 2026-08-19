@@ -3,7 +3,6 @@ import path from "node:path";
 
 import type { AppConfig } from "../../config.js";
 import type { AuthProfileService, AuthProfileSummary } from "../auth-profile-service.js";
-import type { BrokerToolBackend } from "../codex/dynamic-tools.js";
 import { CodexBroker } from "../codex/codex-broker.js";
 import { SessionManager } from "../session-manager.js";
 import { authProfileReasonLabel, evaluateAuthProfile, findAuthProfile, isAuthProfileProbeFailure, isAuthProfileProbeFailureReason, selectBestAuthProfile, type AuthProfileUnavailableReason } from "../session-auth-profile-selector.js";
@@ -45,7 +44,6 @@ export class SessionAuthProfileRuntime extends EventEmitter implements AgentRunt
   readonly #authProfiles: AuthProfileService;
   readonly #createProfileRuntime: (options: { readonly profile: AuthProfileSummary; readonly codexHome: string; readonly teamCodexHomePath: string; readonly port: number }) => AgentRuntime;
   readonly #legacyRuntime?: AgentRuntime | undefined;
-  #toolBackend: BrokerToolBackend | undefined;
   readonly #profileRuntimes = new Map<string, ProfileRuntimeEntry>();
   readonly #profilePorts = new Map<string, number>();
   #nextPortOffset = 0;
@@ -56,7 +54,6 @@ export class SessionAuthProfileRuntime extends EventEmitter implements AgentRunt
     readonly sessions: SessionManager;
     readonly authProfiles: AuthProfileService;
     readonly legacyRuntime?: AgentRuntime | undefined;
-    readonly toolBackend?: BrokerToolBackend | undefined;
     readonly createProfileRuntime?: ((options: { readonly profile: AuthProfileSummary; readonly codexHome: string; readonly teamCodexHomePath: string; readonly port: number }) => AgentRuntime) | undefined;
   }) {
     super();
@@ -64,7 +61,6 @@ export class SessionAuthProfileRuntime extends EventEmitter implements AgentRunt
     this.#sessions = options.sessions;
     this.#authProfiles = options.authProfiles;
     this.#legacyRuntime = options.legacyRuntime;
-    this.#toolBackend = options.toolBackend;
     // Feishu still uses the shared legacy Codex broker, so profile runtimes must
     // leave the base app-server port free when both platforms run together.
     this.#nextPortOffset = options.legacyRuntime || options.config.feishuEnabled ? 1 : 0;
@@ -74,7 +70,6 @@ export class SessionAuthProfileRuntime extends EventEmitter implements AgentRunt
         createDefaultProfileRuntime({
           config: this.#config,
           sessions: this.#sessions,
-          toolBackend: this.#toolBackend,
           ...runtimeOptions,
         }));
     if (this.#legacyRuntime) {
@@ -116,14 +111,6 @@ export class SessionAuthProfileRuntime extends EventEmitter implements AgentRunt
     this.#legacyRuntime?.setSlackBotIdentity(identity);
     for (const entry of this.#profileRuntimes.values()) {
       entry.runtime.setSlackBotIdentity(identity);
-    }
-  }
-
-  setToolBackend(backend: BrokerToolBackend | undefined): void {
-    this.#toolBackend = backend;
-    applyRuntimeToolBackend(this.#legacyRuntime, backend);
-    for (const entry of this.#profileRuntimes.values()) {
-      applyRuntimeToolBackend(entry.runtime, backend);
     }
   }
 
@@ -229,7 +216,6 @@ export class SessionAuthProfileRuntime extends EventEmitter implements AgentRunt
       teamCodexHomePath: this.#config.codexTeamHomePath,
       port: this.#portForProfile(profile.name),
     });
-    applyRuntimeToolBackend(runtime, this.#toolBackend);
     runtime.setSlackBotIdentity(this.#slackBotIdentity);
     const eventHandler = (event: AgentRuntimeEvent) => this.emit("event", event);
     runtime.on("event", eventHandler);
@@ -257,10 +243,11 @@ export class SessionAuthProfileRuntime extends EventEmitter implements AgentRunt
   }
 }
 
-function createDefaultProfileRuntime(options: { readonly config: AppConfig; readonly sessions: SessionManager; readonly profile: AuthProfileSummary; readonly codexHome: string; readonly teamCodexHomePath: string; readonly port: number; readonly toolBackend?: BrokerToolBackend | undefined }): AgentRuntime {
+function createDefaultProfileRuntime(options: { readonly config: AppConfig; readonly sessions: SessionManager; readonly profile: AuthProfileSummary; readonly codexHome: string; readonly teamCodexHomePath: string; readonly port: number }): AgentRuntime {
   const codex = new CodexBroker({
     serviceName: `${options.config.serviceName}:${options.profile.name}`,
     brokerHttpBaseUrl: options.config.brokerHttpBaseUrl,
+    zorkBinDir: options.config.zorkBinDir,
     codexHome: options.codexHome,
     teamCodexHomePath: options.teamCodexHomePath,
     reposRoot: options.config.reposRoot,
@@ -271,19 +258,10 @@ function createDefaultProfileRuntime(options: { readonly config: AppConfig; read
     tempadLinkServiceUrl: options.config.tempadLinkServiceUrl,
     openAiApiKey: options.config.codexOpenAiApiKey,
   });
-  if (options.toolBackend) {
-    codex.setToolBackend(options.toolBackend);
-  }
   return new CodexAppServerRuntime({
     codex,
     sessions: options.sessions,
   });
-}
-
-function applyRuntimeToolBackend(runtime: AgentRuntime | undefined, backend: BrokerToolBackend | undefined): void {
-  if (runtime instanceof CodexAppServerRuntime) {
-    runtime.setToolBackend(backend);
-  }
 }
 
 function safePathSegment(value: string): string {

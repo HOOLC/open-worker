@@ -5,10 +5,8 @@ import { createHttpHandler } from "./http/router.js";
 import { logger } from "./logger.js";
 import { AuthProfileService } from "./services/auth-profile-service.js";
 import {
-  bindBrokerToolBackend,
   configureServiceLogger,
   createAgentRuntime,
-  createBrokerToolBackend,
   createCodexBroker,
   createDiskPressureCleanup,
   createGitHubAuthorMappings,
@@ -52,15 +50,6 @@ export async function startWorkerService(): Promise<{
     sessions: sessionManager,
     bridge,
   });
-  bindBrokerToolBackend({
-    codex: codexBroker,
-    agentRuntime,
-    backend: createBrokerToolBackend({
-      bridge,
-      jobManager,
-      isolatedMcp,
-    }),
-  });
   const diskCleanup = createDiskPressureCleanup({
     config,
     sessions: sessionManager,
@@ -71,6 +60,7 @@ export async function startWorkerService(): Promise<{
       bridge,
       isolatedMcp,
       jobManager,
+      sessions: sessionManager,
       config,
     }),
   );
