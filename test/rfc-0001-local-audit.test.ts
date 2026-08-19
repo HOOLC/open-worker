@@ -8,7 +8,7 @@ import { collectRfc0001LocalAudit, createRfc0001AuditCliReport, parseRfc0001Audi
 
 const requiredScripts = {
   test: "vitest run",
-  "test:e2e:feishu-mock": "vitest run test/feishu-codex-bridge.test.ts test/feishu-platform-adapter.test.ts test/feishu-fixture-replay.test.ts test/dual-platform-runtime.test.ts",
+  "test:e2e:feishu-mock": "vitest run test/feishu-e2e.test.ts test/chat-routes.e2e.test.ts",
   "manual:feishu-smoke": "tsx test/manual/run-real-feishu-smoke.ts --",
   "manual:self-regression": "tsx test/manual/run-self-regression.ts --",
   "rfc:feishu-audit": "tsx test/manual/run-rfc-0001-local-audit.ts",
@@ -226,7 +226,7 @@ describe("RFC 0001 local audit", () => {
 
   it("fails local readiness when implementation or test slices drift", async () => {
     const repo = await createFixtureRepo({
-      omitFiles: ["src/services/feishu/feishu-event-parser.ts", "test/dual-platform-runtime.test.ts"],
+      omitFiles: ["src/services/feishu/feishu-event-parser.ts", "test/feishu-e2e.test.ts"],
     });
     const report = await collectRfc0001LocalAudit({
       cwd: repo,
@@ -245,7 +245,7 @@ describe("RFC 0001 local audit", () => {
         expect.objectContaining({
           id: "local.test_slices",
           status: "missing",
-          evidence: expect.arrayContaining(["missing=test/dual-platform-runtime.test.ts"]),
+          evidence: expect.arrayContaining(["missing=test/feishu-e2e.test.ts"]),
         }),
       ]),
     );
@@ -254,7 +254,7 @@ describe("RFC 0001 local audit", () => {
   it("fails local readiness when Feishu config or startup assets drift", async () => {
     const repo = await createFixtureRepo({
       omitEvidenceProbe: "config.feishu_flags",
-      omitFiles: [".env.example", "test/config.test.ts"],
+      omitFiles: [".env.example", "test/store-behavior.e2e.test.ts"],
     });
     const report = await collectRfc0001LocalAudit({
       cwd: repo,
@@ -273,7 +273,7 @@ describe("RFC 0001 local audit", () => {
         expect.objectContaining({
           id: "local.test_slices",
           status: "missing",
-          evidence: expect.arrayContaining(["missing=test/config.test.ts"]),
+          evidence: expect.arrayContaining(["missing=test/store-behavior.e2e.test.ts"]),
         }),
         expect.objectContaining({
           id: "local.behavior_evidence",
@@ -341,8 +341,7 @@ describe("RFC 0001 local audit", () => {
 
   it("fails local readiness when Phase 4 HTTP or integration contract slices drift", async () => {
     const repo = await createFixtureRepo({
-      omitEvidenceProbe: "api.feishu_resource_transfer",
-      omitFiles: ["src/http/integration-routes.ts", "test/integration-routes.test.ts"],
+      omitFiles: ["src/http/integration-routes.ts", "test/e2e-jobs-tools.test.ts"],
     });
     const report = await collectRfc0001LocalAudit({
       cwd: repo,
@@ -361,12 +360,7 @@ describe("RFC 0001 local audit", () => {
         expect.objectContaining({
           id: "local.test_slices",
           status: "missing",
-          evidence: expect.arrayContaining(["missing=test/integration-routes.test.ts"]),
-        }),
-        expect.objectContaining({
-          id: "local.behavior_evidence",
-          status: "missing",
-          evidence: expect.arrayContaining([expect.stringContaining("api.feishu_resource_transfer:test/feishu-api.test.ts:missing_snippet="), "http.integration_mcp_arguments:test/integration-routes.test.ts:missing_file"]),
+          evidence: expect.arrayContaining(["missing=test/e2e-jobs-tools.test.ts"]),
         }),
       ]),
     );
@@ -396,7 +390,6 @@ describe("RFC 0001 local audit", () => {
 
   it("fails local readiness when Phase 5 admin, co-author, or job slices drift", async () => {
     const repo = await createFixtureRepo({
-      omitEvidenceProbe: "admin.platform_health",
       omitFiles: ["src/services/github-author-mapping-service.ts", "test/job-routes.test.ts"],
     });
     const report = await collectRfc0001LocalAudit({
@@ -417,11 +410,6 @@ describe("RFC 0001 local audit", () => {
           id: "local.test_slices",
           status: "missing",
           evidence: expect.arrayContaining(["missing=test/job-routes.test.ts"]),
-        }),
-        expect.objectContaining({
-          id: "local.behavior_evidence",
-          status: "missing",
-          evidence: expect.arrayContaining([expect.stringContaining("admin.platform_health:test/admin-service.test.ts:missing_snippet=")]),
         }),
       ]),
     );
@@ -488,7 +476,7 @@ describe("RFC 0001 local audit", () => {
 
   it("fails local readiness when required behavior evidence content drifts", async () => {
     const repo = await createFixtureRepo({
-      omitEvidenceProbe: "bridge.non_at_followup",
+      omitEvidenceProbe: "bridge.group_session",
     });
     const report = await collectRfc0001LocalAudit({
       cwd: repo,
@@ -502,7 +490,7 @@ describe("RFC 0001 local audit", () => {
         expect.objectContaining({
           id: "local.behavior_evidence",
           status: "missing",
-          evidence: expect.arrayContaining([expect.stringContaining("bridge.non_at_followup:test/feishu-codex-bridge.test.ts:missing_snippet=")]),
+          evidence: expect.arrayContaining([expect.stringContaining("bridge.group_session:test/feishu-e2e.test.ts:missing_snippet=")]),
         }),
       ]),
     );

@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -14,7 +15,6 @@ import { SlackInboundStore } from "../src/services/slack/slack-inbound-store.js"
 import { SlackTurnRunner } from "../src/services/slack/slack-turn-runner.js";
 import { StateStore } from "../src/store/state-store.js";
 import { MockCodexAppServer } from "./helpers/mock-codex-app-server.js";
-import { normalizeSourceWhitespace, readCompanionSource } from "./source-helpers.js";
 
 describe("admin token usage e2e", () => {
   const cleanups: Array<() => Promise<void>> = [];
@@ -305,4 +305,29 @@ async function readJson(url: string): Promise<Record<string, any>> {
   const payload = (await response.json()) as Record<string, any>;
   expect(response.status).toBe(200);
   return payload;
+}
+
+async function readCompanionSource(entryUrl: URL): Promise<string> {
+  const entryPath = fileURLToPath(entryUrl);
+  const directory = path.dirname(entryPath);
+  const extension = path.extname(entryPath);
+  const stem = path.basename(entryPath, extension);
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+  const sourceFiles = entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((name) => /\.(tsx?|jsx?)$/.test(name))
+    .filter((name) => name === `${stem}${extension}` || name.startsWith(`${stem}-`))
+    .sort((left, right) => sourceSortKey(stem, left).localeCompare(sourceSortKey(stem, right)));
+  return (await Promise.all(sourceFiles.map((name) => fs.readFile(path.join(directory, name), "utf8")))).join("\n");
+}
+
+function normalizeSourceWhitespace(source: string): string {
+  return source.replace(/\s+/g, " ");
+}
+
+function sourceSortKey(stem: string, name: string): string {
+  if (name === `${stem}.ts` || name === `${stem}.tsx`) return "00";
+  if (name.endsWith("-base.ts") || name.endsWith("-base.tsx")) return "10";
+  return `30-${name}`;
 }

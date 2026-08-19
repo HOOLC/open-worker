@@ -13,7 +13,7 @@ const requiredScripts = {
   lint: "oxlint . --deny-warnings",
   build: "pnpm build:admin-ui && tsc -p tsconfig.json && node scripts/build/copy-static-assets.mjs",
   test: "vitest run --no-file-parallelism",
-  "test:e2e:feishu-mock": "vitest run test/feishu-codex-bridge.test.ts test/feishu-platform-adapter.test.ts test/feishu-fixture-replay.test.ts test/dual-platform-runtime.test.ts",
+  "test:e2e:feishu-mock": "vitest run test/feishu-e2e.test.ts test/chat-routes.e2e.test.ts",
   "rfc:feishu-audit": "tsx test/manual/run-rfc-0001-local-audit.ts",
   "rfc:feishu-completion-audit": "tsx test/manual/run-rfc-0001-completion-audit.ts",
   "rfc:feishu-test-plan": "tsx test/manual/run-rfc-0001-test-plan.ts",
@@ -98,7 +98,7 @@ describe("RFC 0001 test plan verifier", () => {
         expect.objectContaining({
           id: "testplan.capability_matrix",
           status: "missing",
-          evidence: expect.arrayContaining(["Admin dashboard:missing_proof=test/admin-service.test.ts"]),
+          evidence: expect.arrayContaining(["Admin dashboard:missing_proof=test/admin-service.e2e.test.ts"]),
         }),
       ]),
     );

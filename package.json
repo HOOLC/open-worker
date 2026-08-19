@@ -36,7 +36,7 @@
     "start:worker": "node dist/src/worker-index.js",
     "test": "vitest run --no-file-parallelism",
     "test:e2e:mock": "tsx test/manual/run-mock-e2e.ts",
-    "test:e2e:feishu-mock": "vitest run test/feishu-codex-bridge.test.ts test/feishu-platform-adapter.test.ts test/feishu-fixture-replay.test.ts test/dual-platform-runtime.test.ts",
+    "test:e2e:feishu-mock": "vitest run test/feishu-e2e.test.ts test/chat-routes.e2e.test.ts",
     "manual:test": "tsx test/manual/run-real-codex-smoke.ts",
     "manual:codex-coding-smoke": "tsx test/manual/run-real-codex-coding-smoke.ts",
     "manual:feishu-smoke": "tsx test/manual/run-real-feishu-smoke.ts --",

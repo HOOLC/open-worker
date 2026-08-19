@@ -572,10 +572,8 @@ describe("RFC 0001 documentation", () => {
     expect(readme).toContain("Generic chat history `format` uses the same `text|json` validation before broker delegation");
     expect(readme).toContain("For Feishu, outbound message images up to 10 MB are uploaded as image messages");
     expect(readme).toContain("fall back to file upload when still within the 30 MB file/resource limit");
-    expect(packageJson.scripts?.["test:e2e:feishu-mock"]).toContain("test/feishu-codex-bridge.test.ts");
-    expect(packageJson.scripts?.["test:e2e:feishu-mock"]).toContain("test/feishu-platform-adapter.test.ts");
-    expect(packageJson.scripts?.["test:e2e:feishu-mock"]).toContain("test/feishu-fixture-replay.test.ts");
-    expect(packageJson.scripts?.["test:e2e:feishu-mock"]).toContain("test/dual-platform-runtime.test.ts");
+    expect(packageJson.scripts?.["test:e2e:feishu-mock"]).toContain("test/feishu-e2e.test.ts");
+    expect(packageJson.scripts?.["test:e2e:feishu-mock"]).toContain("test/chat-routes.e2e.test.ts");
   });
 });
 
