@@ -1,77 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 
-import { formatAuthQuotaDisplay, formatWeightedWeeklyQuotaScore, remainingPercent, weightedWeeklyQuotaScore, daysUntilReset } from "./auth-profile-quota";
-
-import { profileAccountLabel, profilePlanLabel, profileTitle } from "./auth-profile-display";
-
-import { connectAdminRealtime, getAdminStatusSnapshot, mergeAdminStatusSnapshot, publishAdminStatus, subscribeAdminStatus } from "./admin-status-store";
-
+import { loadAdminLogs, loadAdminOverview, loadAdminSessionsStatus, mergeStatusLogs, mergeStatusOverview } from "./admin-api.js";
+import { errorMessage } from "./admin-formatters.js";
+import { connectAdminRealtime, getAdminStatusSnapshot, publishAdminStatus, subscribeAdminStatus } from "./admin-status-store";
+import type { AdminStatus, AdminView } from "./admin-types.js";
+import { loadAdminView, persistAdminView } from "./admin-view-state.js";
+import { OperationsView } from "./operations-view.js";
+import { TopbarProfiles } from "./profiles-panel.js";
 import { AdminSessionsView } from "./session-view";
 import { useSlackSetup } from "./slack-settings";
-
-import { statusLabel } from "./timeline-display";
-
-import {
-  AdminStatus,
-  AdminView,
-  Tone,
-  OperationsView,
-  DeployPanel,
-  OperationRecords,
-  ProfilesPanel,
-  GitHubAccountsPanel,
-  LogsPanel,
-  ServicePanel,
-  AddProfileDialog,
-  GitHubAccountBindDialog,
-  TopbarProfiles,
-  RiskPanel,
-  RiskCell,
-  DeploymentPanel,
-  ReleaseTargetPanel,
-  ReleaseRow,
-  DeployTargetOption,
-  buildDeployTargetOptions,
-  ProfileQuotaMetrics,
-  ProfileQuotaSummary,
-  profileQuotaSummary,
-  Badge,
-  loadAdminStatus,
-  loadAdminSessionsStatus,
-  loadAdminOverview,
-  loadAdminLogs,
-  mergeStatusOverview,
-  mergeStatusLogs,
-  summarizeSessionRows,
-  AdminRequestInit,
-  requestJson,
-  githubAccountDeviceStartApiPath,
-  githubDevicePollApiPath,
-  confirmInterruptRisk,
-  publishStatusFromPayload,
-  loadAdminView,
-  persistAdminView,
-  uiStateStorageKey,
-  profileQuotaItems,
-  normalizeGitHubAccounts,
-  buildFallbackGitHubAccounts,
-  normalizeSlackIdentity,
-  mergeSlackIdentity,
-  identityFromSessionMessage,
-  githubBindingLabel,
-  githubBindingTone,
-  githubAccountOptionLabel,
-  quotaTone,
-  statusTone,
-  operationLabel,
-  pickOperationLabel,
-  fmtTime,
-  fmtDateTime,
-  shortRevision,
-  formatRelativeDuration,
-  formatResetTime,
-  errorMessage,
-} from "./admin-shell-helpers.js";
 
 export function AdminShell({ serviceName }: { readonly serviceName: string }): React.JSX.Element {
   const snapshot = useSyncExternalStore(subscribeAdminStatus, getAdminStatusSnapshot, getAdminStatusSnapshot);

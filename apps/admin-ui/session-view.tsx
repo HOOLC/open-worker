@@ -1,93 +1,14 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
-import { profileDisplayLabel, profileIsSelectable, profileOptionLabel, profileQuotaLabel, profileSessionActionLabel, profileTitle } from "./auth-profile-display";
-
-import { applyAdminRealtimeEvent, getAdminStatusSnapshot, getTimelineSnapshot, publishTimelinePayload, subscribeAdminStatus, subscribeTimeline } from "./admin-status-store";
-
-import { agentTranscriptAvatar, agentTranscriptKind, agentTranscriptSpeaker } from "./agent-transcript-display";
-
-import { requestCancelSessionJob } from "./session-job-actions";
-
+import { getAdminStatusSnapshot, subscribeAdminStatus } from "./admin-status-store";
+import { SessionDetail } from "./session-detail.js";
+import { SessionListRow } from "./session-list.js";
 import { stableSessionOrder } from "./session-order";
-
-import { activeBackgroundJobCount, activeBackgroundJobs, buildChannelLabelById, renderSessionMeta, resolveSessionChannelLabel, sessionActivityAt, sessionActivityMs, sessionOperationalState, shouldShowSessionState } from "./session-row-display";
-
-import type { SessionOperationalState } from "./session-row-display";
-
-import { filterVisibleTimelineEvents, getTimelineEventDisplay, statusLabel, type TimelineEvent } from "./timeline-display";
-
-import {
-  UiState,
-  SessionRecord,
-  TimelinePayload,
-  timelinePayloadSession,
-  mergeSessionRecords,
-  sessionFilters,
-  TIMELINE_PAGE_SIZE,
-  TIMELINE_AUTO_LOAD_THRESHOLD,
-  GitHubBindPage,
-  SessionPermalinkView,
-  SessionRow,
-  SessionDetail,
-  AgentSessionHero,
-  SessionActions,
-  GitHubIdentityPanel,
-  GitHubBindingFlow,
-  GitHubBindingIntro,
-  SessionResetButton,
-  SessionRuntimePanel,
-  MetaLine,
-  SessionDebugPanel,
-  SessionTraceStats,
-  SessionTimeline,
-  SessionSelectionPanel,
-  TimelinePayloadView,
-  mergeTimelinePayloads,
-  mergeTimelineEvents,
-  TraceSummary,
-  Timeline,
-  TimelineRow,
-  JobsTable,
-  Badge,
-  sessionMatchesFilter,
-  resolveSelectedSession,
-  sessionPrimaryText,
-  sessionFirstText,
-  messagePreview,
-  summarizeSessionLead,
-  compareSessionsForMode,
-  requestJson,
-  sessionTimelineApiPath,
-  sessionTimelineEventApiPath,
-  slackThreadUrlApiPath,
-  githubIdentityApiPath,
-  githubDeviceStartApiPath,
-  githubDevicePollApiPath,
-  adminSessionPath,
-  readGitHubBindSessionKey,
-  readPermalinkSessionKey,
-  decodePathSegment,
-  loadUiState,
-  persistUiState,
-  uiStateStorageKey,
-  defaultUiState,
-  normalizeUiState,
-  classSafeValue,
-  statusTone,
-  toolTimelineStatusLabel,
-  jobCancellable,
-  sourceLabel,
-  timelineEventKey,
-  timelineEventIdentity,
-  timestampMs,
-  newestTimestamp,
-  fmtTime,
-  fmtDateTime,
-  fmtRelativeTime,
-  fmtTokens,
-  fmtPercent,
-  shortValue,
-} from "./session-view-helpers.js";
+import { GitHubBindPage, SessionPermalinkView } from "./session-pages.js";
+import { compareSessionsForMode, resolveSelectedSession, sessionMatchesFilter } from "./session-selection.js";
+import { buildChannelLabelById } from "./session-row-display";
+import type { SessionRecord, UiState } from "./session-types.js";
+import { loadUiState, normalizeUiState, persistUiState, readGitHubBindSessionKey, readPermalinkSessionKey } from "./session-view-state.js";
 
 export function AdminSessionsView(): React.JSX.Element {
   const githubBindSessionKey = readGitHubBindSessionKey();
@@ -160,7 +81,7 @@ export function AdminSessionsView(): React.JSX.Element {
         </div>
         <div id="sessions-panel" className="session-list">
           {orderedSessions.length ? (
-            orderedSessions.map((session) => <SessionRow key={session.key} session={session} selected={selectedSession?.key === session.key} channelLabelById={channelLabelById} onSelect={() => updateSessionUiState({ selectedSessionKey: session.key })} />)
+            orderedSessions.map((session) => <SessionListRow key={session.key} session={session} selected={selectedSession?.key === session.key} channelLabelById={channelLabelById} onSelect={() => updateSessionUiState({ selectedSessionKey: session.key })} />)
           ) : (
             <div className="empty-state">没有符合当前筛选的会话</div>
           )}

@@ -1,58 +1,26 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-
-import { profileDisplayLabel, profileIsSelectable, profileOptionLabel, profileQuotaLabel, profileSessionActionLabel, profileTitle } from "./auth-profile-display";
-
 import { applyAdminRealtimeEvent, getAdminStatusSnapshot, getTimelineSnapshot, publishAdminStatus, publishTimelinePayload, subscribeAdminStatus, subscribeTimeline } from "./admin-status-store";
-
-import { AUTOMATIC_PROFILE_ID, defaultThinking, modelOptions, profileOptions, thinkingOptions } from "./profile-selection";
 
 import { agentTranscriptAvatar, agentTranscriptKind, agentTranscriptSpeaker } from "./agent-transcript-display";
 
+import { profileTitle } from "./auth-profile-display";
+
+import { AUTOMATIC_PROFILE_ID, defaultThinking, modelOptions, profileOptions, thinkingOptions } from "./profile-selection";
+
+import { requestJson, sessionTimelineApiPath, sessionTimelineEventApiPath } from "./session-api.js";
+
+import { Badge } from "./session-badge.js";
+
+import { fmtDateTime, fmtTime, jobCancellable, statusTone, timelineEventIdentity, timelineEventKey, timestampMs, toolTimelineStatusLabel } from "./session-formatters.js";
+
 import { requestCancelSessionJob } from "./session-job-actions";
 
-import { stableSessionOrder } from "./session-order";
+import { sessionSelectionBlocked } from "./session-row-display";
 
-import { activeBackgroundJobCount, activeBackgroundJobs, buildChannelLabelById, renderSessionMeta, resolveSessionChannelLabel, sessionActivityAt, sessionActivityMs, sessionOperationalState, sessionSelectionBlocked, shouldShowSessionState } from "./session-row-display";
+import { SessionRecord, TIMELINE_AUTO_LOAD_THRESHOLD, TIMELINE_PAGE_SIZE, TimelinePayload } from "./session-types.js";
 
-import type { SessionOperationalState } from "./session-row-display";
+import { filterVisibleTimelineEvents, getTimelineEventDisplay, statusLabel, TimelineEvent } from "./timeline-display";
 
-import { filterVisibleTimelineEvents, getTimelineEventDisplay, statusLabel, type TimelineEvent } from "./timeline-display";
-
-import { UiState, SessionRecord, TimelinePayload, timelinePayloadSession, mergeSessionRecords, sessionFilters, TIMELINE_PAGE_SIZE, TIMELINE_AUTO_LOAD_THRESHOLD, GitHubBindPage, SessionPermalinkView, SessionRow, SessionDetail, AgentSessionHero, SessionActions } from "./session-view-helpers-1.js";
-import { GitHubIdentityPanel, GitHubBindingFlow, GitHubBindingIntro, SessionResetButton, SessionRuntimePanel, MetaLine, SessionDebugPanel, SessionTraceStats } from "./session-view-helpers-2.js";
-import { TimelineRow, JobsTable, Badge, sessionMatchesFilter, resolveSelectedSession, sessionPrimaryText, sessionFirstText, messagePreview, summarizeSessionLead, compareSessionsForMode, requestJson } from "./session-view-helpers-4.js";
-import {
-  sessionTimelineApiPath,
-  sessionTimelineEventApiPath,
-  slackThreadUrlApiPath,
-  githubIdentityApiPath,
-  githubDeviceStartApiPath,
-  githubDevicePollApiPath,
-  adminSessionPath,
-  readGitHubBindSessionKey,
-  readPermalinkSessionKey,
-  decodePathSegment,
-  loadUiState,
-  persistUiState,
-  uiStateStorageKey,
-  defaultUiState,
-  normalizeUiState,
-  classSafeValue,
-  statusTone,
-  toolTimelineStatusLabel,
-  jobCancellable,
-  sourceLabel,
-  timelineEventKey,
-  timelineEventIdentity,
-  timestampMs,
-  newestTimestamp,
-  fmtTime,
-  fmtDateTime,
-  fmtRelativeTime,
-  fmtTokens,
-  fmtPercent,
-  shortValue,
-} from "./session-view-helpers-5.js";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 export function SessionTimeline({ session }: { readonly session: SessionRecord }): React.JSX.Element {
   const sessionKey = String(session.key || "");
@@ -275,45 +243,6 @@ export function mergeTimelineEvents(left: readonly TimelineEvent[], right: reado
   return merged.sort((first, second) => timestampMs(first.at) - timestampMs(second.at) || Number(first.sequence || 0) - Number(second.sequence || 0) || String(first.id || "").localeCompare(String(second.id || "")));
 }
 
-export function TraceSummary({ trace }: { readonly trace: Record<string, any> }): React.JSX.Element {
-  const categories = trace.categories || {};
-  const eventCount = Number(trace.eventCount || 0);
-  const items = [
-    ["agent_system_prompt", "系统"],
-    ["agent_memory", "记忆"],
-    ["agent_user_message", "用户"],
-    ["agent_runtime_reminder", "提醒"],
-    ["agent_assistant_message", "助手"],
-    ["agent_tool_call", "工具"],
-  ];
-  const summary = [
-    ["agent_user_message", "用户"],
-    ["agent_assistant_message", "助手"],
-    ["agent_tool_call", "工具"],
-  ]
-    .map(([key, label]) => label + " " + Number(categories[key] || 0))
-    .join(" · ");
-  return (
-    <details className="side-disclosure">
-      <summary title={summary}>{summary}</summary>
-      <div className="trace-stat-panel">
-        <div className="trace-stat-head">
-          <strong>{eventCount}</strong>
-          <span>条 Agent 事件</span>
-        </div>
-        <div className="trace-stat-grid">
-          {items.map(([key, label]) => (
-            <div key={key} className={"trace-stat " + classSafeValue(statusTone(key), "")}>
-              <span>{label}</span>
-              <strong>{Number(categories[key] || 0)}</strong>
-            </div>
-          ))}
-        </div>
-      </div>
-    </details>
-  );
-}
-
 export function Timeline({ events, hasMore = false, olderBusy = false, onLoadOlder }: { readonly events: readonly TimelineEvent[]; readonly hasMore?: boolean; readonly olderBusy?: boolean; readonly onLoadOlder?: (() => Promise<void>) | undefined }): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const shouldFollowRef = useRef(true);
@@ -406,5 +335,225 @@ export function Timeline({ events, hasMore = false, olderBusy = false, onLoadOld
         ))}
       </div>
     </div>
+  );
+}
+
+export function TimelineRow({ event }: { readonly event: TimelineEvent }): React.JSX.Element {
+  const [detail, setDetail] = useState<string | null>(typeof event.detail === "string" ? event.detail : null);
+  const [detailStatus, setDetailStatus] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const display = getTimelineEventDisplay(event);
+  const badgeTone = statusTone(event.status === "failed" || event.status === "error" ? event.status : event.type);
+  const kind = agentTranscriptKind(event);
+  const toolTone = kind === "tool" ? statusTone(event.status || event.type) || badgeTone || "info" : "";
+  const rowTone = kind === "tool" ? toolTone : badgeTone;
+  const speaker = agentTranscriptSpeaker(kind, event);
+  const isNotice = kind === "system" || kind === "session";
+  const isCommandEvent = event.toolName === "exec_command";
+  const canLoadDetail = Boolean(event.detailAvailable && event.id && event.sessionKey);
+  const meta = [kind !== "tool" && kind !== "user" && kind !== "assistant" && kind !== "bot" && event.status ? statusLabel(event.status) : "", !isCommandEvent && event.toolName ? "工具 " + event.toolName : "", event.detailTruncated ? "内容已截断" : ""].filter(Boolean).join(" · ");
+
+  useEffect(() => {
+    setDetail(typeof event.detail === "string" ? event.detail : null);
+    setDetailStatus(null);
+    setDetailOpen(false);
+  }, [event.id, event.detail]);
+
+  async function loadDetail(): Promise<void> {
+    if (detail || detailStatus === "loading" || !canLoadDetail) {
+      return;
+    }
+    setDetailStatus("loading");
+    try {
+      const payload = (await requestJson(sessionTimelineEventApiPath(String(event.sessionKey), String(event.id)))) as Record<string, any>;
+      const nextDetail = typeof payload.event?.detail === "string" ? payload.event.detail : "";
+      setDetail(nextDetail || "没有详情");
+      setDetailStatus(null);
+    } catch (error) {
+      setDetailStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function toggleDetail(): Promise<void> {
+    const nextOpen = !detailOpen;
+    setDetailOpen(nextOpen);
+    if (nextOpen) {
+      await loadDetail();
+    }
+  }
+
+  function renderTraceDetails(): React.JSX.Element | null {
+    if (!detail && !canLoadDetail) {
+      return null;
+    }
+    return (
+      <button
+        type="button"
+        className={"trace-details-button" + (detailOpen ? " open" : "")}
+        aria-label="查看详情"
+        title={detailOpen ? "收起详情" : "查看详情"}
+        onClick={() => {
+          void toggleDetail();
+        }}
+      >
+        <span aria-hidden="true" className="trace-details-icon">
+          i
+        </span>
+      </button>
+    );
+  }
+
+  function renderTraceDetailPanel(): React.JSX.Element | null {
+    if (!detailOpen) {
+      return null;
+    }
+    return <pre className="trace-detail-panel">{detail || (detailStatus === "loading" ? "正在加载" : detailStatus || "")}</pre>;
+  }
+
+  return (
+    <div className={"agent-message agent-message-" + kind + " " + rowTone}>
+      <div className="agent-message-avatar" aria-hidden="true">
+        {agentTranscriptAvatar(kind)}
+      </div>
+      <article className="agent-message-body">
+        {isNotice ? (
+          <div className="agent-notice">
+            <span className="agent-notice-kind">{speaker}</span>
+            <time dateTime={String(event.at || "")} title={fmtDateTime(event.at)}>
+              {fmtTime(event.at)}
+            </time>
+            <Badge label={display.badgeLabel} tone={badgeTone} />
+            <strong title={display.title}>{display.title}</strong>
+            {display.summary ? <span title={display.summary}>{display.summary}</span> : null}
+            {meta ? (
+              <em className="trace-meta" title={meta}>
+                {meta}
+              </em>
+            ) : null}
+            {renderTraceDetails()}
+          </div>
+        ) : (
+          <div className="agent-message-head">
+            <strong className="agent-speaker">{speaker}</strong>
+            <time dateTime={String(event.at || "")} title={fmtDateTime(event.at)}>
+              {fmtTime(event.at)}
+            </time>
+            {kind === "tool" ? <Badge label={display.badgeLabel} tone={badgeTone} /> : null}
+            {meta ? (
+              <span className="trace-meta" title={meta}>
+                {meta}
+              </span>
+            ) : null}
+            {kind === "tool" ? null : renderTraceDetails()}
+          </div>
+        )}
+        {!isNotice && kind === "tool" ? (
+          <div className={"agent-tool-step " + toolTone}>
+            <div>
+              <strong title={display.title}>{display.title}</strong>
+              {display.summary ? <em title={display.summary}>{display.summary}</em> : null}
+            </div>
+            <span className="agent-tool-status">{toolTimelineStatusLabel(event)}</span>
+            {renderTraceDetails()}
+          </div>
+        ) : !isNotice ? (
+          <div className="agent-message-content">
+            <p title={display.title}>{display.title}</p>
+            {display.summary ? <span title={display.summary}>{display.summary}</span> : null}
+          </div>
+        ) : null}
+        {renderTraceDetailPanel()}
+      </article>
+    </div>
+  );
+}
+
+export function JobsTable({ session, jobs, expectedCount }: { readonly session: SessionRecord; readonly jobs: readonly Record<string, any>[]; readonly expectedCount?: number }): React.JSX.Element {
+  const [busyJobId, setBusyJobId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const sessionKey = String(session.key || "");
+
+  async function cancelJob(job: Record<string, any>): Promise<void> {
+    const jobId = String(job.id || "");
+    if (!sessionKey || !jobId || !jobCancellable(job)) {
+      return;
+    }
+    const confirmed = window.confirm("确认取消这个后台任务？");
+    if (!confirmed) {
+      return;
+    }
+
+    setBusyJobId(jobId);
+    setMessage(null);
+    try {
+      const payload = await requestCancelSessionJob(sessionKey, jobId);
+      if (payload.session && typeof payload.session === "object") {
+        applyAdminRealtimeEvent({
+          sequence: 0,
+          kind: "session.update",
+          scope: "session",
+          sessionKey,
+          session: payload.session,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      const timelinePayload = await requestJson(sessionTimelineApiPath(sessionKey, { limit: TIMELINE_PAGE_SIZE }));
+      publishTimelinePayload(sessionKey, timelinePayload as TimelinePayload);
+      setMessage("已取消 job");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusyJobId(null);
+    }
+  }
+
+  if (!jobs.length) return <div className="summary-detail">{expectedCount ? "任务明细加载中" : "没有运行任务"}</div>;
+  return (
+    <>
+      <table className="table" style={{ marginTop: 10 }}>
+        <thead>
+          <tr>
+            <th>状态</th>
+            <th>类型</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {jobs.slice(0, 5).map((job, index) => {
+            const jobId = String(job.id || "");
+            const cancellable = jobCancellable(job);
+            return (
+              <tr key={(job.id || job.kind || "") + ":" + index}>
+                <td>
+                  <Badge label={job.status || "unknown"} tone={statusTone(job.status)} />
+                </td>
+                <td>{job.kind || ""}</td>
+                <td>
+                  {cancellable ? (
+                    <button
+                      type="button"
+                      className="danger"
+                      disabled={busyJobId === jobId || !sessionKey || !jobId}
+                      onClick={() => {
+                        void cancelJob(job);
+                      }}
+                    >
+                      {busyJobId === jobId ? "取消中" : "取消"}
+                    </button>
+                  ) : (
+                    <span className="summary-detail">-</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {message ? (
+        <div className="summary-detail" style={{ marginTop: 8 }}>
+          {message}
+        </div>
+      ) : null}
+    </>
   );
 }

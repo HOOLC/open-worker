@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
-import { requestJson } from "./admin-shell-helpers-3.js";
-import { errorMessage } from "./admin-shell-helpers-4.js";
+import { requestJson } from "./admin-api.js";
+import { errorMessage } from "./admin-formatters.js";
 
 export type SlackSetup = {
   readonly configured: boolean;

@@ -3,9 +3,9 @@ import fs from "node:fs/promises";
 import { describe, expect, it } from "vite-plus/test";
 
 import { sessionOperationalState } from "../apps/admin-ui/session-row-display.js";
-import { sessionFilters } from "../apps/admin-ui/session-view-helpers-1.js";
-import { summarizeSessionLead } from "../apps/admin-ui/session-view-helpers-4.js";
-import { defaultUiState, normalizeUiState } from "../apps/admin-ui/session-view-helpers-5.js";
+import { summarizeSessionLead } from "../apps/admin-ui/session-selection.js";
+import { sessionFilters } from "../apps/admin-ui/session-types.js";
+import { defaultUiState, normalizeUiState } from "../apps/admin-ui/session-view-state.js";
 
 describe("Admin session state ownership", () => {
   it("does not infer Agent execution state from Gateway records", () => {
@@ -76,7 +76,7 @@ describe("Admin session state ownership", () => {
   });
 
   it("recomputes Profile choices when public account or quota status changes", async () => {
-    const source = await fs.readFile(new URL("../apps/admin-ui/session-view-helpers-3.tsx", import.meta.url), "utf8");
+    const source = await fs.readFile(new URL("../apps/admin-ui/session-timeline.tsx", import.meta.url), "utf8");
     expect(source).not.toContain("useMemo(() => profileOptions(");
   });
 
