@@ -4,6 +4,7 @@ import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import net, { type Socket } from "node:net";
 import os from "node:os";
 import path from "node:path";
+import { stripVTControlCharacters } from "node:util";
 
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { type WebSocket, WebSocketServer } from "ws";
@@ -1001,12 +1002,13 @@ describe.sequential("zork-agent OpenAI Codex Responses WebSocket transport", () 
     expect(events.filter((event) => event.type === "model_attempt_failed")).toHaveLength(1);
     expect(events.filter((event) => event.type === "model_attempts_exhausted")).toHaveLength(1);
     expect(events.findLast((event) => event.type === "activation_finished")?.outcome).toBe("failed");
-    expect(agentStderr).toContain("model provider attempt failed");
-    expect(agentStderr).toContain("codex.websocket.provider_event");
-    expect(agentStderr).toContain("retryable=true");
-    expect(agentStderr).toContain("status_code=Some(500)");
-    expect(agentStderr).toContain("controlled_failure");
-    expect(agentStderr).toContain("controlled provider failure");
-    expect(agentStderr).not.toContain("test-openai-subscription-key");
+    const plainAgentStderr = stripVTControlCharacters(agentStderr);
+    expect(plainAgentStderr).toContain("model provider attempt failed");
+    expect(plainAgentStderr).toContain("codex.websocket.provider_event");
+    expect(plainAgentStderr).toContain("retryable=true");
+    expect(plainAgentStderr).toContain("status_code=Some(500)");
+    expect(plainAgentStderr).toContain("controlled_failure");
+    expect(plainAgentStderr).toContain("controlled provider failure");
+    expect(plainAgentStderr).not.toContain("test-openai-subscription-key");
   });
 });

@@ -275,7 +275,7 @@ describe.sequential("zork-agent application boundaries", () => {
       (items) => items.some((item) => item.role === "tool" && item.content?.includes("Use offset=")),
       "large read returns a tool-owned bounded page",
     );
-    const latestTool = messages.findLast((item) => item.role === "tool");
+    const latestTool = messages.findLast((item) => item.role === "tool" && item.content?.includes("Use offset="));
     expect(latestTool?.content?.length ?? 0).toBeLessThan(60 * 1024);
   });
 
@@ -303,7 +303,7 @@ describe.sequential("zork-agent application boundaries", () => {
       (items) => items.some((item) => item.role === "tool" && item.content?.includes("line-2400")),
       "bounded bash result",
     );
-    const bashResult = messages.findLast((item) => item.role === "tool")?.content ?? "";
+    const bashResult = messages.findLast((item) => item.role === "tool" && item.content?.includes("line-2400"))?.content ?? "";
     expect(bashResult).not.toContain("line-0001");
     expect(bashResult).toContain("line-2400");
     expect(bashResult).not.toContain("line-1200");
@@ -332,7 +332,7 @@ describe.sequential("zork-agent application boundaries", () => {
       (items) => items.some((item) => item.role === "tool" && item.content?.startsWith("line-1200")),
       "read page from complete bash output",
     );
-    expect(paged.findLast((item) => item.role === "tool")?.content).toContain("Use offset=1201");
+    expect(paged.findLast((item) => item.role === "tool" && item.content?.startsWith("line-1200"))?.content).toContain("Use offset=1201");
   });
 
   it("overlaps independent tools but durably commits results in declaration order", { timeout: 30_000 }, async () => {
@@ -414,7 +414,7 @@ describe.sequential("zork-agent application boundaries", () => {
       (items) => items.some((item) => item.role === "tool" && item.content?.startsWith("two\nthree")),
       "read offset and limit",
     );
-    expect(paged.findLast((item) => item.role === "tool")?.content).toContain("Use offset=4");
+    expect(paged.findLast((item) => item.role === "tool" && item.content?.startsWith("two\nthree"))?.content).toContain("Use offset=4");
 
     await postMessage(
       runtime.baseUrl,
