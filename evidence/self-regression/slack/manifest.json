@@ -1,7 +1,0 @@
-{
-  "platform": "slack",
-  "mode": "drive",
-  "checkedAt": "2026-05-30T18:07:47.338Z",
-  "command": "pnpm manual:self-regression -- -- -- --platform slack --drive --env-file .env --base-url http://127.0.0.1:3001 --output-dir evidence/self-regression/slack --json --wait-ms 180000 --interval-ms 3000",
-  "sanitizedSourceFiles": [".env"]
-}

@@ -1,0 +1,14 @@
+packages:
+  - apps/*
+  - packages/*
+
+catalogMode: prefer
+
+catalog:
+  "@types/node": ^24.5.2
+  "@types/react": 19.2.14
+  "@types/react-dom": 19.2.3
+  react: 19.2.6
+  react-dom: 19.2.6
+  typescript: ^5.9.2
+  vite-plus: 0.1.20

@@ -1,9 +1,0 @@
-{
-  "ok": true,
-  "workspacePath": "codex-coding-smoke-UbKGZM/workspace",
-  "workspaceRetained": false,
-  "expectedContent": "REAL_CODEX_CODING_SMOKE_OK",
-  "actualContent": "REAL_CODEX_CODING_SMOKE_OK\n",
-  "finalMessage": "CODING_SMOKE_DONE",
-  "checkStdout": "coding smoke passed"
-}

@@ -1,0 +1,22 @@
+{
+  "name": "@zork/admin-ui",
+  "version": "0.1.29",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev --host 127.0.0.1 --port 5173",
+    "build": "vp build",
+    "test": "vp test"
+  },
+  "dependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "6.0.1",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

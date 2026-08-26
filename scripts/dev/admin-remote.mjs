@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const sshHost = process.env.ADMIN_REMOTE_SSH_HOST || "admin@100.67.4.27";
 const sshProxyCommand = process.env.ADMIN_REMOTE_SSH_PROXY_COMMAND || "/Applications/Tailscale.app/Contents/MacOS/Tailscale nc %h %p";
@@ -28,7 +32,8 @@ async function main() {
 
   console.log(`[admin-remote] admin UI: http://127.0.0.1:${adminUiPort}/admin/`);
   console.log(`[admin-remote] proxying /admin/api to ${apiOrigin}`);
-  spawnManaged("pnpm", ["exec", "vp", "dev", "--host", "127.0.0.1", "--port", adminUiPort, "--strictPort"], {
+  spawnManaged("vp", ["dev", "--host", "127.0.0.1", "--port", adminUiPort, "--strictPort"], {
+    cwd: path.join(repoRoot, "apps", "admin-ui"),
     env: {
       ...process.env,
       ADMIN_API_PROXY_ORIGIN: apiOrigin,

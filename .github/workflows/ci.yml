@@ -27,7 +27,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.13
+          node-version: 22.15
           cache: pnpm
 
       - name: Install dependencies
@@ -48,14 +48,11 @@ jobs:
       - name: Stage release packages
         run: pnpm release:stage
 
-      - name: Pack admin release artifact
-        run: npm pack artifacts/npm-packages/admin --pack-destination artifacts
-
-      - name: Pack worker release artifact
-        run: npm pack artifacts/npm-packages/worker --pack-destination artifacts
+      - name: Pack Zork release artifact
+        run: npm pack artifacts/npm-packages/zork --pack-destination artifacts
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: agent-session-broker-npm-packages
+          name: zork-npm-package
           path: artifacts/*.tgz

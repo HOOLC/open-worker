@@ -1,20 +1,26 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const adminUiPort = process.env.ADMIN_UI_DEV_PORT || "5173";
-const adminUiOrigin = process.env.ADMIN_UI_DEV_ORIGIN || `http://127.0.0.1:${adminUiPort}`;
+const controlPort = process.env.PORT || "3001";
+const adminApiOrigin = process.env.ADMIN_API_PROXY_ORIGIN || `http://127.0.0.1:${controlPort}`;
 
 const children = [
-  spawn("pnpm", ["exec", "vp", "dev", "--host", "127.0.0.1", "--port", adminUiPort, "--strictPort"], {
-    env: process.env,
-    stdio: "inherit",
-  }),
-  spawn("pnpm", ["exec", "tsx", "watch", "src/admin-index.ts"], {
+  spawn("vp", ["dev", "--host", "127.0.0.1", "--port", adminUiPort, "--strictPort"], {
+    cwd: path.join(repoRoot, "apps", "admin-ui"),
     env: {
       ...process.env,
-      ADMIN_UI_DEV_ORIGIN: adminUiOrigin,
+      ADMIN_API_PROXY_ORIGIN: adminApiOrigin,
+      ADMIN_UI_DEV_PORT: adminUiPort,
     },
+    stdio: "inherit",
+  }),
+  spawn("cargo", ["run", "-p", "zork-gateway", "--", "--ui-dir", path.join(repoRoot, "apps", "admin-ui", "dist")], {
+    cwd: repoRoot,
     stdio: "inherit",
   }),
 ];
