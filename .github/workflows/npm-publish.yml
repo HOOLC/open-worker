@@ -44,30 +44,16 @@ jobs:
       - name: Stage release packages
         run: pnpm release:stage
 
-      - name: Pack admin release artifact
-        run: npm pack artifacts/npm-packages/admin --pack-destination artifacts
+      - name: Pack Zork release artifact
+        run: npm pack artifacts/npm-packages/zork --pack-destination artifacts
 
-      - name: Pack worker release artifact
-        run: npm pack artifacts/npm-packages/worker --pack-destination artifacts
-
-      - name: Upload admin release artifact
+      - name: Upload Zork release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: agent-session-broker-admin-npm-package
-          path: artifacts/agent-session-broker-admin-*.tgz
+          name: zork-npm-package
+          path: artifacts/agent-session-broker-zork-*.tgz
 
-      - name: Upload worker release artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: agent-session-broker-worker-npm-package
-          path: artifacts/agent-session-broker-worker-*.tgz
-
-      - name: Publish admin to npm
-        run: npm publish artifacts/npm-packages/admin --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish worker to npm
-        run: npm publish artifacts/npm-packages/worker --access public --provenance
+      - name: Publish Zork to npm
+        run: npm publish artifacts/npm-packages/zork --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,8 +1,8 @@
 {
-  "name": "agent-session-broker-repo",
+  "name": "zork",
   "version": "0.1.29",
   "private": true,
-  "description": "Slack + China Feishu broker that routes chat sessions into Codex app-server sessions with isolated workspaces.",
+  "description": "Slack broker that routes chat sessions into isolated agent workspaces.",
   "homepage": "https://github.com/HOOLC/open-worker#readme",
   "bugs": {
     "url": "https://github.com/HOOLC/open-worker/issues"
@@ -12,69 +12,47 @@
     "type": "git",
     "url": "git+https://github.com/HOOLC/open-worker.git"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "type": "module",
   "scripts": {
-    "build": "pnpm build:admin-ui && tsc -p tsconfig.json && node scripts/build/copy-static-assets.mjs",
-    "build:admin-ui": "vp build",
-    "dev": "tsx watch src/index.ts",
+    "build": "vp run build:js && vp run build:rust",
+    "build:js": "vp run --filter @zork/admin-ui build",
+    "build:rust": "cargo build -p zork -p zork-gateway -p zork-agent -p zork-call",
+    "dev": "cargo run -p zork",
     "dev:admin": "node scripts/dev/admin.mjs",
     "dev:admin:remote": "node scripts/dev/admin-remote.mjs",
-    "dev:admin:server": "tsx watch src/admin-index.ts",
-    "dev:admin-ui": "vp dev --host 127.0.0.1 --port 5173",
-    "dev:worker": "tsx watch src/worker-index.ts",
+    "dev:admin-ui": "vp run @zork/admin-ui#dev",
     "dev:gateway": "cargo run -p zork-gateway",
-    "build:gateway": "cargo build -p zork-gateway",
-    "format": "oxfmt --write .",
-    "format:check": "oxfmt --check .",
+    "dev:binaries:linux": "bash scripts/dev/update-binaries.sh",
+    "dev:ui": "bash scripts/dev/update-ui.sh",
+    "check": "vp check",
+    "format": "vp fmt --write",
+    "format:check": "vp fmt --check",
     "hooks:install": "lefthook install",
-    "lint": "oxlint . --deny-warnings",
-    "lint:fix": "oxlint . --fix --deny-warnings",
-    "ops:auth:profiles": "node scripts/ops/auth-profiles.mjs",
-    "ops:macos:bootstrap": "node scripts/ops/macos-bootstrap.mjs",
+    "lint": "vp lint",
+    "lint:fix": "vp lint --fix",
     "release:stage": "node scripts/build/stage-npm-packages.mjs",
-    "release:pack": "pnpm build && pnpm release:stage && find artifacts -maxdepth 1 -name '*.tgz' -delete && npm pack artifacts/npm-packages/admin --pack-destination artifacts && npm pack artifacts/npm-packages/worker --pack-destination artifacts",
-    "start": "node dist/src/index.js",
-    "start:admin": "node dist/src/admin-index.js",
-    "start:worker": "node dist/src/worker-index.js",
-    "test": "vitest run --no-file-parallelism",
-    "test:e2e:mock": "tsx test/manual/run-mock-e2e.ts",
-    "test:e2e:feishu-mock": "vitest run test/feishu-e2e.test.ts test/chat-routes.e2e.test.ts",
-    "manual:test": "tsx test/manual/run-real-codex-smoke.ts",
-    "manual:codex-coding-smoke": "tsx test/manual/run-real-codex-coding-smoke.ts",
-    "manual:feishu-smoke": "tsx test/manual/run-real-feishu-smoke.ts --",
-    "manual:self-regression": "tsx test/manual/run-self-regression.ts --",
-    "manual:feishu-controlled-evidence": "tsx test/manual/write-controlled-feishu-smoke-evidence.ts",
-    "rfc:feishu-audit": "tsx test/manual/run-rfc-0001-local-audit.ts",
-    "rfc:feishu-audit:local": "tsx test/manual/run-rfc-0001-local-audit.ts -- --local-only",
-    "rfc:feishu-completion-audit": "tsx test/manual/run-rfc-0001-completion-audit.ts",
-    "rfc:feishu-test-plan": "tsx test/manual/run-rfc-0001-test-plan.ts"
-  },
-  "dependencies": {
-    "@larksuiteoapi/node-sdk": "^1.66.0",
-    "@modelcontextprotocol/sdk": "1.27.1",
-    "marked": "^18.0.4",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "ws": "^8.18.3"
+    "release:pack": "vp run build && vp run release:stage && find artifacts -maxdepth 1 -name '*.tgz' -delete && npm pack artifacts/npm-packages/zork --pack-destination artifacts",
+    "start": "cargo run -p zork --release",
+    "start:gateway": "cargo run -p zork-gateway --release",
+    "test": "vp test test/"
   },
   "devDependencies": {
-    "@types/node": "^24.5.2",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
     "@types/ws": "^8.18.1",
-    "@vitejs/plugin-react": "6.0.1",
     "lefthook": "^2.1.9",
     "oxfmt": "^0.52.0",
     "oxlint": "^1.67.0",
     "oxlint-tsgolint": "^0.22.1",
     "tsx": "^4.20.5",
-    "typescript": "^5.9.2",
-    "vite": "8.0.11",
-    "vite-plus": "0.1.20",
-    "vitest": "^3.2.4"
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "ws": "^8.18.3"
   },
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.15.0"
   },
   "packageManager": "pnpm@10.33.0"
 }

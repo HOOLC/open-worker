@@ -1,0 +1,49 @@
+services:
+  zork:
+    build:
+      context: .
+      target: node
+    volumes:
+      - ./.data:/data
+    environment:
+      PATH: /data/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    ports:
+      - "18790:18790"
+      - "3000:3000"
+      - "3001:3001"
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - |
+        if [ -x /data/bin/zork ]; then exec /data/bin/zork start --data /data --listen 0.0.0.0; fi
+        exec zork start --data /data --listen 0.0.0.0
+
+  rust-build:
+    image: rust:1-bookworm
+    profiles: ["tools"]
+    working_dir: /src
+    volumes:
+      - .:/src
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - rust-target:/src/target
+    command:
+      - bash
+      - -c
+      - |
+        set -euo pipefail
+        cargo build --release -p zork -p zork-gateway -p zork-agent -p zork-call
+        mkdir -p /src/.data/bin
+        cp /src/target/release/zork /src/.data/bin/zork
+        cp /src/target/release/zork-gateway /src/.data/bin/zork-gateway
+        cp /src/target/release/zork-call /src/.data/bin/zork-call
+        cp /src/target/release/zork-agent /src/.data/bin/zork-agent
+        cp /src/target/release/zork-gh /src/.data/bin/zork-gh
+        chmod +x /src/.data/bin/zork /src/.data/bin/zork-gateway /src/.data/bin/zork-agent /src/.data/bin/zork-call /src/.data/bin/zork-gh
+        echo "wrote /src/.data/bin/zork*"
+
+volumes:
+  cargo-registry:
+  cargo-git:
+  rust-target:

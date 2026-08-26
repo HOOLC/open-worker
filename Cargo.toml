@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/gateway"]
+members = ["crates/gateway", "crates/agent", "crates/profile", "crates/slack", "crates/zork-call", "crates/zork-config", "crates/zork"]
 resolver = "2"
 
 [workspace.package]

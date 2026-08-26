@@ -1,17 +1,29 @@
+mod admin;
+mod agent;
+mod binshim;
 mod config;
+mod control_db;
+mod control_github;
 mod db;
+mod delivery;
 mod http;
+mod inbound;
+mod jobs;
 mod slack;
-
-use std::sync::Arc;
-use std::time::Duration;
+mod socket;
+mod state;
+mod timeline;
 
 use anyhow::Result;
-use tokio::time;
+use std::sync::Arc;
+use tokio::sync::watch;
 use tracing::{error, info};
 
-use crate::config::GatewayConfig;
+use crate::config::RuntimeConfig;
 use crate::db::GatewayDb;
+use crate::jobs::JobSupervisor;
+use crate::slack::SlackGateway;
+use crate::state::AppState;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,58 +33,149 @@ async fn main() -> Result<()> {
         )
         .init();
 
-    let config = GatewayConfig::from_env()?;
-    let db = Arc::new(GatewayDb::open(&config.state_dir)?);
-    if !db.try_acquire_role("gateway", &config.process_id, config.lease_ttl_ms)? {
-        anyhow::bail!("another gateway holds the process lease");
-    }
-    info!(process_id = %config.process_id, state = %config.state_dir.display(), "gateway starting");
+    let args = zork_config::parse_process_args()?;
+    let mut config = RuntimeConfig::load()?;
+    std::fs::create_dir_all(&config.state_dir)?;
+    std::fs::create_dir_all(&config.workspaces_root)?;
+    std::fs::create_dir_all(&config.repos_root)?;
+    std::fs::create_dir_all(&config.jobs_root)?;
+    std::fs::create_dir_all(&config.log_dir)?;
+    let zork_call = binshim::install(&mut config)?;
+    let zork_call_display = zork_call.display().to_string();
+    info!(
+        addr = %config.bind_addr,
+        state = %config.state_dir.display().to_string(),
+        zork_call = %zork_call_display,
+        "gateway starting"
+    );
 
+    let db = Arc::new(GatewayDb::open(&config.state_dir, &config.workspaces_root)?);
     let http_client = reqwest::Client::builder().no_proxy().build()?;
-    let slack_config = config.clone();
-    let slack_db = db.clone();
-    let slack_http = http_client.clone();
-    let lease_config = config.clone();
-    let lease_db = db.clone();
-    let http_config = config.clone();
-    let http_for_server = http_client.clone();
+    let slack = SlackGateway::new(&config, http_client.clone());
+    let status = zork_slack::AssistantStatusHub::with_token_provider(
+        http_client.clone(),
+        config.slack_bot_token.clone(),
+        config.slack_api_base_url.clone(),
+        {
+            let data_root = config.data_root.clone();
+            std::sync::Arc::new(move || {
+                zork_config::load_config(&data_root).ok().map(|file| {
+                    (
+                        file.slack.bot_token.trim().to_string(),
+                        zork_config::slack_api_base_url(&file),
+                    )
+                })
+            })
+        },
+    );
+    let jobs = Arc::new(JobSupervisor::new(db.clone(), config.clone()));
+    jobs.restore().await?;
+
+    let state = AppState {
+        config: config.clone(),
+        db: db.clone(),
+        slack,
+        status,
+        jobs,
+        bot: Arc::new(tokio::sync::Mutex::new(None)),
+        admin: state::AdminPlane {
+            db: Arc::new(control_db::ControlDb::open(&config.state_dir)?),
+            admin_token: zork_config::load_config(&config.data_root)
+                .ok()
+                .and_then(|file| {
+                    let token = file.admin.token.trim().to_string();
+                    if token.is_empty() {
+                        None
+                    } else {
+                        Some(token)
+                    }
+                }),
+            started_at: config.started_at.clone(),
+            ui_dir: zork_config::resolve_ui_dir(&config.data_root, args.ui_dir.as_deref()),
+            reload_sock: zork_config::zork_sock_path(&config.data_root),
+        },
+    };
+
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+
+    let http_state = state.clone();
+    let runtime_listener = http::bind_listener(config.bind_addr).await?;
+    let gateway_bind = match gateway_bind(&config) {
+        Some(bind) if bind != config.bind_addr.to_string() => Some(bind),
+        _ => None,
+    };
+    let gateway_listener = match gateway_bind {
+        Some(bind) => Some((
+            http::bind_listener(zork_config::parse_bind(&bind)?).await?,
+            bind,
+        )),
+        None => None,
+    };
+    let admin_listener =
+        http::bind_listener(zork_config::parse_bind(&admin_bind(&config)?)?).await?;
+    zork_config::write_ready_pid(&config.data_root, "zork-gateway")?;
+    info!(
+        runtime = %config.bind_addr,
+        gateway = gateway_listener.as_ref().map(|(_, bind)| bind.clone()).unwrap_or_default(),
+        admin = %admin_listener.local_addr()?,
+        "gateway listening"
+    );
 
     tokio::select! {
-        result = slack::run_socket(slack_config, slack_db, slack_http) => {
+        result = http::serve_listener(runtime_listener, http::router(http_state.clone())) => {
             if let Err(error) = result {
-                error!(error = %error, "slack loop exited");
+                error!(error = %error, "runtime http exited");
             }
         }
-        result = http::serve(http_config, http_for_server) => {
+        result = async {
+            match gateway_listener {
+                Some((listener, _)) => {
+                    http::serve_listener(listener, http::gateway_router(http_state.clone())).await
+                }
+                None => std::future::pending().await,
+            }
+        } => {
             if let Err(error) = result {
-                error!(error = %error, "http loop exited");
+                error!(error = %error, "gateway http exited");
             }
         }
-        _ = renew_gateway_lease(lease_config, lease_db) => {}
+        result = http::serve_listener(admin_listener, admin::router(state.clone())) => {
+            if let Err(error) = result {
+                error!(error = %error, "admin http exited");
+            }
+        }
+        _ = socket::run_socket(state.clone(), shutdown_rx) => {}
         _ = shutdown_signal() => {
             info!("gateway shutting down");
+            let _ = shutdown_tx.send(true);
         }
     }
-    if let Err(error) = db.release_role("gateway", &config.process_id) {
-        error!(error = %error, "release gateway lease");
-    }
+    zork_config::clear_ready_pid(&config.data_root, "zork-gateway");
     Ok(())
 }
 
-async fn renew_gateway_lease(config: GatewayConfig, db: Arc<GatewayDb>) {
-    let mut ticker = time::interval(Duration::from_millis(
-        (config.lease_ttl_ms / 3).max(1) as u64
-    ));
-    loop {
-        ticker.tick().await;
-        match db.try_acquire_role("gateway", &config.process_id, config.lease_ttl_ms) {
-            Ok(true) => {}
-            Ok(false) => {
-                error!("lost gateway lease");
-                return;
-            }
-            Err(error) => error!(error = %error, "renew gateway lease"),
-        }
+/// Optional Slack-facing listener. Test roots can omit it and use only the
+/// broker API listener.
+fn gateway_bind(config: &RuntimeConfig) -> Option<String> {
+    let file = zork_config::load_config(&config.data_root).ok()?;
+    let bind = file.bind.gateway.trim().to_string();
+    if bind.is_empty() {
+        None
+    } else {
+        Some(bind)
+    }
+}
+
+/// Admin UI listener, separate from the broker API listener.
+fn admin_bind(config: &RuntimeConfig) -> Result<String> {
+    let bind = zork_config::load_config(&config.data_root)
+        .ok()
+        .map(|file| file.bind.control.trim().to_string())
+        .unwrap_or_default();
+    if bind.is_empty() || bind == config.bind_addr.to_string() {
+        Ok("127.0.0.1:3001".to_string())
+    } else {
+        Ok(bind)
     }
 }
 
@@ -86,7 +189,6 @@ async fn shutdown_signal() {
             _ = ctrl_c => {}
             _ = sigterm.recv() => {}
         }
-        return;
     }
     #[cfg(not(unix))]
     {

@@ -1,93 +1,84 @@
-use std::env;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 #[derive(Clone, Debug)]
-pub struct GatewayConfig {
-    pub process_id: String,
-    pub state_dir: PathBuf,
+pub struct RuntimeConfig {
     pub bind_addr: SocketAddr,
-    pub slack_app_token: String,
+    pub service_name: String,
+    pub data_root: PathBuf,
+    pub state_dir: PathBuf,
+    pub workspaces_root: PathBuf,
+    pub repos_root: PathBuf,
+    pub jobs_root: PathBuf,
+    pub log_dir: PathBuf,
+    pub broker_http_base_url: String,
+    pub agent_bind: String,
+    pub agent_token: Option<String>,
     pub slack_bot_token: String,
+    pub slack_app_token: String,
     pub slack_api_base_url: String,
-    pub slack_socket_open_path: String,
-    pub lease_ttl_ms: i64,
+    pub slack_initial_thread_history_count: i64,
+    pub slack_history_api_max_limit: i64,
+    pub zork_bin_dir: PathBuf,
+    pub zork_call_path: Option<PathBuf>,
+    pub zork_gh_path: Option<PathBuf>,
+    pub real_gh_path: Option<PathBuf>,
+
+    #[allow(dead_code)]
+    pub isolated_mcp_servers: Vec<String>,
+    #[allow(dead_code)]
+    pub github_api_base_url: String,
+    pub default_github_login: Option<String>,
+    pub default_github_token: Option<String>,
+    #[allow(dead_code)]
+    pub started_at: String,
 }
 
-impl GatewayConfig {
-    pub fn from_env() -> Result<Self> {
-        let port: u16 = env_or("PORT", "3000").parse().context("PORT")?;
-        let host = env_or("GATEWAY_BIND_HOST", "127.0.0.1");
-        let bind_addr = format!("{host}:{port}")
-            .parse()
-            .context("gateway bind addr")?;
-        let data_root = env::var("DATA_ROOT")
-            .ok()
-            .map(|value| value.trim().to_string())
-            .filter(|value| !value.is_empty())
-            .map(PathBuf::from)
-            .unwrap_or_else(default_data_root);
-        let state_dir = env::var("STATE_DIR")
-            .ok()
-            .map(|value| value.trim().to_string())
-            .filter(|value| !value.is_empty())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| data_root.join("state"));
+impl RuntimeConfig {
+    pub fn load() -> Result<Self> {
+        let args = zork_config::parse_process_args()?;
+        let mut file = zork_config::ensure_layout(&args.data_root)?;
+        if let Some(host) = &args.listen_host {
+            zork_config::apply_listen(&mut file, host);
+        }
+        let data_root = args.data_root;
         Ok(Self {
-            process_id: format!(
-                "gateway-{}-{}",
-                std::process::id(),
-                &uuid::Uuid::new_v4().to_string()[..8]
-            ),
-            state_dir,
-            bind_addr,
-            slack_app_token: required("SLACK_APP_TOKEN")?,
-            slack_bot_token: required("SLACK_BOT_TOKEN")?,
-            slack_api_base_url: env_or("SLACK_API_BASE_URL", "https://slack.com/api")
-                .trim_end_matches('/')
-                .to_string(),
-            slack_socket_open_path: env_or("SLACK_SOCKET_OPEN_URL", "apps.connections.open"),
-            lease_ttl_ms: env_or("SPOOL_LEASE_MS", "30000")
-                .parse()
-                .context("SPOOL_LEASE_MS")?,
+            bind_addr: zork_config::parse_bind(&file.bind.runtime)?,
+            service_name: "zork-gateway".into(),
+            state_dir: data_root.join("state"),
+            workspaces_root: data_root.join("workspaces"),
+            repos_root: data_root.join("repos"),
+            jobs_root: data_root.join("jobs"),
+            log_dir: data_root.join("logs"),
+            broker_http_base_url: zork_config::loopback_base_url(&file.bind.runtime),
+            agent_bind: file.bind.agent.clone(),
+            agent_token: args.agent_token,
+            slack_bot_token: file.slack.bot_token.trim().to_string(),
+            slack_app_token: file.slack.app_token.trim().to_string(),
+            slack_api_base_url: zork_config::slack_api_base_url(&file),
+            slack_initial_thread_history_count: 8,
+            slack_history_api_max_limit: 50,
+            zork_bin_dir: data_root.join("bin"),
+            zork_call_path: None,
+            zork_gh_path: None,
+            real_gh_path: None,
+
+            isolated_mcp_servers: vec!["linear".into(), "notion".into()],
+            github_api_base_url: "https://api.github.com".into(),
+            default_github_login: None,
+            default_github_token: None,
+            started_at: now_rfc3339(),
+            data_root,
         })
+    }
+
+    pub fn github_mappings_dir(&self) -> PathBuf {
+        self.state_dir.join("github-author-mappings")
     }
 }
 
-fn required(key: &str) -> Result<String> {
-    env::var(key)
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .with_context(|| format!("missing required environment variable: {key}"))
-}
-
-fn env_or(key: &str, default: &str) -> String {
-    env::var(key)
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| default.to_string())
-}
-
-fn default_data_root() -> PathBuf {
-    home_dir().join(".zork")
-}
-
-fn home_dir() -> PathBuf {
-    env::var("HOME")
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| {
-            env::var("USERPROFILE")
-                .ok()
-                .map(|value| value.trim().to_string())
-                .filter(|value| !value.is_empty())
-                .map(PathBuf::from)
-        })
-        .unwrap_or_else(|| PathBuf::from("."))
+pub fn now_rfc3339() -> String {
+    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
