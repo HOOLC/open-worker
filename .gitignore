@@ -8,6 +8,7 @@ target/
 *.tsbuildinfo
 __pycache__/
 *.py[cod]
+.venv/
 
 .env
 .env.*
@@ -20,4 +21,5 @@ logs/
 *.log
 
 .DS_Store
+.workbuddy/
 test/fixtures/

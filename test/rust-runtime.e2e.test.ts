@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { brokerRoot, getFreePort, removeTempRoot, writeConfig } from "./helpers.js";
 
 describe.sequential("rust runtime", () => {
+  const connectionId = "01J00000000000000000000RUN";
   const cleanups: Array<() => Promise<void>> = [];
 
   afterEach(async () => {
@@ -18,7 +19,7 @@ describe.sequential("rust runtime", () => {
     }
   });
 
-  it("serves readyz, exposes an empty snapshot, and sends only explicit Slack messages", async () => {
+  it("serves readyz and rejects provider calls that are not bound to a Session", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "runtime-e2e-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const dataRoot = path.join(tempRoot, "data");
@@ -30,21 +31,6 @@ describe.sequential("rust runtime", () => {
       if (request.method === "POST" && url.pathname === "/api/auth.test") {
         response.setHeader("content-type", "application/json");
         response.end(JSON.stringify({ ok: true, user_id: "UBOT", user: "zork" }));
-        return;
-      }
-      if (request.method === "GET" && url.pathname === "/bot") {
-        response.setHeader("content-type", "application/json");
-        response.end(
-          JSON.stringify({
-            ok: true,
-            self: { userId: "UBOT", mention: "<@UBOT>", surface: "Slack", username: "zork" },
-          }),
-        );
-        return;
-      }
-      if (request.method === "GET" && url.pathname.startsWith("/threads/")) {
-        response.setHeader("content-type", "application/json");
-        response.end(JSON.stringify({ ok: true, messages: [] }));
         return;
       }
       const chunks: Buffer[] = [];
@@ -64,12 +50,26 @@ describe.sequential("rust runtime", () => {
     );
 
     const runtimePort = await getFreePort();
+    const controlPort = await getFreePort();
+    const publicGatewayPort = await getFreePort();
     await writeConfig(dataRoot, {
       bind: {
         runtime: `127.0.0.1:${runtimePort}`,
-        gateway: `127.0.0.1:${await getFreePort()}`,
+        gateway: `127.0.0.1:${publicGatewayPort}`,
+        control: `127.0.0.1:${controlPort}`,
       },
-      slack: { api_base_url: `http://127.0.0.1:${gatewayPort}/api` },
+      im_connections: [
+        {
+          id: connectionId,
+          name: "Runtime Test Slack",
+          provider: "slack",
+          enabled: true,
+          mode: "normal",
+          app_token: "xapp-test",
+          bot_token: "xoxb-test",
+          api_base_url: `http://127.0.0.1:${gatewayPort}/api`,
+        },
+      ],
     });
     const child = spawnRuntime({
       cwd: brokerRoot,
@@ -89,35 +89,20 @@ describe.sequential("rust runtime", () => {
 
     expect(posts.some((entry) => entry.url.includes("chat.postMessage"))).toBe(false);
 
-    const posted = await fetch(`http://127.0.0.1:${runtimePort}/chat/post-message`, {
+    const removedConnectionSelectedApi = await fetch(`http://127.0.0.1:${publicGatewayPort}/im/${connectionId}/slack/chat.postMessage`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        platform: "slack",
-        conversationId: "C123",
-        rootMessageId: "100.200",
-        text: "hello from test",
-        kind: "final",
-      }),
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ channel: "C123", thread_ts: "100.200", text: "hello from test" }),
     });
-    expect(posted.status).toBe(200);
-    await expect(posted.json()).resolves.toMatchObject({ ok: true, conversationId: "C123" });
-    expect(posts.some((entry) => entry.url.includes("chat.postMessage"))).toBe(true);
+    expect(removedConnectionSelectedApi.status).toBe(404);
 
-    const chinese = await fetch(`http://127.0.0.1:${runtimePort}/chat/post-message`, {
+    const unknownSessionApi = await fetch(`http://127.0.0.1:${publicGatewayPort}/sessions/${encodeURIComponent(`${connectionId}:C123:100.200`)}/im/raw/chat.postMessage`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        platform: "slack",
-        conversationId: "C123",
-        rootMessageId: "100.200",
-        text: "你好，这是中文回复 **加粗**",
-        kind: "progress",
-      }),
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ channel: "C123", thread_ts: "100.200", text: "你好，这是中文回复 **加粗**" }),
     });
-    expect(chinese.status).toBe(200);
-    await expect(chinese.json()).resolves.toMatchObject({ ok: true });
-    expect(posts.some((entry) => entry.body.includes("%E4%BD%A0%E5%A5%BD") || decodeURIComponent(entry.body).includes("你好"))).toBe(true);
+    expect(unknownSessionApi.status).toBe(404);
+    expect(posts.some((entry) => entry.url.includes("chat.postMessage"))).toBe(false);
 
     const stillUp = await fetch(`http://127.0.0.1:${runtimePort}/readyz`);
     expect(stillUp.status).toBe(200);
@@ -127,11 +112,14 @@ describe.sequential("rust runtime", () => {
     expect(existsSync(path.join(dataRoot, "bin/gh"))).toBe(true);
     const cli = await runCommand(zorkCall, ["chat", "post-message", "--text", "from rust cli", "--kind", "progress"], {
       BROKER_API_BASE: `http://127.0.0.1:${runtimePort}`,
+      SESSION_KEY: `${connectionId}:C123:100.200`,
       CHAT_PLATFORM: "slack",
+      CHAT_CONNECTION_ID: connectionId,
       CHAT_CONVERSATION_ID: "C123",
       CHAT_ROOT_MESSAGE_ID: "100.200",
     });
-    expect(cli.status, `${cli.stdout}\n${cli.stderr}`).toBe(0);
+    expect(cli.status, `${cli.stdout}\n${cli.stderr}`).not.toBe(0);
+    expect(cli.stderr).toContain("session_not_found");
   }, 60_000);
 });
 

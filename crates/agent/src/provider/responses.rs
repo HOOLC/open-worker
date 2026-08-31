@@ -22,7 +22,7 @@ use aimux_stream::{SseError, SseEvent, SseStream};
 use futures_util::{StreamExt, TryStreamExt};
 use serde_json::Value;
 
-use zork_agent::session::runtime::ProfileExecution;
+use zork_agent::session::ports::ProfileExecution;
 
 pub(super) struct ResponsesGenerateResult {
     pub(super) result: GenerateResult,
@@ -388,6 +388,7 @@ mod tests {
     }
 
     #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01, PROJECTION-02]
     fn raw_output_items_follow_provider_output_index_not_arrival_order() {
         let captured = CapturedOutputItems::default();
         captured.observe(&output_item_done(
@@ -409,6 +410,7 @@ mod tests {
     }
 
     #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01]
     fn raw_output_items_reject_a_missing_output_index() {
         let captured = CapturedOutputItems::default();
         captured.observe(&output_item_done(
@@ -423,6 +425,7 @@ mod tests {
     }
 
     #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01]
     fn merging_reasoning_releases_the_stream_side_ciphertext() {
         let final_reasoning = Mutex::new(HashMap::from([(
             "rs_1".to_owned(),

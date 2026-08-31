@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zork-gui Codex UI comparison</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #ececec;
+        color: #171717;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: 100vw;
+        padding: 24px;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .comparison {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      figure {
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid #d4d4d4;
+        border-radius: 14px;
+        background: white;
+        box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+      }
+
+      figcaption {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e7e7e7;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Codex shell reference vs. zork-gui native implementation</h1>
+      <section class="comparison">
+        <figure>
+          <figcaption>Source — official OpenAI Codex shell</figcaption>
+          <img src="01-codex-shell-reference-1280x720.jpg" alt="Official Codex shell" />
+        </figure>
+        <figure>
+          <figcaption>Implementation — zork-gui, final native build</figcaption>
+          <img src="11-zork-final-light-1280x800.jpg" alt="zork-gui implementation" />
+        </figure>
+      </section>
+    </main>
+  </body>
+</html>

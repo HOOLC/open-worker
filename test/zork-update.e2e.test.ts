@@ -109,7 +109,7 @@ async function readPid(url: string): Promise<number> {
 }
 
 async function expectAgentToken(agentPort: number): Promise<void> {
-  const url = `http://127.0.0.1:${agentPort}/v1/sessions`;
+  const url = `http://127.0.0.1:${agentPort}/sessions`;
   expect((await fetch(url)).status).toBe(401);
   expect((await fetch(url, { headers: { authorization: `Bearer ${agentToken}` } })).status).toBe(200);
 }

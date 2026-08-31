@@ -1,7 +1,9 @@
+mod agent_port;
 mod codex_responses;
 mod fake;
 mod responses;
 
+pub use agent_port::AgentModelPort;
 pub use fake::FakeProvider;
 
 use aimux_core::{
@@ -26,23 +28,28 @@ use std::collections::HashMap;
 use url::Url;
 
 use zork_agent::session::{
-    runtime::{
-        ModelError, ModelExecutor, ModelOutcome, ModelRequest, ProfileExecution, ProviderFailure,
-    },
-    state::{ProviderContext, ProviderMessage, ToolCall, TranscriptRole},
+    model::{ModelError, ModelOutcome, ModelRequest, ProviderFailure},
+    ports::{ModelExecutor, ProfileExecution},
+    wire::{ProviderContext, ProviderMessage, ProviderToolCall, TranscriptRole},
 };
 
 pub struct ProviderRouter {
     codex_responses: codex_responses::CodexResponsesProvider,
 }
 
+impl Default for ProviderRouter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn aimux_failure(stage: &'static str, error: AiMuxError) -> ModelError {
-    let retryable = error.is_retryable();
     let status_code = error.status_code();
     let (provider_code, request_id) = match &error {
         AiMuxError::ApiCall(detail) => (detail.provider_code.clone(), detail.request_id.clone()),
         _ => (None, None),
     };
+    let retryable = !provider_failure_is_certainly_permanent(status_code, provider_code.as_deref());
     ModelError::ProviderFailed(ProviderFailure {
         stage,
         retryable,
@@ -55,7 +62,27 @@ fn aimux_failure(stage: &'static str, error: AiMuxError) -> ModelError {
 }
 
 fn protocol_failure(stage: &'static str, message: impl Into<String>) -> ModelError {
-    ModelError::ProviderFailed(ProviderFailure::new(stage, false, message))
+    ModelError::ProviderFailed(ProviderFailure::new(stage, true, message))
+}
+
+pub(super) fn provider_failure_is_certainly_permanent(
+    status_code: Option<u16>,
+    provider_code: Option<&str>,
+) -> bool {
+    if matches!(status_code, Some(401 | 403)) {
+        return true;
+    }
+    let Some(code) = provider_code else {
+        return false;
+    };
+    matches!(
+        code.to_ascii_lowercase().as_str(),
+        "invalid_api_key"
+            | "authentication_error"
+            | "unauthorized"
+            | "permission_denied"
+            | "account_deactivated"
+    )
 }
 
 impl ProviderRouter {
@@ -220,7 +247,7 @@ struct ModelOutcomeAccumulator {
     text: String,
     tool_calls: Vec<PendingToolCall>,
     provider_context: Option<ProviderContext>,
-    usage: Option<zork_agent::session::runtime::ModelTokenUsage>,
+    usage: Option<zork_agent::session::model::ModelTokenUsage>,
 }
 
 impl ModelOutcomeAccumulator {
@@ -257,7 +284,7 @@ impl ModelOutcomeAccumulator {
                             "tool arguments are not an object",
                         ));
                     }
-                    calls.push(ToolCall {
+                    calls.push(ProviderToolCall {
                         tool_call_id: call.tool_call_id,
                         tool_name: call.tool_name,
                         arguments: input,
@@ -273,8 +300,8 @@ impl ModelOutcomeAccumulator {
             }
             FinishReasonUnified::Stop
             | FinishReasonUnified::ToolCalls
-            | FinishReasonUnified::Error
             | FinishReasonUnified::Length
+            | FinishReasonUnified::Error
             | FinishReasonUnified::ContentFilter
             | FinishReasonUnified::Other => Err(protocol_failure(
                 "provider.outcome.finish_reason",
@@ -297,8 +324,8 @@ async fn model_outcome_from_stream_result(
             StreamPart::TextDelta { delta, .. } => {
                 request.stream_observer.text_delta(
                     &request.session_id,
-                    &request.activation_id,
-                    &request.round_id,
+                    request.generation,
+                    &request.step_id,
                     &delta,
                 );
                 outcome.text.push_str(&delta);
@@ -431,16 +458,17 @@ fn provider_context_from_output_items(
     }
 }
 
-fn model_token_usage(usage: &Usage) -> Option<zork_agent::session::runtime::ModelTokenUsage> {
-    usage.input_tokens.total.map(
-        |input_tokens| zork_agent::session::runtime::ModelTokenUsage {
+fn model_token_usage(usage: &Usage) -> Option<zork_agent::session::model::ModelTokenUsage> {
+    usage
+        .input_tokens
+        .total
+        .map(|input_tokens| zork_agent::session::model::ModelTokenUsage {
             input_tokens: u64::from(input_tokens),
             cached_input_tokens: usage.input_tokens.cache_read.map(u64::from),
             output_tokens: u64::from(usage.output_tokens.total.unwrap_or(0)),
             output_reasoning_tokens: usage.output_tokens.reasoning.map(u64::from),
             output_text_tokens: usage.output_tokens.text.map(u64::from),
-        },
-    )
+        })
 }
 
 fn reasoning_effort(value: &str) -> ReasoningEffort {
@@ -624,6 +652,7 @@ mod tests {
     use super::*;
 
     #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01, RETRY-02]
     fn aimux_failure_preserves_structured_diagnostics_without_raw_body() {
         let error = AiMuxError::ApiCall(aimux_core::ApiCallError {
             status_code: Some(429),
@@ -664,11 +693,17 @@ mod tests {
             "https://example.invalid".to_owned(),
             HashMap::new(),
             "max".to_owned(),
+            zork_agent::session::ports::ModelLimits {
+                context_window_tokens: 1_000_000,
+                max_output_tokens: 128_000,
+                reserve_percent: 10,
+            },
             "secret".to_owned(),
         )
     }
 
     #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01]
     fn non_streaming_result_preserves_the_streaming_outcome_contract() {
         let result = aimux_core::result::GenerateResult {
             content: vec![
@@ -772,6 +807,7 @@ mod tests {
     }
 
     #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01]
     fn non_streaming_responses_accepts_plain_raw_reasoning() {
         let result = aimux_core::result::GenerateResult {
             content: vec![aimux_core::result::GenerateContent::Reasoning {
@@ -814,6 +850,7 @@ mod tests {
     }
 
     #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01, PROVIDER-03]
     fn responses_options_preserve_profile_defined_reasoning_exactly() {
         let options = responses_provider_options("future-depth");
 
