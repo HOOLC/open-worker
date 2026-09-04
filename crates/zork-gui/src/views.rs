@@ -17,9 +17,10 @@ use gpui::{
 };
 
 use crate::api::{
-    AgentStatus, GatewayClient, MessagePage, ProfileInfo, ProfileModel, Role, SessionStatus,
-    SessionSummary, SseEvent, TranscriptMessage,
+    AgentStatus, ContextConfig, ContextStrategy, GatewayClient, MessagePage, ProfileInfo,
+    ProfileModel, Role, SessionStatus, SessionSummary, SseEvent, TranscriptMessage,
 };
+use crate::automation::{AutomationElementExt, AutomationRole};
 use crate::components::message::render_markdown;
 use crate::components::selector_menu::{SelectorKind, SelectorMenuState};
 use crate::components::text_input::{ComposerInput, ComposerSubmit};
@@ -86,6 +87,10 @@ pub struct RootView {
     sel_model: usize,
     sel_thinking: usize,
     selection_dirty: bool,
+    context_config: Option<ContextConfig>,
+    context_busy: bool,
+    context_request: u64,
+    context_feedback: Option<String>,
     selector_menu: SelectorMenuState,
 
     // Transcript
@@ -141,6 +146,10 @@ impl RootView {
             sel_model: 0,
             sel_thinking: 0,
             selection_dirty: false,
+            context_config: None,
+            context_busy: false,
+            context_request: 0,
+            context_feedback: None,
             selector_menu: SelectorMenuState::default(),
             lines: Vec::new(),
             pending_user: Vec::new(),
@@ -330,6 +339,12 @@ impl RootView {
             return;
         }
         self.selected_session = Some(id.to_owned());
+        self.context_request = self.context_request.wrapping_add(1);
+        self.context_config = None;
+        self.context_busy = false;
+        self.context_feedback = None;
+        self.selector_menu.dismiss();
+        self.load_context(None, cx);
         let old = self.lines.len();
         self.lines.clear();
         self.transcript_list.splice(0..old, 0);
@@ -377,6 +392,11 @@ impl RootView {
 
     fn deselect_session(&mut self, cx: &mut Context<Self>) {
         self.selected_session = None;
+        self.context_request = self.context_request.wrapping_add(1);
+        self.context_config = None;
+        self.context_busy = false;
+        self.context_feedback = None;
+        self.selector_menu.dismiss();
         self.selected_status_cache = None;
         self.sse_task = None;
         let old = self.lines.len();
@@ -705,6 +725,76 @@ impl RootView {
         }
     }
 
+    fn load_context(&mut self, update: Option<ContextConfig>, cx: &mut Context<Self>) {
+        let Some(id) = self.selected_session.clone() else {
+            return;
+        };
+        if self.context_busy {
+            return;
+        }
+        self.context_request = self.context_request.wrapping_add(1);
+        let request = self.context_request;
+        let saving = update.is_some();
+        self.context_busy = true;
+        self.context_feedback = None;
+        let client = self.client.clone();
+        cx.spawn(async move |this, cx| {
+            let result = client.session_context(&id, update).await;
+            this.update(cx, |view, cx| {
+                if view.selected_session.as_deref() != Some(&id) || view.context_request != request
+                {
+                    return;
+                }
+                view.context_busy = false;
+                match result {
+                    Ok(config) => {
+                        view.context_config = Some(config);
+                        if saving {
+                            view.context_feedback = Some(
+                                "Context setting saved; applies at the next transition".into(),
+                            );
+                        }
+                    }
+                    Err(error) => view.error = Some(format!("context: {error}")),
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn context_options(&self) -> Vec<(String, ContextConfig)> {
+        let Some(current) = self.context_config.as_ref() else {
+            return Vec::new();
+        };
+        let mut counts = vec![0, 8_000, 20_000, 40_000];
+        if !counts.contains(&current.keep_recent_tokens) {
+            counts.push(current.keep_recent_tokens);
+        }
+        counts.sort_unstable();
+        let mut options = counts
+            .into_iter()
+            .map(|keep_recent_tokens| {
+                (
+                    format!("Summary + {keep_recent_tokens} recent tokens"),
+                    ContextConfig {
+                        strategy: ContextStrategy::Compaction,
+                        keep_recent_tokens,
+                    },
+                )
+            })
+            .collect::<Vec<_>>();
+        options.push((
+            "Handoff document".into(),
+            ContextConfig {
+                strategy: ContextStrategy::Handoff,
+                keep_recent_tokens: current.keep_recent_tokens,
+            },
+        ));
+        options
+    }
+
     fn mark_selection_dirty(&mut self) {
         if self.selected_session.is_some() {
             self.selection_dirty = true;
@@ -713,6 +803,13 @@ impl RootView {
 
     fn selector_option_count(&self, kind: SelectorKind) -> usize {
         match kind {
+            SelectorKind::Context => {
+                if self.context_busy {
+                    0
+                } else {
+                    self.context_options().len()
+                }
+            }
             SelectorKind::Profile => self.profiles.len(),
             SelectorKind::Model => self
                 .profiles
@@ -728,6 +825,11 @@ impl RootView {
 
     fn selected_selector_index(&self, kind: SelectorKind) -> usize {
         match kind {
+            SelectorKind::Context => self
+                .context_options()
+                .iter()
+                .position(|(_, config)| Some(config) == self.context_config.as_ref())
+                .unwrap_or(0),
             SelectorKind::Profile => self.sel_profile,
             SelectorKind::Model => self.sel_model,
             SelectorKind::Thinking => self.sel_thinking,
@@ -745,6 +847,10 @@ impl RootView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if kind == SelectorKind::Context && (self.context_busy || self.context_config.is_none()) {
+            self.load_context(None, cx);
+            return;
+        }
         if self.selector_menu.open() == Some(kind) {
             self.selector_menu.dismiss();
             self.focus_composer(window, cx);
@@ -769,6 +875,12 @@ impl RootView {
         };
 
         let changed = match kind {
+            SelectorKind::Context => {
+                if let Some((_, config)) = self.context_options().get(index).cloned() {
+                    self.load_context(Some(config), cx);
+                }
+                false
+            }
             SelectorKind::Profile => {
                 let changed = self.sel_profile != index;
                 self.sel_profile = index;
@@ -1000,6 +1112,10 @@ impl RootView {
                             .line_height(px(CODEX_UI.sidebar.item_line_height))
                             .text_color(rgb(TEXT))
                             .child(truncate(&workspace_label, 28).to_owned()),
+                    )
+                    .automation(
+                        AutomationRole::Button,
+                        format!("Workspace {workspace_label}"),
                     ),
             );
             for (id, title, working) in rows {
@@ -1037,7 +1153,8 @@ impl RootView {
                                     .rounded_full()
                                     .bg(rgb(GREEN)),
                             )
-                        }),
+                        })
+                        .automation(AutomationRole::Button, title),
                 );
             }
             task_groups.push(group);
@@ -1097,7 +1214,8 @@ impl RootView {
                                 .size(px(16.))
                                 .text_color(rgb(TEXT)),
                         )
-                        .child("New task"),
+                        .child("New task")
+                        .automation(AutomationRole::Button, "New task"),
                 ),
             )
             .child(
@@ -1139,7 +1257,8 @@ impl RootView {
                                         }),
                                 )
                             }),
-                    ),
+                    )
+                    .automation(AutomationRole::ScrollArea, "Task list"),
             )
             .child(
                 div()
@@ -1320,7 +1439,11 @@ impl RootView {
                                         .on_click(cx.listener(move |v, _, _window, cx| {
                                             v.load_older(cx);
                                         }))
-                                        .child("Load earlier activity"),
+                                        .child("Load earlier activity")
+                                        .automation(
+                                            AutomationRole::Button,
+                                            "Load earlier activity",
+                                        ),
                                 ),
                         )
                         .into_any_element(),
@@ -1409,6 +1532,13 @@ impl RootView {
         } else {
             16.0
         };
+        let action_label = if is_working || self.canceling {
+            "Stop task"
+        } else if is_new_task {
+            "Start task"
+        } else {
+            "Send message"
+        };
         let (feedback, feedback_color) = if self.canceling {
             ("Stopping…".to_owned(), DIM)
         } else if self.creating {
@@ -1417,6 +1547,10 @@ impl RootView {
             ("Sending…".to_owned(), DIM)
         } else if let Some(message) = self.error.as_ref().or(self.connection_error.as_ref()) {
             (truncate(message, 60).to_owned(), RED)
+        } else if self.context_busy {
+            ("Loading context setting…".to_owned(), DIM)
+        } else if let Some(message) = &self.context_feedback {
+            (message.clone(), DIM)
         } else if self.selection_dirty {
             ("Model change applies next message".to_owned(), AMBER)
         } else {
@@ -1530,7 +1664,12 @@ impl RootView {
             .h(px(CODEX_UI.layout.composer_height))
             .flex()
             .flex_col()
-            .child(workspace_tray)
+            .child(workspace_tray.automation_when(
+                is_new_task,
+                true,
+                AutomationRole::TextInput,
+                "Workspace path",
+            ))
             .child(
                 div()
                     .h(px(CODEX_UI.composer.input_surface_height))
@@ -1564,7 +1703,8 @@ impl RootView {
                             .text_size(px(CODEX_UI.composer.placeholder_font_size))
                             .line_height(px(20.))
                             .text_color(rgb(CODEX_UI.composer.primary_text_color))
-                            .child(self.composer_input.clone()),
+                            .child(self.composer_input.clone())
+                            .automation(AutomationRole::TextInput, "Message composer"),
                     )
                     .child(
                         div()
@@ -1588,6 +1728,24 @@ impl RootView {
                                 &thinking_label,
                                 open_kind == Some(SelectorKind::Thinking),
                             ))
+                            .when(!is_new_task, |row| {
+                                row.child(selector_button(
+                                    cx,
+                                    SelectorKind::Context,
+                                    &self
+                                        .context_config
+                                        .as_ref()
+                                        .map(|config| match config.strategy {
+                                            ContextStrategy::Compaction => format!(
+                                                "Summary · {}k",
+                                                config.keep_recent_tokens as f64 / 1000.0
+                                            ),
+                                            ContextStrategy::Handoff => "Handoff".to_owned(),
+                                        })
+                                        .unwrap_or_else(|| "Context".into()),
+                                    open_kind == Some(SelectorKind::Context),
+                                ))
+                            })
                             .child(div().flex_1())
                             .child(selector_button(
                                 cx,
@@ -1595,7 +1753,11 @@ impl RootView {
                                 &model_label,
                                 open_kind == Some(SelectorKind::Model),
                             ))
-                            .child(action_button),
+                            .child(action_button.automation_enabled(
+                                action_available,
+                                AutomationRole::Button,
+                                action_label,
+                            )),
                     )
                     .when_some(open_menu, |surface, menu| surface.child(menu)),
             )
@@ -1603,6 +1765,14 @@ impl RootView {
 
     fn render_selector_menu(&self, kind: SelectorKind, cx: &mut Context<Self>) -> gpui::AnyElement {
         let (options, selected, width) = match kind {
+            SelectorKind::Context => (
+                self.context_options()
+                    .into_iter()
+                    .map(|(label, _)| label)
+                    .collect(),
+                self.selected_selector_index(kind),
+                280.0,
+            ),
             SelectorKind::Profile => (
                 self.profiles
                     .iter()
@@ -1645,6 +1815,7 @@ impl RootView {
         let rows = options.into_iter().enumerate().map(|(index, label)| {
             let is_selected = selected == index;
             let is_highlighted = highlighted == Some(index);
+            let automation_label = label.clone();
             div()
                 .id(format!("selector-option-{slug}-{index}"))
                 .h(px(30.))
@@ -1684,6 +1855,7 @@ impl RootView {
                         .text_color(rgb(TEXT))
                         .child(label),
                 )
+                .automation(AutomationRole::Option, automation_label)
         });
 
         let menu = div()
@@ -1705,9 +1877,11 @@ impl RootView {
                     .flex()
                     .flex_col()
                     .overflow_y_scroll()
-                    .children(rows),
+                    .children(rows)
+                    .automation(AutomationRole::ScrollArea, format!("{slug} choices")),
             );
         match kind {
+            SelectorKind::Context => menu.left(px(180.)).into_any_element(),
             SelectorKind::Profile => menu.left(px(8.)).into_any_element(),
             SelectorKind::Thinking => menu.left(px(104.)).into_any_element(),
             SelectorKind::Model => menu.right(px(44.)).into_any_element(),
@@ -1754,6 +1928,7 @@ impl RootView {
                             .text_color(rgb(TEXT))
                             .child(label),
                     )
+                    .automation(AutomationRole::Button, label)
             },
         );
 
@@ -1868,6 +2043,7 @@ fn selector_button(
         SelectorKind::Profile => "icons/phosphor-terminal-window.svg",
         SelectorKind::Model => "icons/phosphor-cube.svg",
         SelectorKind::Thinking => "icons/phosphor-brain.svg",
+        SelectorKind::Context => "icons/phosphor-cube.svg",
     };
 
     div()
@@ -1905,6 +2081,7 @@ fn selector_button(
                     .text_color(rgba(0x1A1C1F7E)),
             )
         })
+        .automation(AutomationRole::Button, format!("{label} selector"))
 }
 
 fn home_prompt_suggestions() -> [(&'static str, &'static str, &'static str, u32); 4] {

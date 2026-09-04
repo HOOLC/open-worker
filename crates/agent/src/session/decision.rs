@@ -3,8 +3,8 @@
 use std::collections::BTreeSet;
 
 use super::events::{
-    AutoWaitEndReason, DeadlineKind, OutstandingItem, Purpose, StepInterruptionReason, TurnOutcome,
-    HANDOFF_TOOL_NAME,
+    AutoWaitEndReason, DeadlineKind, OutstandingItem, Purpose, StepInterruptionReason,
+    ToolInvocation, TurnOutcome, HANDOFF_TOOL_NAME,
 };
 use super::state::{SessionState, ToolDeliveryState};
 use super::tools::ToolChange;
@@ -18,7 +18,7 @@ pub struct DecisionWorld {
     pub estimated_input_tokens: Option<u64>,
     pub input_budget: Option<u64>,
     pub provider_retry_limit: u32,
-    pub handoff_timeout_ms: i64,
+    pub context_attempt_limit: u32,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -40,7 +40,8 @@ pub enum Decision {
         include_pending_tools: bool,
         outstanding: Vec<OutstandingItem>,
     },
-    ApplyHandoff {
+    ApplyContext {
+        purpose: Purpose,
         document: Option<String>,
         failure: Option<String>,
     },
@@ -91,8 +92,6 @@ pub fn decide(state: &SessionState, world: &DecisionWorld) -> Decision {
     }
 
     if let Some(wait) = &state.auto_wait {
-        let effective_deadline_ms = handoff_deadline_ms(state, world)
-            .map_or(wait.deadline_ms, |deadline| deadline.min(wait.deadline_ms));
         let all_finished = wait.invocation_ids.iter().all(|id| {
             state
                 .pending(id)
@@ -102,14 +101,14 @@ pub fn decide(state: &SessionState, world: &DecisionWorld) -> Decision {
             Some(AutoWaitEndReason::BatchCompleted)
         } else if !state.unconsumed_inputs.is_empty() {
             Some(AutoWaitEndReason::NewInput)
-        } else if world.now_ms >= effective_deadline_ms {
+        } else if world.now_ms >= wait.deadline_ms {
             Some(AutoWaitEndReason::TimedOut)
         } else {
             None
         };
         return reason.map_or(
             Decision::Park {
-                until_ms: Some(effective_deadline_ms),
+                until_ms: Some(wait.deadline_ms),
             },
             |reason| Decision::EndAutoWait {
                 step_id: wait.step_id.clone(),
@@ -122,35 +121,40 @@ pub fn decide(state: &SessionState, world: &DecisionWorld) -> Decision {
         if turn.consecutive_provider_failures > 0 {
             let failure = state.last_step_failure.as_ref();
             if failure.is_some_and(|failure| failure.error.is_context_overflow()) {
-                return Decision::ApplyHandoff {
+                let purpose = state.context_progress().map_or_else(
+                    || state.context_config.strategy.into(),
+                    |progress| progress.purpose,
+                );
+                // An independent summary can still rescue a conversation that
+                // the provider rejected as too large. A rejected maintenance
+                // request itself must take the shared no-document exit.
+                if purpose == Purpose::Compaction && state.context_progress().is_none() {
+                    return Decision::StartStep {
+                        purpose,
+                        include_pending_tools: true,
+                        outstanding: Vec::new(),
+                    };
+                }
+                return Decision::ApplyContext {
+                    purpose,
                     document: None,
                     failure: failure.map(|failure| failure.error.message.clone()),
                 };
             }
-            if failure.is_some_and(|failure| failure.purpose == Purpose::Handoff) {
-                if let Some(reason) = handoff_limit_failure(state, world) {
-                    return Decision::ApplyHandoff {
-                        document: None,
-                        failure: Some(reason),
-                    };
-                }
-            }
             if !turn.provider_retry_allowed
                 || turn.consecutive_provider_failures >= world.provider_retry_limit.max(1)
             {
-                if failure.is_some_and(|failure| failure.purpose == Purpose::Handoff) {
-                    return Decision::ApplyHandoff {
-                        document: None,
-                        failure: failure.map(|failure| failure.error.message.clone()),
-                    };
-                }
                 return Decision::FinishTurn {
                     outcome: TurnOutcome::Failed,
                     outstanding: world.outstanding.clone(),
                 };
             }
+            let purpose = state.context_progress().map_or_else(
+                || failure.map_or(Purpose::Conversation, |failure| failure.purpose),
+                |progress| progress.purpose,
+            );
             return Decision::StartStep {
-                purpose: failure.map_or(Purpose::Conversation, |failure| failure.purpose),
+                purpose,
                 include_pending_tools: true,
                 outstanding: Vec::new(),
             };
@@ -188,32 +192,28 @@ pub fn decide(state: &SessionState, world: &DecisionWorld) -> Decision {
         };
     }
 
-    if let Some(decision) = control_decision(state, world) {
-        return decision;
-    }
-
-    if state
-        .active_turn
-        .as_ref()
-        .and_then(|turn| turn.handoff.as_ref())
-        .is_some()
-    {
-        if let Some(reason) = handoff_limit_failure(state, world) {
-            return Decision::ApplyHandoff {
+    if let Some(progress) = state.context_progress() {
+        if let Some(reason) = context_limit_failure(state, world) {
+            return Decision::ApplyContext {
+                purpose: progress.purpose,
                 document: None,
                 failure: Some(reason),
             };
         }
         return Decision::StartStep {
-            purpose: Purpose::Handoff,
+            purpose: progress.purpose,
             include_pending_tools: true,
             outstanding: Vec::new(),
         };
     }
 
-    if should_handoff(state, world) {
+    if let Some(decision) = control_decision(state, world) {
+        return decision;
+    }
+
+    if should_prepare_context(state, world) {
         return Decision::StartStep {
-            purpose: Purpose::Handoff,
+            purpose: state.context_config.strategy.into(),
             include_pending_tools: true,
             outstanding: Vec::new(),
         };
@@ -237,33 +237,17 @@ pub fn decide(state: &SessionState, world: &DecisionWorld) -> Decision {
     }
 }
 
-fn handoff_deadline_ms(state: &SessionState, world: &DecisionWorld) -> Option<i64> {
-    state
-        .active_turn
-        .as_ref()?
-        .handoff
-        .as_ref()
-        .map(|progress| {
-            progress
-                .started_at_ms
-                .saturating_add(world.handoff_timeout_ms.max(1))
-        })
-}
-
-fn handoff_limit_failure(state: &SessionState, world: &DecisionWorld) -> Option<String> {
-    let progress = state.active_turn.as_ref()?.handoff.as_ref()?;
-    if world.now_ms >= handoff_deadline_ms(state, world)? {
-        return Some("context handoff exceeded its total timeout".into());
-    }
-    (progress.attempts >= world.provider_retry_limit.max(1)).then(|| {
+fn context_limit_failure(state: &SessionState, world: &DecisionWorld) -> Option<String> {
+    let progress = state.context_progress()?;
+    (progress.attempts >= world.context_attempt_limit.max(1)).then(|| {
         format!(
-            "the model did not produce a valid handoff document in {} handoff steps",
+            "the model did not produce a valid context document in {} attempts",
             progress.attempts
         )
     })
 }
 
-fn should_handoff(state: &SessionState, world: &DecisionWorld) -> bool {
+fn should_prepare_context(state: &SessionState, world: &DecisionWorld) -> bool {
     state.anchor().is_some()
         && !state.generation.entries.is_empty()
         && matches!(
@@ -275,40 +259,13 @@ fn should_handoff(state: &SessionState, world: &DecisionWorld) -> bool {
 fn control_decision(state: &SessionState, world: &DecisionWorld) -> Option<Decision> {
     let (_, invocations) = state.latest_assistant()?;
 
-    for invocation in invocations {
-        let Some(result) = state
-            .pending(&invocation.invocation_id)
-            .and_then(|pending| pending.result.as_ref())
-        else {
-            continue;
-        };
-        if invocation.tool == HANDOFF_TOOL_NAME {
-            let document = result
-                .data
-                .get("document")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-                .or_else(|| {
-                    invocation
-                        .arguments
-                        .get("document")
-                        .and_then(serde_json::Value::as_str)
-                        .map(str::to_owned)
-                });
-            return Some(Decision::ApplyHandoff {
-                failure: (result.outcome != super::events::ToolOutcome::Succeeded)
-                    .then(|| result.message.clone()),
-                document,
-            });
-        }
-    }
-
-    if let Some(end) = invocations
-        .iter()
-        .find(|invocation| invocation.tool == super::events::END_TOOL_NAME)
-    {
+    if let Some(end) = invocations.iter().find(|invocation| {
+        invocation.rejection.is_none() && invocation.tool == super::events::END_TOOL_NAME
+    }) {
         let pending = state.pending(&end.invocation_id)?;
-        pending.result.as_ref()?;
+        if pending.result.as_ref()?.outcome != super::events::ToolOutcome::Succeeded {
+            return None;
+        }
         let acknowledge = end
             .arguments
             .get("acknowledge_outstanding")
@@ -328,4 +285,89 @@ fn control_decision(state: &SessionState, world: &DecisionWorld) -> Option<Decis
     }
 
     None
+}
+
+pub(super) fn handoff_document(invocations: &[ToolInvocation]) -> Result<String, String> {
+    let [invocation] = invocations else {
+        return Err(format!(
+            "expected exactly one handoff call, received {} calls",
+            invocations.len()
+        ));
+    };
+    if let Some(reason) = &invocation.rejection {
+        return Err(format!("invalid provider call: {reason}"));
+    }
+    if invocation.tool != HANDOFF_TOOL_NAME {
+        return Err(format!("expected handoff, received {}", invocation.tool));
+    }
+    let Some(arguments) = invocation.arguments.as_object() else {
+        return Err("handoff arguments must be an object".into());
+    };
+    let Some(document) = arguments
+        .get("document")
+        .and_then(serde_json::Value::as_str)
+    else {
+        return Err("handoff document must be a string".into());
+    };
+    if document.trim().is_empty() {
+        return Err("handoff document must not be empty".into());
+    }
+    Ok(document.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::session::state::{ActiveTurn, ContextProgress};
+
+    #[test]
+    // Contract: docs/zork-agent-architecture.md [HANDOFF-01, RETRY-01]
+    fn interrupted_handoff_retry_keeps_its_purpose_and_retry_limit() {
+        let mut state = SessionState::empty("session");
+        state.active_turn = Some(ActiveTurn {
+            turn_id: "turn".into(),
+            started_at_ms: 0,
+            cancel_requested: false,
+            consecutive_provider_failures: 1,
+            provider_retry_allowed: true,
+            context: Some(ContextProgress {
+                purpose: Purpose::Handoff,
+                attempts: 0,
+                source_entries: 0,
+                retain_from: 0,
+            }),
+        });
+        let world = DecisionWorld {
+            now_ms: 0,
+            live_tools: BTreeSet::new(),
+            tool_changes: Vec::new(),
+            outstanding: Vec::new(),
+            estimated_input_tokens: None,
+            input_budget: None,
+            provider_retry_limit: 10,
+            context_attempt_limit: 3,
+        };
+
+        assert_eq!(
+            decide(&state, &world),
+            Decision::StartStep {
+                purpose: Purpose::Handoff,
+                include_pending_tools: true,
+                outstanding: Vec::new(),
+            }
+        );
+
+        state
+            .active_turn
+            .as_mut()
+            .unwrap()
+            .consecutive_provider_failures = 10;
+        assert!(matches!(
+            decide(&state, &world),
+            Decision::FinishTurn {
+                outcome: TurnOutcome::Failed,
+                ..
+            }
+        ));
+    }
 }

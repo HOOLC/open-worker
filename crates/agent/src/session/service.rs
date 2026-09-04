@@ -111,9 +111,10 @@ impl SessionService {
         selection: Selection,
         system_prompt: Option<String>,
         workspace: String,
+        context: Option<zork_config::ContextConfig>,
     ) -> Result<String, SupervisorError> {
         self.supervisor
-            .create_session(selection, system_prompt, workspace)
+            .create_session(selection, system_prompt, workspace, context)
             .await
     }
 
@@ -135,6 +136,14 @@ impl SessionService {
 
     pub async fn cancel(&self, session_id: &str) -> Result<(), SupervisorError> {
         self.supervisor.cancel_turn(session_id).await
+    }
+
+    pub async fn set_context(
+        &self,
+        session_id: &str,
+        config: zork_config::ContextConfig,
+    ) -> Result<(), SupervisorError> {
+        self.supervisor.set_context(session_id, config).await
     }
 
     pub async fn delete(&self, session_id: &str) -> Result<(), SupervisorError> {

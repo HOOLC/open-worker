@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+pub use zork_config::{ContextConfig, ContextStrategy};
 pub use zork_profile::{ProfileDocument, ProfileModel as AgentModel, ProfileView as AgentProfile};
 
 pub const DURABLE_EVENT_NAME: &str = "event";
@@ -70,6 +71,7 @@ pub struct CreateSessionRequest {
     pub thinking: String,
     pub system_prompt: Option<String>,
     pub workspace: Option<String>,
+    pub context: Option<ContextConfig>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -87,6 +89,7 @@ pub struct SessionView {
     pub model: String,
     pub thinking: String,
     pub generation: u64,
+    pub context: ContextConfig,
     pub status: SessionStatus,
 }
 

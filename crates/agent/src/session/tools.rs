@@ -37,7 +37,6 @@ pub struct DynamicCall {
 impl DynamicCall {
     pub fn from_value(value: Value) -> Result<Self, DynamicCallError> {
         #[derive(Deserialize)]
-        #[serde(deny_unknown_fields)]
         struct WireCall {
             tool: String,
             arguments: Map<String, Value>,
@@ -106,18 +105,16 @@ pub struct ToolContext {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ToolExecution {
     pub outcome: ToolOutcome,
-    pub message: String,
     pub data: Value,
     pub result_schema_version: u32,
     pub knowledge: Option<ToolKnowledge>,
 }
 
 impl ToolExecution {
-    pub fn success(message: impl Into<String>) -> Self {
+    pub fn success(data: impl Into<Value>) -> Self {
         Self {
             outcome: ToolOutcome::Succeeded,
-            message: message.into(),
-            data: Value::Object(Map::new()),
+            data: data.into(),
             result_schema_version: 1,
             knowledge: None,
         }
@@ -219,12 +216,14 @@ impl ToolInstance {
         self.compatibility.clone()
     }
 
-    pub fn validate_arguments(&self, arguments: &Value) -> Result<(), String> {
+    pub fn prepare_arguments(&self, mut arguments: Value) -> Result<Value, String> {
+        discard_unknown_fields(&mut arguments, &self.contract.input_schema);
         let validator = jsonschema::validator_for(&self.contract.input_schema)
             .map_err(|error| error.to_string())?;
         validator
-            .validate(arguments)
-            .map_err(|error| error.to_string())
+            .validate(&arguments)
+            .map_err(|error| error.to_string())?;
+        Ok(arguments)
     }
 
     pub fn execute<'a>(
@@ -233,6 +232,35 @@ impl ToolInstance {
         arguments: &'a Value,
     ) -> Pin<Box<dyn Future<Output = ToolExecution> + Send + 'a>> {
         self.implementation.execute(context, arguments)
+    }
+}
+
+fn discard_unknown_fields(value: &mut Value, schema: &Value) {
+    match value {
+        Value::Object(fields) => {
+            let properties = schema.get("properties").and_then(Value::as_object);
+            if schema.get("additionalProperties") == Some(&Value::Bool(false)) {
+                fields.retain(|name, _| properties.is_some_and(|known| known.contains_key(name)));
+            }
+            for (name, field) in fields {
+                let field_schema = properties.and_then(|known| known.get(name)).or_else(|| {
+                    schema
+                        .get("additionalProperties")
+                        .filter(|value| value.is_object())
+                });
+                if let Some(field_schema) = field_schema {
+                    discard_unknown_fields(field, field_schema);
+                }
+            }
+        }
+        Value::Array(items) => {
+            if let Some(item_schema) = schema.get("items") {
+                for item in items {
+                    discard_unknown_fields(item, item_schema);
+                }
+            }
+        }
+        _ => {}
     }
 }
 
@@ -396,8 +424,7 @@ impl ToolImplementation for ToolHelp {
             let Some(name) = arguments.get("tool").and_then(Value::as_str) else {
                 return ToolExecution {
                     outcome: ToolOutcome::Failed,
-                    message: "tool.help requires an exact tool name.".into(),
-                    data: Value::Object(Map::new()),
+                    data: error_data("tool.help requires an exact tool name."),
                     result_schema_version: 1,
                     knowledge: None,
                 };
@@ -405,8 +432,7 @@ impl ToolImplementation for ToolHelp {
             let Some(registry) = self.registry.upgrade() else {
                 return ToolExecution {
                     outcome: ToolOutcome::Failed,
-                    message: "Tool registry is unavailable.".into(),
-                    data: Value::Object(Map::new()),
+                    data: error_data("Tool registry is unavailable."),
                     result_schema_version: 1,
                     knowledge: None,
                 };
@@ -414,8 +440,10 @@ impl ToolImplementation for ToolHelp {
             let Some(contract) = registry.current_contract(name) else {
                 return ToolExecution {
                     outcome: ToolOutcome::Failed,
-                    message: format!("Tool {name} is unavailable."),
-                    data: serde_json::json!({"tool": name}),
+                    data: serde_json::json!({
+                        "error": format!("Tool {name} is unavailable."),
+                        "tool": name,
+                    }),
                     result_schema_version: 1,
                     knowledge: Some(ToolKnowledge::Removed {
                         name: name.to_owned(),
@@ -430,10 +458,10 @@ impl ToolImplementation for ToolHelp {
             } = contract;
             ToolExecution {
                 outcome: ToolOutcome::Succeeded,
-                message: detailed_description,
                 data: serde_json::json!({
                     "tool": tool_name,
                     "version": version.clone(),
+                    "description": detailed_description,
                 }),
                 result_schema_version: 1,
                 knowledge: Some(ToolKnowledge::Current {
@@ -543,7 +571,6 @@ pub fn register_builtin_tools(
 enum BuiltinKind {
     End,
     Wait,
-    Handoff,
     ToolCancel,
     HistoryList,
     FileRead,
@@ -588,21 +615,6 @@ fn builtin_contracts() -> Result<Vec<(BuiltinKind, ToolContract)>, ToolDefinitio
             },
         ),
         (
-            BuiltinKind::Handoff,
-            ToolContract {
-                name: super::events::HANDOFF_TOOL_NAME.into(),
-                version: version()?,
-                initial_description: "Submit a context handoff document when the runtime requests one.".into(),
-                detailed_description: "Use handoff only when the runtime asks for a context handoff. Put the complete successor-facing handoff document in document.".into(),
-                input_schema: serde_json::json!({
-                    "type": "object",
-                    "properties": {"document": {"type": "string", "minLength": 1}},
-                    "required": ["document"],
-                    "additionalProperties": false
-                }),
-            },
-        ),
-        (
             BuiltinKind::ToolCancel,
             ToolContract {
                 name: super::events::TOOL_CANCEL_NAME.into(),
@@ -639,7 +651,7 @@ fn builtin_contracts() -> Result<Vec<(BuiltinKind, ToolContract)>, ToolDefinitio
             ToolContract {
                 name: super::events::FILE_READ_NAME.into(),
                 version: version()?,
-                initial_description: "Read bounded byte ranges from files or zork://history/<event-id>.".into(),
+                initial_description: "Read files or zork://history/<event-id> with {path, offset?, limit?}. offset is a zero-based byte offset (default 0), limit is bytes (default 65536). Continue from the returned next_offset. start/end and line numbers are not read parameters.".into(),
                 detailed_description: "Read at most limit bytes beginning at zero-based byte offset. Relative filesystem paths resolve from the session workspace. The same offset/limit contract applies to ordinary files and durable history events. Continue from next_offset until it is absent.".into(),
                 input_schema: serde_json::json!({
                     "type": "object",
@@ -676,7 +688,7 @@ fn builtin_contracts() -> Result<Vec<(BuiltinKind, ToolContract)>, ToolDefinitio
             ToolContract {
                 name: super::events::FILE_EDIT_NAME.into(),
                 version: version()?,
-                initial_description: "Apply exact, non-overlapping text replacements to a file.".into(),
+                initial_description: "Apply exact text replacements with {path, edits:[{old_text, new_text}]}. Each old_text must occur exactly once; replacements cannot overlap.".into(),
                 detailed_description: "Each edits[].old_text must occur exactly once in the original file. All matches are resolved against the original content, replacements must not overlap, and the file is written once after validation.".into(),
                 input_schema: serde_json::json!({
                     "type": "object",
@@ -738,28 +750,16 @@ impl ToolImplementation for BuiltinTool {
         let arguments = arguments.clone();
         Box::pin(async move {
             match kind {
-                BuiltinKind::End => success(
-                    "End requested.",
-                    serde_json::json!({
-                        "acknowledge_outstanding": arguments
-                            .get("acknowledge_outstanding")
-                            .and_then(Value::as_bool)
-                            .unwrap_or(false)
-                    }),
-                ),
+                BuiltinKind::End => success(serde_json::json!({
+                    "acknowledge_outstanding": arguments
+                        .get("acknowledge_outstanding")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false)
+                })),
                 BuiltinKind::Wait => wait_result(dependencies.clock.as_ref(), &arguments),
-                BuiltinKind::Handoff => success(
-                    "Handoff document received.",
-                    serde_json::json!({
-                        "document": arguments.get("document").cloned().unwrap_or(Value::Null)
-                    }),
-                ),
-                BuiltinKind::ToolCancel => success(
-                    "Cancellation request accepted for runtime processing.",
-                    serde_json::json!({
-                        "invocation_id": arguments.get("invocation_id").cloned().unwrap_or(Value::Null)
-                    }),
-                ),
+                BuiltinKind::ToolCancel => success(serde_json::json!({
+                    "invocation_id": arguments.get("invocation_id").cloned().unwrap_or(Value::Null)
+                })),
                 BuiltinKind::HistoryList => {
                     history_list(dependencies.query.as_ref(), &context.session_id, &arguments)
                 }
@@ -776,10 +776,9 @@ impl ToolImplementation for BuiltinTool {
     }
 }
 
-fn success(message: impl Into<String>, data: Value) -> ToolExecution {
+fn success(data: Value) -> ToolExecution {
     ToolExecution {
         outcome: super::events::ToolOutcome::Succeeded,
-        message: message.into(),
         data,
         result_schema_version: 1,
         knowledge: None,
@@ -789,11 +788,14 @@ fn success(message: impl Into<String>, data: Value) -> ToolExecution {
 fn failed(message: impl Into<String>) -> ToolExecution {
     ToolExecution {
         outcome: super::events::ToolOutcome::Failed,
-        message: message.into(),
-        data: Value::Object(Map::new()),
+        data: error_data(message),
         result_schema_version: 1,
         knowledge: None,
     }
+}
+
+fn error_data(message: impl Into<String>) -> Value {
+    serde_json::json!({"error": message.into()})
 }
 
 async fn blocking(work: impl FnOnce() -> ToolExecution + Send + 'static) -> ToolExecution {
@@ -810,13 +812,10 @@ fn wait_result(clock: &dyn Clock, arguments: &Value) -> ToolExecution {
         .unwrap_or(0.0);
     let now_ms = clock.now_ms();
     let duration_ms = (seconds * 1000.0).ceil().min(i64::MAX as f64) as i64;
-    success(
-        "Wait scheduled.",
-        serde_json::json!({
-            "until_ms": now_ms.saturating_add(duration_ms),
-            "reason": arguments.get("reason").cloned().unwrap_or(Value::Null),
-        }),
-    )
+    success(serde_json::json!({
+        "until_ms": now_ms.saturating_add(duration_ms),
+        "reason": arguments.get("reason").cloned().unwrap_or(Value::Null),
+    }))
 }
 
 fn history_list(
@@ -842,11 +841,7 @@ fn history_list(
                 "events": items,
                 "next_before_event_id": events.first().map(|event| event.event_id.clone()),
             });
-            success(
-                serde_json::to_string_pretty(&data)
-                    .unwrap_or_else(|_| "History page ready.".into()),
-                data,
-            )
+            success(data)
         }
         Err(error) => failed(format!("History query failed: {error}")),
     }
@@ -889,7 +884,6 @@ async fn file_read(
     let content = String::from_utf8_lossy(&page.bytes).into_owned();
     ToolExecution {
         outcome: super::events::ToolOutcome::Succeeded,
-        message: content.clone(),
         data: serde_json::json!({
             "content": content,
             "offset": page.offset,
@@ -945,10 +939,7 @@ fn file_write(
         dependencies.files.write(&path, content.as_bytes())
     })();
     match result {
-        Ok(()) => success(
-            format!("Wrote {} bytes to {}.", content.len(), path.display()),
-            serde_json::json!({"path": path, "bytes": content.len()}),
-        ),
+        Ok(()) => success(serde_json::json!({"path": path, "bytes": content.len()})),
         Err(error) => failed(format!("Failed to write {}: {error}", path.display())),
     }
 }
@@ -1010,10 +1001,7 @@ fn file_edit(
         Ok(replacements.len())
     })();
     match result {
-        Ok(count) => success(
-            format!("Applied {count} edit(s) to {}.", path.display()),
-            serde_json::json!({"path": path, "edits": count}),
-        ),
+        Ok(count) => success(serde_json::json!({"path": path, "edits": count})),
         Err(error) => failed(format!("Failed to edit {}: {error}", path.display())),
     }
 }
@@ -1114,11 +1102,10 @@ async fn shell_run(
     } else if outcome == super::events::ToolOutcome::Failed {
         message.push_str("\n\nCommand exited unsuccessfully.");
     }
-    message.push_str(&format!("\n\nLive output: {relative}"));
     ToolExecution {
         outcome,
-        message,
         data: serde_json::json!({
+            "output": message,
             "output_path": relative,
         }),
         result_schema_version: 1,

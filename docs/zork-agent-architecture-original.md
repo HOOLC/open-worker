@@ -1598,6 +1598,12 @@ agent 给出的原因：
 
 > 新输入先持久化并确认，但如果旧 generation 已达到 handoff 条件，就先完成一次 handoff；handoff 不消费也不包含这条新输入，新 generation 再完整消费它。普通新输入不取消已经开始的 handoff，cancel 和 delete 可以取消。一次输入最多等待一次有总时限的 handoff。
 
+以上决策中的“总时限”已被后续修订取代。
+
+### 后续修订
+
+删除跨请求的 handoff 总时限。已完成但未生成合法 handoff 文档的 handoff step 共享独立的文档尝试次数上限；provider 请求失败不消耗该次数，而是独立遵守 provider 自身的失败与超时策略。原理由只支持“先 handoff、再消费新输入”，不能支持一个覆盖多次请求的总时限。
+
 ## 57. handoff 时冻结 carried_tools
 
 ### 校对对话过程
@@ -1681,6 +1687,12 @@ agent 修正理解：
 
 “runtime 只传失败原因、历史入口和 `carried_tools`”的表述已撤回。
 
+### 后续澄清
+
+handoff 轮不按普通工具轮执行。runtime 直接验证 provider 输出中是否存在唯一的 `handoff` 调用，并读取其中非空字符串 `document`；其它未消费参数直接忽略，不因此浪费一次交接生成。合法时立即切换 generation，不调用 ToolExecutor，也不产生成功 handoff ToolResult。
+
+已完成但文档不合法的 handoff step 留在原 generation，并消耗一次独立的文档尝试次数；若还可重试，只为原始 provider call 补失败 ToolResult 以维持协议配对，不执行其中任何逻辑工具。只有文档尝试次数耗尽，或 provider 明确拒绝旧上下文为超限，才允许缺少文档地切换 generation。网络、鉴权、限流等普通 provider 失败走各自的 provider 重试；重试耗尽只结束当前 turn 为 Failed，不切换 generation。
+
 ## 59. provider usage 作为 token 锚点，估计方式和触发线可以有默认值
 
 ### 校对对话过程
@@ -1726,6 +1738,12 @@ agent 修正：
 所以估计器不需要特别精确，只需要估算两次准确锚点之间新增的内容。
 
 “handoff 触发线和 token 估计方式必须显式配置”的提议已撤回。
+
+### 后续协议校正
+
+`max_output_tokens` 必须在请求前确定，不等于每种 provider 协议都接受同名 wire 字段。adapter 只发送所选协议实际支持的字段；ChatGPT Codex Responses 协议不接受 `max_output_tokens`，因此该值只用于输入预算，不写入其 wire request。`parallel_tool_calls` 等协议支持的控制项仍按 profile 原样发送。
+
+provider 失败不能丢失已经取得的观测数据。`StepFailed` 保存 request identity、非敏感输入诊断以及 provider 在失败前实际返回的 usage；provider 没有返回 usage 时保持缺失，不使用字节估算冒充 API 数值。完整逻辑请求已由 `StepStarted` 对应的 generation 前缀、selection、工具目录和输出上限确定，不在失败 event 中复制一份 transcript。
 
 ## 60. session 只依赖一个 ModelGateway
 
@@ -3379,3 +3397,39 @@ agent 的理解是：服务不等待全量恢复检查结束；所有历史 sess
 > 需要恢复或当前 active 的 session 在槽位中持有唯一 runner；完整领域 state 只随这些 runner 存在。runner 正常结束并退出后，槽位退回轻量布尔状态。
 
 第 103 项的“有界加载”限制针对 session 历史和完整领域 state，不禁止在内存中保存十万个 session ID 及其轻量状态。
+
+## 105. 默认压缩、保留 handoff，并共用交接提交和无文档兜底
+
+### 后续设计对话
+
+用户要求：
+
+> 把我们的 handoff 改成压缩吧，参考 pi，但不要删掉 handoff，把这两个抽象成一致的 api，支持无缝替换，默认压缩，可以替换成 handoff，先思考一下怎么设计
+
+用户进一步限定执行边界：
+
+> 我感觉应该这样，正常 step 只管按照上下文发请求，handoff/压缩轮把上下文处理好就行，只需要在前置检查那里按照配置进入压缩/handoff step
+
+关于失败恢复，用户明确：
+
+> 无文档降级是所有交接方式的兜底方案，降低触发率是必要的，但 turn 一定不能进入无法恢复的状态
+
+随后用户授权实现：
+
+> 对，动手吧
+
+### 已确认决策
+
+默认上下文处理方式为 compaction，handoff 保留，可按 session 配置无缝替换。前置检查选择 step；普通 step 不感知策略，交接 step 准备好后统一提交新 generation，复用现有 ModelGateway、step 生命周期、持久化和恢复路径，不增加策略执行框架。
+
+compaction 使用当前模型和 thinking 独立生成摘要，材料为前次文档与被移出的旧前缀，不提供工具；保留可配置的最近原文，默认目标 20,000 个估计 token。按完整调用/结果组切分，允许在单个超长 turn 内切分。handoff 保持 user role 完整用法、固定 call schema、只提交 document 的协议。
+
+两种方式共用文档验证结果后的提交、snapshot、旧 provider continuation 释放和无文档兜底。文档生成失败不能使 turn 卡死；有限次文档尝试耗尽或交接上下文被明确拒绝后，无文档进入新 generation 并继续同一 turn。只有文档可以缺失，原始历史、未消费输入、未完成工具、未交付结果、tool state 和 session 配置正常保留，并提供历史恢复指引。普通网络、鉴权、限流故障仍遵守原有独立 provider 重试规则。
+
+摘要请求的真实 usage 必须计入总消耗，但不作为主对话 token anchor；摘要文字和流式输出不伪装成普通助手回复。主对话继续使用 API 返回的准确 input token 数及其后的增量估计。
+
+### 对前文的修订
+
+第 56—59、92、101 项涉及 generation 切换的共同规则，现在同时适用于 compaction 与 handoff。持久提交使用中性的 `ContextApplied` / `ContextFailed`；旧 handoff 文档协议本身保留。配置变化只影响下一次交接，不改变已开始操作的 purpose 和原文保留边界。
+
+摘要材料必须有界，避免为摘要复制巨大工具结果；默认采用工具输出摘录、前次文档更新及最近原文保留，参考 [pi 的 compaction 实现](https://github.com/earendil-works/pi/blob/4e69b0c28060f0f02fbe38bfa7c21a2e2eb25057/packages/coding-agent/src/core/compaction/compaction.ts)。具体实现、字段和验收合同见结构化规范第 7 节。

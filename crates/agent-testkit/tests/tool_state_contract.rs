@@ -124,7 +124,7 @@ async fn tool_owned_migrations_fold_outstanding_snapshot_and_restart_share_one_s
     counter
         .request()
         .await
-        .succeed("counter advanced", json!({"amount": 2}))
+        .succeed(json!({"message": "counter advanced", "amount": 2}))
         .unwrap();
 
     let second = world.request().await;
@@ -143,7 +143,7 @@ async fn tool_owned_migrations_fold_outstanding_snapshot_and_restart_share_one_s
     counter
         .request()
         .await
-        .succeed("counter completed", json!({"amount": 1}))
+        .succeed(json!({"message": "counter completed", "amount": 1}))
         .unwrap();
 
     world
@@ -203,12 +203,13 @@ async fn an_unmatched_durable_tool_result_is_folded_and_reported_as_new_informat
             &session_id,
             &[SessionEvent::ToolResult {
                 result: ToolResultData {
-                    result_id: "01ARZ3NDEKTSV4RRFFQ69G5FA1".into(),
                     invocation_id: "01ARZ3NDEKTSV4RRFFQ69G5FA2".into(),
                     tool: "test.counter".into(),
                     outcome: ToolOutcome::Succeeded,
-                    message: "late external completion".into(),
-                    data: json!({"amount": 2}),
+                    data: json!({
+                        "amount": 2,
+                        "message": "late external completion",
+                    }),
                     result_schema_version: 1,
                     knowledge: None,
                     finished_at_ms: 10,

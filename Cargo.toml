@@ -13,3 +13,6 @@ reqwest = { version = "0.12.28", default-features = false, features = ["blocking
 serde = { version = "1.0.228", features = ["alloc", "derive", "rc"] }
 tokio = { version = "1.48.0", features = ["full", "test-util"] }
 tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+
+[profile.dev.package.sha2]
+opt-level = 3

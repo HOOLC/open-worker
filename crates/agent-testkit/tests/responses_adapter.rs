@@ -8,7 +8,9 @@ use reqwest::StatusCode;
 use serde_json::{json, Value};
 use zork_agent::provider::ProviderRouter;
 use zork_agent::session::events::{SessionEvent, TurnOutcome};
-use zork_agent::session::model::{ModelRequest, ModelStreamObserver, SilentStreamObserver};
+use zork_agent::session::model::{
+    ModelError, ModelRequest, ModelStreamObserver, SilentStreamObserver,
+};
 use zork_agent::session::ports::{ModelExecutor, ModelLimits, ProfileExecution};
 use zork_agent::session::wire::{ProviderMessage, SessionSelection, TranscriptRole};
 use zork_agent_testkit::{
@@ -341,7 +343,97 @@ fn provider_request(profile_id: &str, observer: Arc<dyn ModelStreamObserver>) ->
         }]),
         tools: Arc::new(Vec::new()),
         max_output_tokens: Some(56000),
+        independent: false,
         stream_observer: observer,
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [COMPACTION-01, PROVIDER-01, PROVIDER-02]
+async fn compaction_is_tool_free_on_responses_and_chat_completions() {
+    for api in ["openai-responses", "openai-completions"] {
+        let mut agent = RealAgent::new().unwrap();
+        let mut settings = profile(agent.provider_base_url(), true);
+        settings["models"][0]["api"] = json!(api);
+        settings["models"][0]["limits"] =
+            json!({"context_window_tokens": 256_000, "max_output_tokens": 131_072});
+        agent.install_profile("compact", settings).unwrap();
+        let session = agent
+            .create_configured_session(selection("compact"), None)
+            .await
+            .unwrap();
+        agent
+            .send_mail(&session, "Keep working on the same task")
+            .await
+            .unwrap();
+        let normal = agent.request().await;
+        if api == "openai-responses" {
+            assert_eq!(normal.json().unwrap()["max_output_tokens"], 131_072);
+            let mut events = text_events("normal", "progress so far");
+            *events.last_mut().unwrap() = completed("normal", 123_000, 20);
+            normal.respond_sse(events).unwrap();
+        } else {
+            normal.respond_sse([json!({"id": "normal", "object": "chat.completion.chunk",
+                "choices": [{"index": 0, "delta": {"role": "assistant", "content": "progress so far"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 123_000, "completion_tokens": 20, "total_tokens": 123_020}})]).unwrap();
+        }
+        let summary = tokio::time::timeout(Duration::from_secs(3), agent.request())
+            .await
+            .unwrap();
+        let body = summary.json().unwrap();
+        if api == "openai-responses" {
+            assert_eq!(body["max_output_tokens"], 131_072);
+        }
+        assert!(
+            body.get("tools")
+                .is_none_or(|value| value.is_null() || value.as_array().is_some_and(Vec::is_empty)),
+            "{api}: {body}"
+        );
+        assert!(body.get("previous_response_id").is_none());
+        let input = body
+            .get("input")
+            .or_else(|| body.get("messages"))
+            .unwrap()
+            .as_array()
+            .unwrap();
+        assert!(input
+            .iter()
+            .all(|item| item["role"] != "assistant" && item["role"] != "tool"));
+        if api == "openai-responses" {
+            respond_text(summary, "summary", "PRIVATE SUMMARY: continue this task.");
+        } else {
+            summary
+                .respond_openai_text("summary", "PRIVATE SUMMARY: continue this task.")
+                .unwrap();
+        }
+        let successor = tokio::time::timeout(Duration::from_secs(3), agent.request())
+            .await
+            .unwrap();
+        let body = successor.json().unwrap();
+        if api == "openai-responses" {
+            assert_eq!(body["max_output_tokens"], 131_072);
+        }
+        assert!(body.to_string().contains("PRIVATE SUMMARY"));
+        assert_eq!(body["tools"].as_array().unwrap().len(), 1);
+        assert!(!agent
+            .messages(&session)
+            .await
+            .unwrap()
+            .to_string()
+            .contains("PRIVATE SUMMARY"));
+        if api == "openai-responses" {
+            respond_call(successor, "finish", "end", "end", "end", json!({}));
+        } else {
+            successor
+                .respond_openai_calls("finish", [("end", "end", json!({}))])
+                .unwrap();
+        }
+        agent
+            .wait_for_state(&session, |state| {
+                state.last_turn_outcome == Some(TurnOutcome::Finished)
+            })
+            .await;
+        agent.shutdown().await;
     }
 }
 
@@ -687,4 +779,29 @@ async fn streaming_and_complete_responses_stay_on_one_request_across_thirty_sile
     let complete_outcome = complete_task.await.unwrap().unwrap();
     assert_eq!(complete_outcome.text, "complete response");
     complete_provider.shutdown().await;
+}
+
+#[tokio::test]
+// Contract: docs/zork-agent-architecture.md [PROVIDER-01, RETRY-02]
+async fn responses_eof_without_a_terminal_event_is_a_diagnostic_provider_failure() {
+    let router = ProviderRouter::new();
+    let mut provider = ControlledHttpProvider::start(4).unwrap();
+    let request = provider_request("responses", Arc::new(SilentStreamObserver));
+    let execution = provider_execution(provider.base_url(), "responses", true);
+    let task = tokio::spawn(async move { router.complete(&request, execution).await });
+
+    let stream = provider.request().await.begin_sse(16).unwrap();
+    for event in &text_events("resp_incomplete", "partial")[..3] {
+        stream.send_json(event.clone()).await.unwrap();
+    }
+    stream.finish().await.unwrap();
+
+    let ModelError::ProviderFailed(failure) = task.await.unwrap().unwrap_err() else {
+        panic!("expected provider failure");
+    };
+    assert_eq!(failure.stage, "provider.stream.finish");
+    assert!(failure.message.contains("terminal response event"));
+    let diagnostics = failure.provider_input.expect("provider input diagnostics");
+    assert_eq!(diagnostics.response_id.as_deref(), Some("resp_incomplete"));
+    provider.shutdown().await;
 }

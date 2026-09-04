@@ -142,6 +142,19 @@ Gateway remains the only component holding provider credentials and executing
 an explicit entry-specific delivery action. Background-job events also enter
 Agent through the same mailbox.
 
+## Context
+
+Each created session has an Agent-owned context policy. In Admin, use the
+session's **上下文** panel to choose `compaction` (summary plus recent original
+messages) or `handoff` (handoff document), and set `keep_recent_tokens`.
+The desktop composer offers the same policies with common retention targets.
+Settings apply at the next context transition; they do not restart the task.
+
+The gateway exposes `GET`/`PUT /admin/api/sessions/{session_key}/context` and
+`GET`/`PUT /v1/im/sessions/{session_id}/context` for its desktop entry. Both
+read and update Agent state directly. New sessions inherit `context` from the
+Agent configuration, whose default is `{"strategy":"compaction","keep_recent_tokens":20000}`.
+
 ## Profiles
 
 Create a Profile in the admin UI. Profiles live under

@@ -54,6 +54,10 @@ pub fn router(state: AppState) -> Router {
             "/sessions/{session_id}/selection",
             axum::routing::put(set_selection),
         )
+        .route(
+            "/sessions/{session_id}/context",
+            axum::routing::put(set_context),
+        )
         .with_state(Arc::new(state));
     match token {
         Some(token) => router.route_layer(axum::middleware::from_fn_with_state(
@@ -151,21 +155,15 @@ async fn create_session(
         .unwrap_or_else(|| std::env::temp_dir().to_string_lossy().into_owned());
     let session_id = state
         .service
-        .create_session(selection.clone(), request.system_prompt, workspace.clone())
+        .create_session(selection, request.system_prompt, workspace, request.context)
         .await
         .map_err(ApiError::from)?;
-    Ok((
-        StatusCode::CREATED,
-        Json(SessionView {
-            session_id,
-            workspace,
-            profile_id: selection.profile_id,
-            model: selection.model,
-            thinking: selection.thinking,
-            generation: 1,
-            status: SessionStatus::Wait,
-        }),
-    ))
+    let session = state
+        .service
+        .state(&session_id)
+        .await
+        .map_err(ApiError::from)?;
+    Ok((StatusCode::CREATED, Json(session_view(&session))))
 }
 
 async fn list_sessions(State(state): State<Arc<AppState>>) -> Json<ItemList<SessionSummary>> {
@@ -245,6 +243,25 @@ async fn set_selection(
     state
         .service
         .set_selection(&session_id, selection.clone())
+        .await
+        .map_err(ApiError::from)?;
+    let session = state
+        .service
+        .state(&session_id)
+        .await
+        .map_err(ApiError::from)?;
+    Ok(Json(session_view(&session)))
+}
+
+async fn set_context(
+    State(state): State<Arc<AppState>>,
+    Path(session_id): Path<String>,
+    body: Result<Json<zork_agent_api::ContextConfig>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<SessionView>, ApiError> {
+    let Json(config) = body.map_err(|_| ApiError::invalid("invalid context configuration"))?;
+    state
+        .service
+        .set_context(&session_id, config)
         .await
         .map_err(ApiError::from)?;
     let session = state
@@ -438,7 +455,13 @@ fn public_message(event: &SessionEvent) -> Option<PublicMessage> {
             role: PublicRole::Mailbox,
             content: input.content.clone(),
         }),
-        SessionEvent::StepCompleted { assistant_text, .. } if !assistant_text.is_empty() => {
+        SessionEvent::StepCompleted {
+            assistant_text,
+            purpose,
+            ..
+        } if *purpose == crate::session::events::Purpose::Conversation
+            && !assistant_text.is_empty() =>
+        {
             Some(PublicMessage {
                 kind: MessageKind::Message,
                 role: PublicRole::Assistant,
@@ -448,13 +471,22 @@ fn public_message(event: &SessionEvent) -> Option<PublicMessage> {
         SessionEvent::ToolResult { result } => Some(PublicMessage {
             kind: MessageKind::Message,
             role: PublicRole::Tool,
-            content: if result.outcome == ToolOutcome::Succeeded {
-                result.message.clone()
-            } else {
-                format!("{:?}: {}", result.outcome, result.message)
-            },
+            content: render_tool_data(result.outcome, &result.data),
         }),
         _ => None,
+    }
+}
+
+fn render_tool_data(outcome: ToolOutcome, data: &serde_json::Value) -> String {
+    let content = data
+        .as_str()
+        .map(ToOwned::to_owned)
+        .or_else(|| serde_json::to_string(data).ok())
+        .unwrap_or_else(|| "null".into());
+    if outcome == ToolOutcome::Succeeded {
+        content
+    } else {
+        format!("{outcome:?}: {content}")
     }
 }
 
@@ -473,6 +505,7 @@ fn session_view(state: &SessionState) -> SessionView {
             .unwrap_or_default(),
         workspace: state.workspace.clone(),
         generation: state.generation.number,
+        context: state.context_config.clone(),
         status: state_status(state),
     }
 }

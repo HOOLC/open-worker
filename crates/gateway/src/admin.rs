@@ -63,6 +63,10 @@ pub fn router(state: RuntimeState) -> Router {
             post(runtime_http::reset_session),
         )
         .route(
+            "/admin/api/sessions/{session_key}/context",
+            get(get_session_context).put(update_session_context),
+        )
+        .route(
             "/admin/api/sessions/{session_key}/selection",
             axum::routing::put(update_session_selection),
         )
@@ -459,6 +463,77 @@ async fn delete_profile(
             )
                 .into_response()
         }
+    }
+}
+
+async fn get_session_context(
+    State(state): State<RuntimeState>,
+    headers: HeaderMap,
+    Path(session_key): Path<String>,
+) -> Response {
+    session_context(&state, &headers, &session_key, None).await
+}
+
+async fn update_session_context(
+    State(state): State<RuntimeState>,
+    headers: HeaderMap,
+    Path(session_key): Path<String>,
+    body: Result<Json<zork_agent_api::ContextConfig>, axum::extract::rejection::JsonRejection>,
+) -> Response {
+    if !authorize(&headers, &state) {
+        return unauthorized();
+    }
+    let Json(config) = match body {
+        Ok(config) => config,
+        Err(_) => {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({"error": "invalid_context"})),
+            )
+                .into_response()
+        }
+    };
+    session_context(&state, &headers, &session_key, Some(&config)).await
+}
+
+async fn session_context(
+    state: &RuntimeState,
+    headers: &HeaderMap,
+    session_key: &str,
+    update: Option<&zork_agent_api::ContextConfig>,
+) -> Response {
+    if !authorize(headers, state) {
+        return unauthorized();
+    }
+    let session_id = match state.db.get_binding(session_key) {
+        Ok(Some(binding)) => match binding.id() {
+            Some(id) => id.to_owned(),
+            None => {
+                return (
+                    StatusCode::CONFLICT,
+                    Json(json!({"error": "agent_session_not_created"})),
+                )
+                    .into_response()
+            }
+        },
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "session_not_found"})),
+            )
+                .into_response()
+        }
+        Err(error) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": error.to_string()})),
+            )
+                .into_response()
+        }
+    };
+    match agent::session_context(&state.config, &session_id, update).await {
+        Ok(config) => Json(config).into_response(),
+        Err(error) => (error.status, Json(json!({"error": error.message}))).into_response(),
     }
 }
 

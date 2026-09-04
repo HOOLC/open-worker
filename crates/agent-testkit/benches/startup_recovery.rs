@@ -11,7 +11,10 @@ const MAX_PEAK_RSS_BYTES: u64 = 512 * 1024 * 1024;
 
 // Contract: docs/zork-agent-architecture.md [STARTUP-03, PERF-03]
 fn main() {
-    let arguments = std::env::args().skip(1).collect::<Vec<_>>();
+    let arguments = std::env::args()
+        .skip(1)
+        .filter(|value| value != "--bench")
+        .collect::<Vec<_>>();
     if arguments.first().map(String::as_str) == Some("--measure-child") {
         run_measurement_child(&arguments);
         return;
@@ -50,6 +53,11 @@ fn main() {
     );
     let measured: RealStartupPerformance =
         serde_json::from_slice(&output.stdout).expect("parse startup measurement report");
+    // Keep the phase timings even when an acceptance threshold fails.
+    eprintln!(
+        "startup measurement: {}",
+        serde_json::to_string(&measured).unwrap()
+    );
 
     assert_eq!(measured.session_count, session_count);
     assert!(

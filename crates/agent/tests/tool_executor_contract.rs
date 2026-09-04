@@ -22,6 +22,18 @@ impl ToolImplementation for ImmediateTool {
     }
 }
 
+struct EchoArguments;
+
+impl ToolImplementation for EchoArguments {
+    fn execute<'a>(
+        &'a self,
+        _context: &'a ToolContext,
+        arguments: &'a Value,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ToolExecution> + Send + 'a>> {
+        Box::pin(async move { ToolExecution::success(arguments.clone()) })
+    }
+}
+
 struct WaitingTool {
     started: Arc<tokio::sync::Notify>,
     release: Arc<tokio::sync::Notify>,
@@ -72,6 +84,7 @@ fn invocation(id: &str, tool: &str) -> ToolInvocation {
         tool: tool.into(),
         arguments: json!({"value": "ok"}),
         tool_version: Some(ToolVersion::new("v1").unwrap()),
+        rejection: None,
     }
 }
 
@@ -94,7 +107,59 @@ async fn successful_tool_execution_returns_its_normal_result() {
         .await;
 
     assert_eq!(execution.outcome, ToolOutcome::Succeeded);
-    assert_eq!(execution.message, "done");
+    assert_eq!(execution.data, json!("done"));
+}
+
+#[tokio::test]
+// Contract: docs/zork-agent-architecture.md [TOOL-10]
+async fn unknown_fields_are_removed_before_validation_and_execution() {
+    let registry = Arc::new(ToolRegistry::default());
+    registry.register(Arc::new(
+        ToolInstance::new(
+            ToolContract {
+                name: "test.arguments".into(),
+                version: ToolVersion::new("v1").unwrap(),
+                initial_description: "Echo declared arguments.".into(),
+                detailed_description: "Echo only arguments declared by the schema.".into(),
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "request": {
+                            "type": "object",
+                            "properties": {"path": {"type": "string"}},
+                            "required": ["path"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "required": ["request"],
+                    "additionalProperties": false
+                }),
+            },
+            Arc::new(EchoArguments),
+            Arc::new(NoToolState),
+        )
+        .unwrap(),
+    ));
+    let executor = ToolExecutor::new(registry, Duration::from_secs(5));
+    let mut call = invocation("extra", "test.arguments");
+    call.arguments = json!({
+        "request": {"path": "README.md", "reason": "ignored"},
+        "comment": "ignored"
+    });
+
+    let execution = executor
+        .execute(
+            ToolContext {
+                session_id: "session".into(),
+                invocation_id: "extra".into(),
+                workspace: "/workspace".into(),
+            },
+            call,
+        )
+        .await;
+
+    assert_eq!(execution.outcome, ToolOutcome::Succeeded);
+    assert_eq!(execution.data, json!({"request": {"path": "README.md"}}));
 }
 
 #[tokio::test]
@@ -165,6 +230,51 @@ async fn session_cancellation_waits_until_every_tool_has_stopped() {
     assert_eq!(result.execution.outcome, ToolOutcome::Cancelled);
 }
 
+#[tokio::test(start_paused = true)]
+// Contract: docs/zork-agent-architecture.md [TOOL-11, EVENT-05]
+async fn completed_tools_stay_live_until_their_result_can_be_queued() {
+    let registry = Arc::new(ToolRegistry::default());
+    register(&registry, "test.immediate", Arc::new(ImmediateTool));
+    let executor = Arc::new(ToolExecutor::new(registry, Duration::from_secs(5)));
+    let (results, mut completed) = tokio::sync::mpsc::channel(1);
+    let capacity = results.reserve().await.unwrap();
+    executor.dispatch_batch(
+        "session",
+        "/workspace",
+        vec![invocation("blocked-result", "test.immediate")],
+        results.clone(),
+    );
+
+    // Paused time advances only after the immediate tool blocks on the full queue.
+    tokio::time::sleep(Duration::from_millis(1)).await;
+    assert!(executor.live("session").contains("blocked-result"));
+    assert!(completed.try_recv().is_err());
+    drop(capacity);
+    let result = completed.recv().await.unwrap();
+    assert_eq!(result.execution.outcome, ToolOutcome::Succeeded);
+    assert!(executor.live("session").is_empty());
+
+    executor.dispatch_batch(
+        "session",
+        "/workspace",
+        vec![
+            invocation("queued-result", "test.immediate"),
+            invocation("closing-result", "test.immediate"),
+        ],
+        results,
+    );
+    tokio::time::sleep(Duration::from_millis(1)).await;
+    assert_eq!(executor.live("session").len(), 1);
+    completed.close();
+    tokio::time::timeout(
+        Duration::from_secs(1),
+        executor.cancel_session_and_wait("session"),
+    )
+    .await
+    .expect("closing a full queue must allow shutdown");
+    assert!(executor.live("session").is_empty());
+}
+
 struct PanickingTool;
 
 impl ToolImplementation for PanickingTool {
@@ -212,20 +322,57 @@ async fn invalid_arguments_and_panics_become_results_and_the_executor_stays_usab
     invalid.arguments = json!({});
     let invalid_result = executor.execute(context.clone(), invalid).await;
     assert_eq!(invalid_result.outcome, ToolOutcome::Failed);
-    assert!(invalid_result.message.contains("Invalid tool arguments"));
+    assert!(invalid_result.data["error"]
+        .as_str()
+        .is_some_and(|error| error.contains("Invalid tool arguments")));
     assert_eq!(calls.load(Ordering::Relaxed), 0);
 
     let panic_result = executor
         .execute(context.clone(), invocation("panic", "test.panics"))
         .await;
     assert_eq!(panic_result.outcome, ToolOutcome::Failed);
-    assert!(panic_result.message.contains("Tool task panicked"));
+    assert!(panic_result.data["error"]
+        .as_str()
+        .is_some_and(|error| error.contains("Tool task panicked")));
 
     let healthy = executor
         .execute(context, invocation("healthy", "test.counted"))
         .await;
     assert_eq!(healthy.outcome, ToolOutcome::Succeeded);
     assert_eq!(calls.load(Ordering::Relaxed), 1);
+}
+
+#[tokio::test]
+// Contract: docs/zork-agent-architecture.md [TOOL-01, TOOL-10]
+async fn a_rejected_provider_call_never_reaches_the_tool() {
+    let registry = Arc::new(ToolRegistry::default());
+    let calls = Arc::new(AtomicUsize::new(0));
+    register(
+        &registry,
+        "test.counted",
+        Arc::new(CountedTool(calls.clone())),
+    );
+    let executor = ToolExecutor::new(registry, Duration::from_secs(5));
+    let mut rejected = invocation("rejected", "test.counted");
+    rejected.rejection = Some("missing field `arguments`".into());
+
+    let result = executor
+        .execute(
+            ToolContext {
+                session_id: "session".into(),
+                invocation_id: "rejected".into(),
+                workspace: "/workspace".into(),
+            },
+            rejected,
+        )
+        .await;
+
+    assert_eq!(result.outcome, ToolOutcome::Failed);
+    assert_eq!(
+        result.data["error"],
+        "Invalid provider call: missing field `arguments`"
+    );
+    assert_eq!(calls.load(Ordering::Relaxed), 0);
 }
 
 #[tokio::test]
@@ -249,7 +396,7 @@ async fn bounded_internal_result_channel_waits_and_delivers_every_result() {
 
     tokio::time::timeout(Duration::from_secs(1), async {
         loop {
-            if executor.live("session").is_empty() && completed.len() == 1 {
+            if executor.live("session").len() == 2 && completed.len() == 1 {
                 return;
             }
             tokio::task::yield_now().await;
@@ -264,4 +411,5 @@ async fn bounded_internal_result_channel_waits_and_delivers_every_result() {
     }
     ids.sort();
     assert_eq!(ids, ["bounded-1", "bounded-2", "bounded-3"]);
+    assert!(executor.live("session").is_empty());
 }

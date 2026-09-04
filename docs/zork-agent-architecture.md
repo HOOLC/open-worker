@@ -9,7 +9,7 @@ zork-agent 是持久、可恢复的 agent runtime。它负责：
 - 保存 session mailbox、event、当前可恢复状态和历史；
 - 调用 provider，并把 provider 输出转换为持久事实；
 - 调度逻辑工具并保存真实结果；
-- 在进程退出、工具中断、provider 错误和 handoff 后继续执行；
+- 在进程退出、工具中断、provider 错误和上下文交接后继续执行；
 - 通过 HTTP、history 和 SSE 提供一致的外部契约。
 
 实现必须优先保持以下性质：
@@ -96,20 +96,24 @@ snapshot 是 event，也占用一个 event ID。event ID 不用于去重，不�
 
 领域 event 至少覆盖：
 
-- session 创建、选择变化和 mailbox 输入；
+- session 创建、选择及上下文策略变化和 mailbox 输入；
 - turn 开始、取消请求和结束；
 - step 准备、成功、失败和中断；
 - 工具取消请求和工具结果；
-- handoff 应用；
+- 上下文交接应用及文档降级；
 - deadline 到期；
 - runner/recovery 故障；
 - snapshot。
 
-`StepStarted` 是 provider 外部执行前的持久准备事实。`StepCompleted` 保存 provider 返回的文字、原始 provider call 身份和解析后的领域 ToolInvocation；它在 ToolExecutor 接收调用前完成持久化。
+`StepStarted` 是 provider 外部执行前的持久准备事实，冻结 purpose、输入边界和输出上限。ModelGateway 返回 `ModelOutcome` 后，runner 先用 `StepCompleted` 保存 purpose、文字、原始 provider call、usage、provider context 和非敏感输入诊断；普通 step 的调用再交给 ToolExecutor，上下文 step 由 runtime 校验文档。固定 `call` wrapper 或逻辑工具参数不合法不能把这个事实降级成 `StepFailed`；后者只表示没有取得可用 `ModelOutcome`。
+
+普通和 handoff step 的每个原始 provider call 都对应一个领域 ToolInvocation。无法解析时保留原始 call ID、参数和拒绝原因，随后产生失败 ToolResult，供下一次请求按原 call ID 配对。独立且无工具的 compaction 不建立调用协议对：意外工具输出只保存原始事实并判文档尝试失败，不创建或执行 ToolInvocation。runtime 不把 `parameters`、`path` 等错误字段静默改写成合法 `arguments`。
 
 不需要独立 `ToolStarted`。已持久化 ToolInvocation 但没有 ToolResult 时，恢复必须追加“执行被中断，实际结果未知”的错误结果，不得自动重新执行。
 
 任何到达的 ToolResult 都写 event。无法与当前 pending invocation 匹配的结果仍是事实，并在下一次 provider 请求中作为新增通知告诉 agent。
+
+ToolResult 只有一个规范 JSON 载荷 `data`。工具、持久化、fold、provider projection 和 UI 都读取这一份数据；不得再保存平行的展示正文。provider 与 UI 的文本表现由投影层从 `data` 生成，失败原因放在 `data.error`，因此 `file.read`、`history.list` 等大结果在一次 provider 请求中只能出现一份正文。
 
 ### 4.4 持久确认（`PERSIST-03`）
 
@@ -137,7 +141,7 @@ store 只负责单写：data root 所有权、完整 commit append、snapshot �
 
 ### 5.2 Snapshot（`SNAPSHOT-01`、`SNAPSHOT-02`、`SNAPSHOT-03`）
 
-snapshot 只在 handoff 后产生。它是由当前 state 生成的派生 event：损坏或缺失只能影响恢复成本，不能改变其他 event 表达的事实。
+snapshot 只在上下文交接后产生，compaction 和 handoff 共用此路径。它是由当前 state 生成的派生 event：损坏或缺失只能影响恢复成本，不能改变其他 event 表达的事实。
 
 snapshot 保存“当前仍需恢复”的数据，即只读取 snapshot 和后续 event，就能作出与崩溃前相同的下一步 Decision，并正确处理之后输入、工具结果和 deadline 所需的数据。它包括：
 
@@ -158,7 +162,7 @@ snapshot 保存 `state_schema_version`。恢复时先检查版本，再在内存
 
 ### 5.3 大结果文件（`TOOL-13`）
 
-ToolResult 中持久化的 JSON 有大小上限，并必须包含工具 fold 所需的全部数据。更大的展示内容由工具写入普通文件，ToolResult 只保存有界预览和文件路径。
+ToolResult 中持久化的唯一 JSON 载荷有大小上限，并必须包含工具 fold 和展示所需的全部数据。更大的展示内容由工具写入普通文件，ToolResult 只保存有界预览和文件路径。
 
 文件在引用它的 ToolResult 持久化前完成写入和 flush。fold 可以保存和传递文件路径，但不能读取文件；文件之后被修改或删除不影响 event fold 和恢复的正确性。
 
@@ -207,6 +211,8 @@ session 只依赖一个 ModelGateway，请求、结果和错误类型只定义�
 
 runner 只提交 selection、session/generation/step 身份、完整 transcript、固定 `call` 定义和输出上限。
 
+provider adapter 必须按所选协议发送 profile 解析出的控制项，不得硬编码覆盖，也不得发送该协议不支持的字段。`parallel_tool_calls` 在协议支持时原样发送；`max_output_tokens` 在协议支持时原样发送，在 ChatGPT Codex Responses 协议不支持时只用于请求前的输入预算，不写入 wire request。provider 返回 incomplete/failed 终态时，具体 reason、request 身份、非敏感输入诊断和失败前实际收到的 usage 必须保留到持久错误事实中；没有收到 usage 时保持缺失，不用估算值代替。完整逻辑请求由 `StepStarted` 对应的 generation 前缀、selection、工具目录和输出上限确定，错误 event 不再复制 transcript。
+
 runner 可以向 ModelGateway 提供 session 或稳定 key 的资源释放建议。建议不影响正确性，provider 自己决定何时执行。
 
 ### 7.2 Generation 前缀（`PROJECTION-01`、`PROJECTION-02`、`PROJECTION-03`）
@@ -217,21 +223,43 @@ provider wire call ID 只负责 provider 协议配对。每个 provider call 同
 
 任何可恢复 event 序列都必须被投影成 provider 接受的消息序列。需要补齐 provider call/result 配对时，补充内容必须说明未完成、中断或结果未知，不能伪造成功。
 
-### 7.3 Token anchor 与 handoff（`PROVIDER-02`、`HANDOFF-01`、`HANDOFF-02`、`HANDOFF-03`）
+### 7.3 Token anchor 与统一交接（`PROVIDER-02`、`CONTEXT-01`、`CONTEXT-02`）
 
-一个 generation 的第一个 provider 请求直接发送，不做本地 token 估算。成功响应返回的准确 input token 数作为持久 anchor；之后只估算 anchor 以后的新增内容。profile/model 变化和 handoff 会使旧 anchor 失效。
+一个 generation 的第一个普通请求直接发送，不做本地 token 估算。主对话响应返回的准确 input token 数作为持久 anchor，之后只估算 anchor 以后的新增内容。profile/model 变化和上下文交接使旧 anchor 失效。独立摘要请求的 usage 必须持久化并计入消耗，但成功或失败都不更新主对话 anchor。
 
-`context_window` 和本次 `max_output_tokens` 必须在发送请求前由所选 profile 或 provider/model 默认值确定。无法确定时拒绝该 selection；runner 不提供猜测性的全局兜底值。handoff 触发比例和增量 token 估计方法可以使用系统默认值。
+`context_window` 和本次 `max_output_tokens` 必须在发送请求前由所选 profile 或 provider/model 默认值确定。无法确定时拒绝该 selection；runner 不提供猜测性的全局兜底值。上下文维护触发比例和增量 token 估计方法可以使用系统默认值。
 
 provider 可见的固定 `call` 定义已经包含在准确 anchor 中；adapter 因无状态协议重复发送相同定义，不表示新增 token 内容。
 
-达到 handoff 条件时，旧 generation 先完成 handoff，新 generation 再消费尚未消费的输入。新输入不取消已经开始的 handoff；cancel 和 delete 可以取消。
+前置 Decision 按 session 配置选择 conversation、compaction 或 handoff step，默认 compaction。普通 step 只使用当前已准备好的 generation，不分辨其产生方式；不增加第二套策略执行器、provider 循环或重试系统。一次交接开始后冻结 purpose 和保留范围，改配置只影响下一次操作。交接不消费新输入；普通新输入不取消当前操作，cancel 和 delete 可以取消。两种方式都没有跨请求总时限。
 
-一次输入最多等待一个逻辑 handoff。该 handoff 的全部 provider 重试和未生成合法 handoff 文档的再次尝试共享有限次数与一个可配置的总时限；达到任一上限都直接创建新 generation。
+两种方式共用 `ContextApplied`：原子提交文档、原文保留范围和 carried tools，创建新 generation、重置主对话 anchor、保存 snapshot、释放旧 provider continuation。移动原文不重新 fold ToolResult 或执行工具，持久历史不删除。
 
-`HandoffApplied` 冻结当时未完成调用的 carried tools，包括内部 ID、工具名、参数和开始时间。新 generation 用固定描述说明这些调用在 handoff 时尚未完成，不伪造原调用的 provider call/result 对；后来的真实结果只追加通知。
+无文档降级是所有交接方式的兜底。文档为空、输出不合法、明确输出上限/内容过滤导致不完整或工具参数不能解码，都消耗有限的文档尝试次数；耗尽后原子写入 `ContextFailed` 和无文档的 `ContextApplied`，继续同一个 turn。provider 明确拒绝交接请求的上下文也走此出口；普通请求超限时，compaction 先尝试独立摘要，handoff 可直接降级。
 
-handoff 失败仍创建正常的新 generation。只有 handoff 文档可以缺失；未消费输入、carried tools、tool state、session 配置和其他应继承数据必须正常传递。同一原子批次先追加 agent 可见的 `HandoffFailed`，再追加职责单一的 `HandoffApplied`。
+只有文档可以缺失：未消费输入、未完成工具、未交付真实结果、tool state、session 配置和待处理通知必须保留，并提供 `history.list` 恢复指引。摘要/交接期间看到但未进入保留原文的结果仍须交付；已保留的结果不重复发送。普通网络、鉴权、限流等失败走独立 provider 重试，不能通过丢上下文处理；耗尽后按原规则结束 turn 为 Failed。
+
+### 7.4 独立摘要与最近原文（`COMPACTION-01`）
+
+compaction 使用当前 session 的模型与 thinking，独立请求摘要，不继承主对话 continuation、加密 reasoning 或缓存路由，不提供工具。输入是前次摘要/交接文档及将移出的旧前缀，要求保留任务、约束、决策理由、进展、关键文件命令、阻塞和下一步，不能执行原任务。非空纯文本即合法摘要，不强加格式 schema。
+
+最近原文默认目标为 20,000 个估计 token，由 `keep_recent_tokens` 配置，并限制在当前输入预算的一半内。只在完整 provider call/result 组之间切分，不以用户 turn 为最小单位，支持单个超长 turn；超过目标的原子组整体进入摘要。窗口大小估计不取代 API token anchor。
+
+摘要材料采用有界摘录：工具结果每条约 2,000 字节，其他历史条目约 16,000 字节；优先保留前次文档、最早任务和较新的旧前缀。总文本采用不大于输入 token 预算数值的保守字节上限，另有 1 MiB 内存保护上界，截断必须标记。摘要请求沿用所选 profile/model 的输出上限，不另设固定上限；adapter 只发送协议支持的字段。完整原文仍在历史中。
+
+工具结果摘录先保留有界的调用参数和实际执行元数据，再截取正文，避免源码输出挤掉 offset、退出码等证据。摘要应区分已读、已改、已验证和计划，保留硬性要求与具体下一步，并依据后续证据修正旧摘要；工具调用成功不表示所有附加参数均被使用。当前工具说明和后续观测优先于摘要中的历史描述。
+
+摘要文字及其流式 delta 不作为普通回复发布，原始请求结果、失败诊断和 usage 仍持久化。benchmark 总消耗包含摘要，并单列 compaction 次数和输入/输出 token；主对话上下文峰值不混入摘要请求。
+
+### 7.5 Handoff 文档（`HANDOFF-01`、`HANDOFF-02`、`HANDOFF-03`）
+
+`handoff` 不属于普通 ToolRegistry，不出现在初始工具列表、工具变化通知或 `tool.help` 查询结果中。它只在 handoff step 临时存在：runtime 必须把完整用法作为 user role notification 追加，明确要求不返回解释文本、不调用 `tool.help` 或任何其他逻辑工具，只提交一次 `{"tool":"handoff","arguments":{"document":"..."}}`。为保留同一 generation 的 provider continuation，固定 `call` schema 不变；runtime 直接拒绝且绝不执行该 step 中除唯一合法 `handoff` 外的任何调用。
+
+handoff step 不进入普通 ToolExecutor：runtime 要求恰好一个 `handoff` 调用，读取非空字符串 `document`，忽略未消费的附加字段。合法时原子保存 `StepCompleted` 与 `ContextApplied`，立即进入新 generation；handoff 不保留旧原文窗口。
+
+文档不合法时按共用规则留在原 generation 重试。原始输出由 `StepCompleted` 保存，其中的 provider call 只补失败 ToolResult 以满足协议配对，不执行逻辑工具。
+
+`ContextApplied` 冻结当时未完成调用的 carried tools，包括内部 ID、工具名、参数和开始时间。新 generation 说明这些调用在交接时尚未完成，不伪造原调用的 provider call/result 对；后来的真实结果只追加通知。
 
 ## 8. 动态工具
 
@@ -245,11 +273,12 @@ provider 只注册一个固定工具 `call`：
 
 `tool` 是逻辑工具完整名称，`arguments` 始终是 JSON object。tool version、provider call ID 和内部 ToolInvocation ULID 都由 runtime 添加，不由 agent填写。固定 schema 不枚举动态工具名。
 
-当前内置逻辑工具为：
+provider 即使违反该固定 schema，原始响应也仍按 `StepCompleted` 持久化；对应调用只在执行边界被拒绝并返回失败 ToolResult，不触发 provider step 重试。
+
+当前 ToolRegistry 注册的内置逻辑工具为（`handoff` 仅在 §7.5 的 handoff step 临时可用）：
 
 - `end`
 - `wait`
-- `handoff`
 - `tool.cancel`
 - `tool.help`
 - `history.list`
@@ -281,7 +310,7 @@ runner 只能比较 tool version 是否相等，不能解释格式或比较大�
 
 ### 8.3 Agent 已知版本与说明（`TOOL-05`、`TOOL-06`、`TOOL-07`）
 
-初始 generation 和 handoff 把当时所有工具的初始说明发给 agent，并把对应版本保存为 agent 已知版本。工具作者决定初始说明是完整说明，还是只说明用途和何时查询详细用法。
+初始 generation 和上下文交接把当时所有工具的初始说明发给 agent，并把对应版本保存为 agent 已知版本。工具作者决定初始说明是完整说明，还是只说明用途和何时查询详细用法。
 
 `tool.help` 按完整名称返回目标工具当前版本的最新详细说明，并更新该工具的 agent 已知版本。
 
@@ -293,7 +322,11 @@ runner 只能比较 tool version 是否相等，不能解释格式或比较大�
 
 一批 ToolInvocation 持久化后整体交给 ToolExecutor。并行度、排队和实际启动顺序由 ToolExecutor 管理，auto wait 不参与调度。
 
+所有工具调用都只消费 schema 声明的字段。runtime 在校验和执行前递归丢弃多余字段；已声明字段缺失或类型错误仍返回失败 ToolResult。provider 原始输出保留在 StepCompleted 中用于审计。
+
 内置工具在独立、受监督的 task 中执行。参数错误、返回错误、I/O 错误、超时、取消和 task panic 都转换成正常 ToolResult，不能炸掉 runner。
+
+执行表保留调用直到真实结果进入 runner 队列；runner 先读取执行表快照，再消费结果队列，不能把完成与投递之间的间隙误判为中断。停止 runner 时先关闭结果队列，避免队列背压阻塞工具收尾。
 
 第三方工具不能作为 native plugin 加载；需要第三方工具时使用 WASM 隔离。当前没有已确认的第三方工具 ABI，因此 runtime 不提前实现猜测 ABI。
 
@@ -304,6 +337,8 @@ runner 只能比较 tool version 是否相等，不能解释格式或比较大�
 ### 9.1 Turn（`TURN-01`、`TURN-02`）
 
 `end` 是 turn 正常结束的唯一信号。agent 只输出文字时，文字持久化并展示，但 turn 继续。
+
+只有成功执行的 `end` 才能结束 turn；失败结果返回 agent 后继续下一轮。
 
 agent 只输出文字或调用 `end` 时，runtime 都计算全部 outstanding 并把清单告诉 agent。`end` 默认不在 outstanding 存在时结束；agent 可以在看过清单后显式确认带着 outstanding 结束。
 
@@ -391,6 +426,8 @@ zork-agent 只保留一套无版本业务路由，不提供 `/v1` alias。Agent 
 
 session 只能由显式创建产生。只有持久化 `SessionCreated` 后 session 才存在；未知 session 的读取、提交、选择变化和取消返回 404，不能隐式创建空流。
 
+全局配置 `context` 是新 session 的默认值，`POST /sessions` 可用同名字段覆盖；创建和 `ContextConfigured` 原子持久化。`PUT /sessions/{id}/context` 修改该 session 的配置，`SessionView.context` 返回当前值。字段为 `strategy: compaction | handoff` 和 `keep_recent_tokens`，后者允许为零。
+
 ### 11.3 SSE（`SSE-01`、`SSE-02`、`SSE-03`）
 
 event ID 是 durable SSE cursor。首次连接、`Last-Event-ID` 重连和广播落后时，SSE 从 SessionQuery 补齐 cursor 之后的可发布 event；实时路径广播完整持久 event，而不是只广播“有变化”的信号。
@@ -411,6 +448,7 @@ events       当前 event schema 和 migration
 state        纯 fold 与 snapshot state migration
 decision     Decision 与 outstanding
 projection   generation/provider transcript
+context      独立摘要材料与安全原文切分（纯计算）
 model        唯一 ModelGateway 词汇和端口
 tools        ToolRegistry 与工具纯兼容逻辑
 executor     受监督 ToolExecutor

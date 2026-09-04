@@ -8,7 +8,7 @@ use ulid::Ulid;
 use super::event_id::EventId;
 use super::log::{
     commits_forward, commits_reverse, first_event_id, history_records_forward, latest_segment,
-    segment_paths, snapshots_reverse, EventEnvelope, HistoryRecord,
+    segment_paths, snapshots_reverse, EventEnvelope, HistoryReader, HistoryRecord,
     SnapshotWindow as LogSnapshotWindow, StreamItem,
 };
 
@@ -227,11 +227,12 @@ impl FileSessionQuery {
         let mut events = VecDeque::with_capacity(limit.min(128));
         for segment in (0..=end_segment).rev() {
             let needed = limit.saturating_sub(events.len());
-            let mut local = VecDeque::<Vec<u8>>::with_capacity(needed.min(128));
+            let mut visible_count = 0usize;
             let mut found = cursor.is_none() || segment != end_segment;
             let mut last_event_id = String::new();
             let path = indexed[segment].1.clone();
-            self.stream_history_records(session_id, std::slice::from_ref(&path), &mut |record| {
+            let mut reader = HistoryReader::open(&path)?;
+            self.stream_history_reader(session_id, &mut reader, &mut |record| {
                 if segment < end_segment {
                     last_event_id.clear();
                     last_event_id.push_str(record.event_id);
@@ -241,10 +242,7 @@ impl FileSessionQuery {
                     return Ok(true);
                 }
                 if record.visible && needed > 0 {
-                    if local.len() == needed {
-                        local.pop_front();
-                    }
-                    local.push_back(record.line.to_vec());
+                    visible_count += 1;
                 }
                 Ok(false)
             })?;
@@ -264,8 +262,32 @@ impl FileSessionQuery {
                     indexed[segment + 1].1.display()
                 )));
             }
-            for line in local.into_iter().rev() {
-                events.push_front(decode_history_line(&path, &line)?);
+            // Locate the tail first, then allocate only returned payloads.
+            // This avoids allocator pressure from repeatedly discarding large
+            // events while scanning compressed segments forwards.
+            let count = visible_count.min(needed);
+            let mut skip = visible_count - count;
+            let mut local = Vec::with_capacity(count);
+            if count > 0 {
+                self.stream_history_reader(session_id, &mut reader, &mut |record| {
+                    if record.visible {
+                        if skip > 0 {
+                            skip -= 1;
+                        } else {
+                            local.push(decode_history_record(&record)?);
+                        }
+                    }
+                    Ok(local.len() == count)
+                })?;
+                if local.len() != count {
+                    return Err(QueryError::InvalidLog(format!(
+                        "segment {} changed while reading history",
+                        path.display()
+                    )));
+                }
+            }
+            for event in local.into_iter().rev() {
+                events.push_front(event);
             }
             if events.len() == limit {
                 break;
@@ -340,6 +362,59 @@ impl FileSessionQuery {
         })?;
         fault.map_or(Ok(()), Err)
     }
+    fn stream_history_reader(
+        &self,
+        session_id: &str,
+        reader: &mut HistoryReader,
+        visit: &mut dyn FnMut(HistoryRecord<'_>) -> Result<bool, QueryError>,
+    ) -> Result<(), QueryError> {
+        let session_ulid = parse_session_id(session_id)?;
+        let mut fault = None;
+        reader.scan(session_ulid, &mut |item| match item {
+            StreamItem::Value(record) => match visit(record) {
+                Ok(stop) => stop,
+                Err(error) => {
+                    fault = Some(error);
+                    true
+                }
+            },
+            StreamItem::Fault(error) => {
+                fault = Some(QueryError::InvalidLog(error));
+                true
+            }
+        })?;
+        fault.map_or(Ok(()), Err)
+    }
+}
+
+fn discover_session(entry: std::fs::DirEntry) -> Result<Option<SessionDiscovery>, QueryError> {
+    let Some(session_id) = entry.file_name().to_str().map(str::to_owned) else {
+        return Ok(None);
+    };
+    if session_id.parse::<Ulid>().is_err() || !entry.path().is_dir() {
+        return Ok(None);
+    }
+    let mut latest = None;
+    let mut last_activity_ms = 0;
+    for path in segment_paths(&entry.path().join("segments"))? {
+        let modified = path
+            .metadata()?
+            .modified()
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
+            .unwrap_or(0);
+        last_activity_ms = last_activity_ms.max(modified);
+        latest = Some(path);
+    }
+    Ok(Some(SessionDiscovery {
+        read_hint: SessionReadHint {
+            session_id: session_id.clone(),
+            latest_segment: latest,
+        },
+        session_id,
+        last_activity_ms,
+    }))
 }
 
 impl SessionQuery for FileSessionQuery {
@@ -348,37 +423,43 @@ impl SessionQuery for FileSessionQuery {
     }
 
     fn discover_sessions(&self) -> Result<Vec<SessionDiscovery>, QueryError> {
-        let mut sessions = Vec::new();
-        for entry in std::fs::read_dir(&self.root)? {
-            let entry = entry?;
-            let Some(session_id) = entry.file_name().to_str().map(str::to_owned) else {
-                continue;
-            };
-            if !entry.path().is_dir() || session_id.parse::<Ulid>().is_err() {
-                continue;
+        // Directory entries are consumed once; only independent metadata I/O
+        // runs in parallel. Keep a small fixed upper bound even on big hosts.
+        let entries = std::sync::Mutex::new(std::fs::read_dir(&self.root)?);
+        let workers = std::thread::available_parallelism()
+            .map(usize::from)
+            .unwrap_or(1)
+            .min(4);
+        let mut sessions = std::thread::scope(|scope| {
+            let handles = (0..workers)
+                .map(|_| {
+                    scope.spawn(|| -> Result<Vec<SessionDiscovery>, QueryError> {
+                        let mut sessions = Vec::new();
+                        loop {
+                            let next = entries
+                                .lock()
+                                .expect("session directory iterator poisoned")
+                                .next();
+                            let Some(entry) = next else {
+                                break;
+                            };
+                            if let Some(session) = discover_session(entry?)? {
+                                sessions.push(session);
+                            }
+                        }
+                        Ok(sessions)
+                    })
+                })
+                .collect::<Vec<_>>();
+            let mut sessions = Vec::new();
+            for handle in handles {
+                let batch = handle
+                    .join()
+                    .map_err(|_| std::io::Error::other("session discovery worker panicked"))??;
+                sessions.extend(batch);
             }
-            let mut latest = None;
-            let mut last_activity_ms = 0;
-            for path in segment_paths(&entry.path().join("segments"))? {
-                let modified = path
-                    .metadata()?
-                    .modified()
-                    .ok()
-                    .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
-                    .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
-                    .unwrap_or(0);
-                last_activity_ms = last_activity_ms.max(modified);
-                latest = Some(path);
-            }
-            sessions.push(SessionDiscovery {
-                read_hint: SessionReadHint {
-                    session_id: session_id.clone(),
-                    latest_segment: latest,
-                },
-                session_id,
-                last_activity_ms,
-            });
-        }
+            Ok::<_, QueryError>(sessions)
+        })?;
         sessions.sort_by(|left, right| {
             right
                 .last_activity_ms
@@ -521,7 +602,7 @@ fn decode_history_record(record: &HistoryRecord<'_>) -> Result<EventEnvelope, Qu
 }
 
 fn decode_history_line(path: &Path, line: &[u8]) -> Result<EventEnvelope, QueryError> {
-    serde_json::from_slice(line).map_err(|error| {
+    super::log::decode_envelope(line).map_err(|error| {
         QueryError::InvalidLog(format!(
             "segment {} has an unmigratable commit: {error}",
             path.display()

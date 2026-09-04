@@ -154,6 +154,7 @@ impl SessionSupervisor {
         selection: Selection,
         system_prompt: Option<String>,
         workspace: String,
+        context: Option<zork_config::ContextConfig>,
     ) -> Result<String, SupervisorError> {
         let capacity = self.try_global_capacity()?;
         let session_id = loop {
@@ -187,6 +188,7 @@ impl SessionSupervisor {
                 selection,
                 system_prompt,
                 workspace,
+                context,
                 response,
                 capacity: Some(capacity),
             },
@@ -228,6 +230,26 @@ impl SessionSupervisor {
             &slot,
             RunnerCommand::SetSelection {
                 selection,
+                response,
+                capacity: Some(capacity),
+            },
+        )
+        .await?;
+        await_response(received).await
+    }
+
+    pub async fn set_context(
+        self: &Arc<Self>,
+        session_id: &str,
+        config: zork_config::ContextConfig,
+    ) -> Result<(), SupervisorError> {
+        let slot = self.lookup(session_id)?;
+        let capacity = self.try_global_capacity()?;
+        let (response, received) = tokio::sync::oneshot::channel();
+        self.dispatch_external(
+            &slot,
+            RunnerCommand::SetContext {
+                config,
                 response,
                 capacity: Some(capacity),
             },

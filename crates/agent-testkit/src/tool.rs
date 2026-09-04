@@ -68,10 +68,9 @@ impl PendingToolRequest {
         self.response.send(result).map_err(|_| ToolRequestClosed)
     }
 
-    pub fn succeed(self, message: impl Into<String>, data: Value) -> Result<(), ToolRequestClosed> {
+    pub fn succeed(self, data: Value) -> Result<(), ToolRequestClosed> {
         self.respond(ToolExecution {
             outcome: ToolOutcome::Succeeded,
-            message: message.into(),
             data,
             result_schema_version: 1,
             knowledge: None,
@@ -81,8 +80,7 @@ impl PendingToolRequest {
     pub fn fail(self, message: impl Into<String>) -> Result<(), ToolRequestClosed> {
         self.respond(ToolExecution {
             outcome: ToolOutcome::Failed,
-            message: message.into(),
-            data: Value::Object(Default::default()),
+            data: serde_json::json!({"error": message.into()}),
             result_schema_version: 1,
             knowledge: None,
         })
@@ -123,8 +121,7 @@ impl ToolImplementation for ControlledToolImplementation {
 fn failed_execution(message: impl Into<String>) -> ToolExecution {
     ToolExecution {
         outcome: ToolOutcome::Failed,
-        message: message.into(),
-        data: Value::Object(Default::default()),
+        data: serde_json::json!({"error": message.into()}),
         result_schema_version: 1,
         knowledge: None,
     }

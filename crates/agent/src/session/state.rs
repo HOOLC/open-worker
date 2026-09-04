@@ -53,17 +53,21 @@ pub enum GenerationEntry {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct GenerationState {
     pub number: u64,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub handoff_document: Option<String>,
+    #[serde(
+        default,
+        alias = "handoff_document",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub document: Option<String>,
     pub tools: Vec<ToolIntroduction>,
     pub entries: Vec<GenerationEntry>,
 }
 
 impl GenerationState {
-    fn new(number: u64, handoff_document: Option<String>, tools: Vec<ToolIntroduction>) -> Self {
+    fn new(number: u64, document: Option<String>, tools: Vec<ToolIntroduction>) -> Self {
         Self {
             number,
-            handoff_document,
+            document,
             tools,
             entries: Vec::new(),
         }
@@ -77,14 +81,19 @@ pub struct ActiveTurn {
     pub cancel_requested: bool,
     pub consecutive_provider_failures: u32,
     pub provider_retry_allowed: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub handoff: Option<HandoffProgress>,
+    #[serde(default, alias = "handoff", skip_serializing_if = "Option::is_none")]
+    pub context: Option<ContextProgress>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct HandoffProgress {
-    pub started_at_ms: i64,
+pub struct ContextProgress {
+    #[serde(default = "super::events::handoff_purpose")]
+    pub purpose: Purpose,
     pub attempts: u32,
+    #[serde(default)]
+    pub source_entries: usize,
+    #[serde(default)]
+    pub retain_from: usize,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -105,6 +114,8 @@ pub struct ActiveStep {
     pub consumed_inputs: Vec<Input>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_output_tokens: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_budget: Option<u64>,
     pub started_at_ms: i64,
 }
 
@@ -161,6 +172,8 @@ pub struct SessionState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub system_prompt: Option<String>,
     pub workspace: String,
+    #[serde(default)]
+    pub context_config: zork_config::ContextConfig,
 
     pub generation: GenerationState,
     pub unconsumed_inputs: Vec<Input>,
@@ -196,6 +209,7 @@ impl SessionState {
             selection: None,
             system_prompt: None,
             workspace: String::new(),
+            context_config: zork_config::ContextConfig::default(),
             generation: GenerationState::new(0, None, Vec::new()),
             unconsumed_inputs: Vec::new(),
             active_turn: None,
@@ -215,6 +229,10 @@ impl SessionState {
 
     pub fn is_created(&self) -> bool {
         self.created_at_ms.is_some()
+    }
+
+    pub fn context_progress(&self) -> Option<&ContextProgress> {
+        self.active_turn.as_ref()?.context.as_ref()
     }
 
     pub fn apply(&mut self, event: &SessionEvent, tools: &ToolRegistry) -> Result<(), FoldError> {
@@ -245,6 +263,9 @@ impl SessionState {
                 self.selection = Some(selection.clone());
                 self.token_anchor = None;
             }
+            SessionEvent::ContextConfigured { config } => {
+                self.context_config = config.clone();
+            }
             SessionEvent::TurnStarted {
                 turn_id,
                 started_at_ms,
@@ -258,7 +279,7 @@ impl SessionState {
                     cancel_requested: false,
                     consecutive_provider_failures: 0,
                     provider_retry_allowed: true,
-                    handoff: None,
+                    context: None,
                 });
                 self.last_turn_outcome = None;
             }
@@ -305,6 +326,7 @@ impl SessionState {
                 notices,
                 outstanding,
                 max_output_tokens,
+                input_budget,
                 started_at_ms,
             } => self.apply_step_started(
                 step_id,
@@ -316,19 +338,23 @@ impl SessionState {
                 notices,
                 outstanding,
                 *max_output_tokens,
+                *input_budget,
                 *started_at_ms,
             ),
             SessionEvent::StepCompleted {
                 step_id,
+                purpose,
                 assistant_text,
                 provider_calls,
                 invocations,
                 auto_wait_deadline_ms,
                 usage,
                 provider_context,
+                provider_input: _,
                 completed_at_ms,
             } => self.apply_step_completed(
                 step_id,
+                *purpose,
                 assistant_text,
                 provider_calls,
                 invocations,
@@ -338,6 +364,7 @@ impl SessionState {
                 *completed_at_ms,
             ),
             SessionEvent::StepFailed { step_id, error, .. } => {
+                self.update_token_anchor(step_id, error.usage.as_ref());
                 let purpose = self
                     .active_step
                     .as_ref()
@@ -366,9 +393,17 @@ impl SessionState {
                 }
                 self.close_step(step_id, "failed");
                 if let Some(turn) = &mut self.active_turn {
-                    turn.consecutive_provider_failures =
-                        turn.consecutive_provider_failures.saturating_add(1);
-                    turn.provider_retry_allowed = error.retryable;
+                    if purpose.is_context() && error.is_invalid_document() {
+                        if let Some(progress) = &mut turn.context {
+                            progress.attempts = progress.attempts.saturating_add(1);
+                        }
+                        turn.consecutive_provider_failures = 0;
+                        turn.provider_retry_allowed = true;
+                    } else {
+                        turn.consecutive_provider_failures =
+                            turn.consecutive_provider_failures.saturating_add(1);
+                        turn.provider_retry_allowed = error.retryable;
+                    }
                 }
                 self.last_step_failure = Some(StepFailureState {
                     purpose,
@@ -389,9 +424,9 @@ impl SessionState {
                             "Provider step {step_id} was interrupted during runtime recovery because it had no durable outcome."
                         ));
                     }
-                    super::events::StepInterruptionReason::HandoffTimeout => {
+                    super::events::StepInterruptionReason::LegacyHandoffTimeout => {
                         self.pending_notices.push(format!(
-                            "Provider step {step_id} was interrupted because context handoff reached its total timeout."
+                            "Provider step {step_id} was interrupted by a handoff timeout from an older runtime."
                         ));
                     }
                     super::events::StepInterruptionReason::TurnCancelled => {}
@@ -427,18 +462,25 @@ impl SessionState {
                 }
             }
             SessionEvent::ToolResult { result } => self.apply_tool_result(result, tools),
-            SessionEvent::HandoffFailed { message, .. } => {
+            SessionEvent::ContextFailed { message, .. } => {
                 self.pending_notices.push(format!(
-                    "Context handoff completed without a handoff document: {message}"
+                    "Context transition completed without a document: {message}. Continue the SAME turn and task. Session configuration, workspace, tool states, new inputs and undelivered tool results are preserved. Recover earlier instructions and progress with history.list({{\"limit\":100}}); page backward using before_event_id. Do not assume the task has finished or repeat completed tools."
                 ));
             }
-            SessionEvent::HandoffApplied {
+            SessionEvent::ContextApplied {
                 generation,
                 document,
+                retained,
                 tools,
                 carried_tools,
                 ..
-            } => self.apply_handoff(*generation, document, tools, carried_tools),
+            } => self.apply_context(
+                *generation,
+                document,
+                retained.clone(),
+                tools,
+                carried_tools,
+            ),
             SessionEvent::DeadlineReached {
                 deadline,
                 reached_at_ms,
@@ -504,6 +546,7 @@ impl SessionState {
         notices: &[String],
         outstanding: &[OutstandingItem],
         max_output_tokens: Option<u32>,
+        input_budget: Option<u64>,
         started_at_ms: i64,
     ) {
         if self.active_step.is_some() {
@@ -533,6 +576,7 @@ impl SessionState {
                 .pending_notices
                 .iter()
                 .position(|pending| pending == notice)
+                .filter(|_| purpose == Purpose::Conversation)
             {
                 self.pending_notices.remove(index);
             }
@@ -562,6 +606,9 @@ impl SessionState {
             });
         }
 
+        // Maintenance may show a result to the summarizer/handoff model, but
+        // cannot consume the ordinary turn's only durable copy of that result.
+        let preserve_results = purpose.is_context() && self.context_progress().is_none();
         for delivery in deliveries {
             match delivery {
                 ToolDelivery::Pending { invocation } => {
@@ -570,7 +617,14 @@ impl SessionState {
                     }
                 }
                 ToolDelivery::Result { invocation, .. } => {
-                    self.pending_tools.remove(&invocation.invocation_id);
+                    if preserve_results {
+                        if let Some(pending) = self.pending_tools.get_mut(&invocation.invocation_id)
+                        {
+                            pending.delivery = ToolDeliveryState::PendingSent;
+                        }
+                    } else {
+                        self.pending_tools.remove(&invocation.invocation_id);
+                    }
                 }
             }
             self.generation.entries.push(GenerationEntry::ToolDelivery {
@@ -592,21 +646,25 @@ impl SessionState {
             request_entries: self.generation.entries.len(),
             consumed_inputs: consumed,
             max_output_tokens,
+            input_budget,
             started_at_ms,
         });
-        if purpose == Purpose::Handoff {
+        if purpose.is_context() && self.context_progress().is_none() {
+            let source_entries = self.generation.entries.len();
+            let keep_tokens = u64::from(self.context_config.keep_recent_tokens)
+                .min(input_budget.map_or(u64::MAX, |budget| budget / 2));
+            let retain_from = if purpose == Purpose::Compaction {
+                super::context::retention_start(&self.generation.entries, keep_tokens)
+            } else {
+                source_entries
+            };
             if let Some(turn) = &mut self.active_turn {
-                match &mut turn.handoff {
-                    Some(progress) => {
-                        progress.attempts = progress.attempts.saturating_add(1);
-                    }
-                    None => {
-                        turn.handoff = Some(HandoffProgress {
-                            started_at_ms,
-                            attempts: 1,
-                        });
-                    }
-                }
+                turn.context = Some(ContextProgress {
+                    purpose,
+                    attempts: 0,
+                    source_entries,
+                    retain_from,
+                });
             }
         }
         self.last_step_failure = None;
@@ -616,6 +674,7 @@ impl SessionState {
     fn apply_step_completed(
         &mut self,
         step_id: &str,
+        completed_purpose: Purpose,
         assistant_text: &str,
         provider_calls: &[ProviderToolCall],
         invocations: &[ToolInvocation],
@@ -628,27 +687,36 @@ impl SessionState {
             .active_step
             .as_ref()
             .filter(|step| step.step_id == step_id);
-        let request_entries =
-            active_step.map_or(self.generation.entries.len(), |step| step.request_entries);
-        let selection_is_current =
-            active_step.and_then(|step| step.selection.as_ref()) == self.selection.as_ref();
+        let purpose = active_step.map_or(completed_purpose, |step| step.purpose);
+        self.update_token_anchor(step_id, usage.as_ref());
         self.close_step(step_id, "completed");
 
-        if provider_calls.len() != invocations.len() {
+        if purpose != Purpose::Compaction && provider_calls.len() != invocations.len() {
             self.diagnose(format!(
                 "Step {step_id} persisted {} provider calls and {} logical invocations.",
                 provider_calls.len(),
                 invocations.len()
             ));
         }
-        self.generation.entries.push(GenerationEntry::Assistant {
-            step_id: step_id.to_owned(),
-            text: assistant_text.to_owned(),
-            provider_calls: provider_calls.to_vec(),
-            invocations: invocations.to_vec(),
-            usage: usage.clone(),
-            provider_context: provider_context.clone(),
-        });
+        if purpose != Purpose::Compaction {
+            self.generation.entries.push(GenerationEntry::Assistant {
+                step_id: step_id.to_owned(),
+                text: assistant_text.to_owned(),
+                provider_calls: provider_calls.to_vec(),
+                invocations: invocations.to_vec(),
+                usage: usage.clone(),
+                provider_context: provider_context.clone(),
+            });
+        }
+        if purpose.is_context() {
+            if let Some(progress) = self
+                .active_turn
+                .as_mut()
+                .and_then(|turn| turn.context.as_mut())
+            {
+                progress.attempts = progress.attempts.saturating_add(1);
+            }
+        }
 
         for invocation in invocations {
             if self.pending_tools.contains_key(&invocation.invocation_id) {
@@ -680,15 +748,6 @@ impl SessionState {
                 deadline_ms: deadline,
             });
 
-        if selection_is_current {
-            if let Some(usage) = usage {
-                self.token_anchor = Some(TokenAnchor {
-                    input_tokens: usage.input_tokens,
-                    generation: self.generation.number,
-                    entries: request_entries,
-                });
-            }
-        }
         if let Some(turn) = &mut self.active_turn {
             turn.consecutive_provider_failures = 0;
             turn.provider_retry_allowed = true;
@@ -701,6 +760,26 @@ impl SessionState {
                 self.fault_streak = None;
             }
         }
+    }
+
+    fn update_token_anchor(&mut self, step_id: &str, usage: Option<&Usage>) {
+        let Some(usage) = usage else {
+            return;
+        };
+        let Some(step) = self
+            .active_step
+            .as_ref()
+            .filter(|step| step.step_id == step_id)
+            .filter(|step| step.purpose != Purpose::Compaction)
+            .filter(|step| step.selection.as_ref() == self.selection.as_ref())
+        else {
+            return;
+        };
+        self.token_anchor = Some(TokenAnchor {
+            input_tokens: usage.input_tokens,
+            generation: self.generation.number,
+            entries: step.request_entries,
+        });
     }
 
     fn close_step(&mut self, step_id: &str, verb: &str) {
@@ -719,20 +798,28 @@ impl SessionState {
     }
 
     fn apply_tool_result(&mut self, result: &ToolResultData, tools: &ToolRegistry) {
-        self.apply_tool_knowledge(result.knowledge.as_ref());
-        self.fold_tool_state(result, tools);
+        let rejected = self
+            .pending_tools
+            .get(&result.invocation_id)
+            .is_some_and(|pending| pending.invocation.rejection.is_some());
+        if !rejected {
+            self.apply_tool_knowledge(result.knowledge.as_ref());
+            self.fold_tool_state(result, tools);
+        }
 
         match self.pending_tools.get_mut(&result.invocation_id) {
             Some(pending) if pending.result.is_none() => {
                 pending.result = Some(result.clone());
             }
             _ => self.pending_notices.push(format!(
-                "Tool result {} arrived for invocation {} but did not match a currently pending invocation. Tool: {}. Outcome: {:?}. Message: {}",
-                result.result_id, result.invocation_id, result.tool, result.outcome, result.message
+                "A result arrived for invocation {} but did not match a currently pending invocation. Tool: {}. Outcome: {:?}. Data: {}",
+                result.invocation_id, result.tool, result.outcome, result.data
             )),
         }
 
-        if result.tool == WAIT_TOOL_NAME && result.outcome == super::events::ToolOutcome::Succeeded
+        if !rejected
+            && result.tool == WAIT_TOOL_NAME
+            && result.outcome == super::events::ToolOutcome::Succeeded
         {
             if let Some(deadline_ms) = result.data.get("until_ms").and_then(Value::as_i64) {
                 self.wait_deadline = Some(WaitDeadline {
@@ -758,8 +845,8 @@ impl SessionState {
     fn fold_tool_state(&mut self, result: &ToolResultData, tools: &ToolRegistry) {
         let Some(compatibility) = tools.compatibility(&result.tool) else {
             self.diagnose(format!(
-                "No compatibility logic is available for tool result {} from {}.",
-                result.result_id, result.tool
+                "No compatibility logic is available for the result of invocation {} from {}.",
+                result.invocation_id, result.tool
             ));
             return;
         };
@@ -768,8 +855,8 @@ impl SessionState {
                 Ok(result) => result,
                 Err(error) => {
                     self.diagnose(format!(
-                        "Tool {} result {} could not be migrated: {error}",
-                        result.tool, result.result_id
+                        "Tool {} result for invocation {} could not be migrated: {error}",
+                        result.tool, result.invocation_id
                     ));
                     return;
                 }
@@ -779,8 +866,8 @@ impl SessionState {
                 Ok(state) => Some(state),
                 Err(error) => {
                     self.diagnose(format!(
-                        "Tool {} state could not be migrated before result {}: {error}",
-                        result.tool, result.result_id
+                        "Tool {} state could not be migrated before the result for invocation {}: {error}",
+                        result.tool, result.invocation_id
                     ));
                     return;
                 }
@@ -795,32 +882,51 @@ impl SessionState {
                 self.tool_states.remove(&result.tool);
             }
             Err(error) => self.diagnose(format!(
-                "Tool {} result {} could not be folded: {error}",
-                result.tool, result.result_id
+                "Tool {} result for invocation {} could not be folded: {error}",
+                result.tool, result.invocation_id
             )),
         }
     }
 
-    fn apply_handoff(
+    fn apply_context(
         &mut self,
         generation: u64,
         document: &Option<String>,
+        retained: std::ops::Range<usize>,
         tools: &[ToolIntroduction],
         carried_tools: &[ToolInvocation],
     ) {
         if generation <= self.generation.number {
             self.diagnose(format!(
-                "Handoff selected generation {generation} after generation {}.",
+                "Context transition selected generation {generation} after generation {}.",
                 self.generation.number
             ));
         }
 
+        let retained_results = self
+            .generation
+            .entries
+            .iter()
+            .take(retained.end)
+            .skip(retained.start)
+            .filter_map(|entry| match entry {
+                GenerationEntry::ToolDelivery {
+                    delivery: ToolDelivery::Result { invocation, .. },
+                } => Some(invocation.invocation_id.as_str()),
+                _ => None,
+            })
+            .collect::<BTreeSet<_>>();
         let carried_ids: BTreeSet<_> = carried_tools
             .iter()
             .map(|invocation| invocation.invocation_id.as_str())
             .collect();
-        self.pending_tools
-            .retain(|id, _| carried_ids.contains(id.as_str()));
+        self.pending_tools.retain(|id, pending| {
+            carried_ids.contains(id.as_str())
+                || (pending.result.is_some() && !retained_results.contains(id.as_str()))
+        });
+        for pending in self.pending_tools.values_mut() {
+            pending.delivery = ToolDeliveryState::PendingSent;
+        }
         for invocation in carried_tools {
             self.pending_tools
                 .entry(invocation.invocation_id.clone())
@@ -833,7 +939,30 @@ impl SessionState {
                 });
         }
 
+        let entries = std::mem::take(&mut self.generation.entries);
         self.generation = GenerationState::new(generation, document.clone(), tools.to_vec());
+        self.generation.entries.extend(
+            entries
+                .into_iter()
+                .take(retained.end)
+                .skip(retained.start)
+                .filter_map(|mut entry| {
+                    // A rejected ordinary request restores its inputs to the
+                    // mailbox. Don't also retain a second copy in the new prefix.
+                    if let GenerationEntry::Inputs { inputs } = &mut entry {
+                        inputs.retain(|input| {
+                            !self
+                                .unconsumed_inputs
+                                .iter()
+                                .any(|pending| pending.input_id == input.input_id)
+                        });
+                        if inputs.is_empty() {
+                            return None;
+                        }
+                    }
+                    Some(entry)
+                }),
+        );
         if !carried_tools.is_empty() {
             self.generation.entries.push(GenerationEntry::CarriedTools {
                 invocations: carried_tools.to_vec(),
@@ -847,7 +976,7 @@ impl SessionState {
         if let Some(turn) = &mut self.active_turn {
             turn.consecutive_provider_failures = 0;
             turn.provider_retry_allowed = true;
-            turn.handoff = None;
+            turn.context = None;
         }
     }
 

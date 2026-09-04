@@ -31,6 +31,7 @@ pub struct PendingModelRequest {
     pub transcript: Arc<Vec<ProviderMessage>>,
     pub tools: Arc<Vec<ToolDefinition>>,
     pub max_output_tokens: Option<u32>,
+    pub independent: bool,
     stream_observer: Arc<dyn ModelStreamObserver>,
     response: tokio::sync::oneshot::Sender<ControlledReply>,
 }
@@ -162,6 +163,7 @@ impl ModelGateway for ControlledModelGateway {
             transcript: request.transcript.clone(),
             tools: request.tools.clone(),
             max_output_tokens: request.max_output_tokens,
+            independent: request.independent,
             stream_observer: request.stream_observer.clone(),
             response,
         };

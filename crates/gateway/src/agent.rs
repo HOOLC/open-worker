@@ -238,6 +238,7 @@ pub async fn create_session(
     })?;
     let response = authenticate(config, http.post(format!("{}/sessions", base_url(config))))
         .json(&CreateSessionRequest {
+            context: None,
             profile_id: selection.profile_id.clone(),
             model: selection.model.clone(),
             thinking: selection.thinking.clone(),
@@ -304,6 +305,42 @@ pub async fn update_selection(
         });
     }
     Ok(updated)
+}
+
+/// Context policy lives only in Agent state; the Gateway does not cache or
+/// independently persist a second copy.
+pub async fn session_context(
+    config: &RuntimeConfig,
+    session_id: &str,
+    update: Option<&zork_agent_api::ContextConfig>,
+) -> std::result::Result<zork_agent_api::ContextConfig, AgentHttpError> {
+    let http = client().map_err(|error| AgentHttpError {
+        status: StatusCode::BAD_GATEWAY,
+        message: error.to_string(),
+    })?;
+    let url = format!("{}/sessions/{session_id}", base_url(config));
+    let request = match update {
+        Some(context) => http.put(format!("{url}/context")).json(context),
+        None => http.get(url),
+    };
+    let response = authenticate(config, request)
+        .send()
+        .await
+        .map_err(|error| AgentHttpError {
+            status: StatusCode::BAD_GATEWAY,
+            message: error.to_string(),
+        })?;
+    let session: SessionView =
+        response_json_with_status(response, StatusCode::OK, "session context").await?;
+    if session.session_id != session_id
+        || update.is_some_and(|expected| expected != &session.context)
+    {
+        return Err(AgentHttpError {
+            status: StatusCode::BAD_GATEWAY,
+            message: "zork-agent returned a different session context".into(),
+        });
+    }
+    Ok(session.context)
 }
 
 pub async fn append_mailbox(config: &RuntimeConfig, session_id: &str, content: &str) -> Result<()> {

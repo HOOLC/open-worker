@@ -148,13 +148,24 @@ pub fn measure_query_pressure(
     }
     let requests = pressure_requests(manifest, query_count, max_query_events)?;
     let query = FileSessionQuery::open(data_root);
+    eprintln!("pressure initial peak RSS: {:?}", peak_rss_bytes());
     let warmup_started = Instant::now();
     run_pressure_requests(&query, &requests, 1)?;
     let warmup = warmup_started.elapsed();
+    eprintln!(
+        "pressure warmup completed in {:.2}s; peak RSS {:?}",
+        warmup.as_secs_f64(),
+        peak_rss_bytes()
+    );
 
     let mut modes = Vec::with_capacity(worker_counts.len());
     for workers in worker_counts.iter().copied() {
         let (elapsed, latencies) = run_pressure_requests(&query, &requests, workers)?;
+        eprintln!(
+            "pressure: {workers} workers completed {query_count} queries in {:.2}s; peak RSS {:?}",
+            elapsed.as_secs_f64(),
+            peak_rss_bytes()
+        );
         modes.push(QueryPressureMode {
             workers,
             elapsed,

@@ -36,6 +36,8 @@ pub struct ModelRequest {
     pub transcript: Arc<Vec<ProviderMessage>>,
     pub tools: Arc<Vec<ToolDefinition>>,
     pub max_output_tokens: Option<u32>,
+    /// One-off context preparation must not reuse or alter conversation continuation.
+    pub independent: bool,
     pub stream_observer: Arc<dyn ModelStreamObserver>,
 }
 
@@ -71,7 +73,7 @@ pub struct ModelOutcome {
     pub provider_input: Option<Box<ProviderInputDiagnostics>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ModelTokenUsage {
     pub input_tokens: u64,
     pub cached_input_tokens: Option<u64>,
@@ -89,6 +91,7 @@ pub struct ProviderFailure {
     pub request_id: Option<String>,
     pub message: String,
     pub provider_input: Option<Box<ProviderInputDiagnostics>>,
+    pub usage: Option<Box<ModelTokenUsage>>,
 }
 
 impl ProviderFailure {
@@ -101,6 +104,7 @@ impl ProviderFailure {
             request_id: None,
             message: message.into(),
             provider_input: None,
+            usage: None,
         }
     }
 
@@ -123,7 +127,6 @@ pub enum ModelError {
     InvalidSelection,
     ProfileUnavailable,
     ProviderFailed(ProviderFailure),
-    InvalidToolArguments,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -148,6 +151,7 @@ mod tests {
             request_id: None,
             message: message.to_owned(),
             provider_input: None,
+            usage: None,
         }
     }
 

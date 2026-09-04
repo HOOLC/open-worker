@@ -43,7 +43,7 @@ async fn tool_help_always_returns_the_targets_current_detailed_contract() {
             &json!({"tool": "file.read"}),
         )
         .await;
-    assert_eq!(result.message, "detailed file.read");
+    assert_eq!(result.data["description"], "detailed file.read");
     assert_eq!(result.data["version"], "v2");
     assert!(matches!(
         result.knowledge,
@@ -118,7 +118,7 @@ async fn each_logical_tool_updates_and_resolves_its_own_opaque_version() {
         )
         .await;
     assert_eq!(result.outcome, ToolOutcome::Succeeded);
-    assert_eq!(result.message, "old");
+    assert_eq!(result.data, "old");
 }
 
 struct MarkerCompatibility(&'static str);

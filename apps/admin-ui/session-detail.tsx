@@ -3,6 +3,7 @@ import { getAdminStatusSnapshot, getTimelineSnapshot, subscribeAdminStatus, subs
 import { adminSessionPath, requestJson, slackThreadUrlApiPath } from "./session-api.js";
 
 import { Badge } from "./session-badge.js";
+import { SessionContextPanel } from "./session-context.js";
 
 import { classSafeValue, fmtDateTime, fmtRelativeTime } from "./session-formatters.js";
 
@@ -203,6 +204,7 @@ export function SessionActions({ session, isPermalink }: { readonly session: Ses
   return (
     <div className="side-action-stack">
       <SessionSelectionPanel session={session} />
+      <SessionContextPanel session={session} />
       <GitHubIdentityPanel session={session} />
       <SessionResetButton session={session} />
       <div className="side-link-grid">

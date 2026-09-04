@@ -89,13 +89,13 @@ fn main() {
     let peak_rss = report
         .peak_rss_bytes
         .expect("the pressure benchmark requires Unix RSS measurement");
+    print_report(&report);
     assert!(
         peak_rss <= MAX_PEAK_RSS_BYTES,
         "query pressure peak RSS was {:.1} MiB, exceeding {:.1} MiB",
         mib(peak_rss),
         mib(MAX_PEAK_RSS_BYTES),
     );
-    print_report(&report);
 }
 
 fn run_measurement_child(arguments: &[String]) {

@@ -71,7 +71,7 @@ async fn virtual_world_can_pause_assert_and_continue_at_effect_boundaries() {
         .any(|message| message.content.contains("message during auto wait")));
 
     pending_echo
-        .succeed("echo completed", json!({"value": "one"}))
+        .succeed(json!({"message": "echo completed", "value": "one"}))
         .unwrap();
     second
         .respond_text("I will incorporate the result.")
@@ -382,6 +382,70 @@ async fn history_list_and_file_read_share_the_same_session_query_event() {
     .unwrap();
     assert_eq!(rendered["data"]["content"], serialized);
     read.respond_call("provider-history-end", "end", json!({}))
+        .unwrap();
+    world
+        .wait_for_state(&session_id, |state| {
+            state.last_turn_outcome == Some(TurnOutcome::Finished)
+        })
+        .await;
+    world.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [TOOL-13, PROJECTION-01]
+async fn file_read_projects_one_bounded_canonical_payload() {
+    let mut world = TestWorld::new();
+    let workspace = "/virtual/workspace";
+    let content = "unique-file-content-".repeat(1_024);
+    world
+        .files
+        .write_text(format!("{workspace}/large.txt"), &content);
+    let session_id = world
+        .create_session(
+            SessionSelection {
+                profile_id: "test-profile".into(),
+                model: "test-model".into(),
+                thinking: "medium".into(),
+            },
+            None,
+            workspace,
+        )
+        .await
+        .unwrap();
+
+    world.send_mail(&session_id, "read the file").await.unwrap();
+    world
+        .request()
+        .await
+        .respond_call(
+            "provider-file-read",
+            "file.read",
+            json!({"path": "large.txt", "limit": content.len()}),
+        )
+        .unwrap();
+
+    let projected = world.request().await;
+    let tool_message = projected
+        .transcript
+        .iter()
+        .rev()
+        .find(|message| message.role == TranscriptRole::Tool)
+        .expect("file.read returned one direct tool result");
+    let rendered: serde_json::Value = serde_json::from_str(&tool_message.content).unwrap();
+    assert!(
+        rendered.get("message").is_none(),
+        "ToolResult must not carry a second display payload"
+    );
+    assert_eq!(rendered["data"]["content"], content);
+    assert!(
+        tool_message.content.len() <= content.len() + 512,
+        "projected file payload was duplicated: {} bytes for {} bytes of content",
+        tool_message.content.len(),
+        content.len()
+    );
+
+    projected
+        .respond_call("provider-file-read-end", "end", json!({}))
         .unwrap();
     world
         .wait_for_state(&session_id, |state| {

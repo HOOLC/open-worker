@@ -9,6 +9,7 @@ use futures_channel::mpsc;
 use futures_util::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+pub use zork_config::{ContextConfig, ContextStrategy};
 
 /// Roles deliberately delivered through the IM gateway.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -303,6 +304,26 @@ impl GatewayClient {
                 Some(body),
             )
             .await?;
+            response.json().await.map_err(ApiError::from)
+        })
+        .await
+    }
+
+    pub async fn session_context(
+        &self,
+        session_id: &str,
+        update: Option<ContextConfig>,
+    ) -> Result<ContextConfig, ApiError> {
+        let path = format!("/v1/im/sessions/{session_id}/context");
+        let http = self.http.clone();
+        let base_url = self.base_url.clone();
+        let token = self.token.clone();
+        self.run_on(async move {
+            let (method, body) = match update {
+                Some(config) => (reqwest::Method::PUT, Some(serde_json::json!(config))),
+                None => (reqwest::Method::GET, None),
+            };
+            let response = send_request(&http, &base_url, &token, method, &path, body).await?;
             response.json().await.map_err(ApiError::from)
         })
         .await

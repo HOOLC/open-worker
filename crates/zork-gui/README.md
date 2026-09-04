@@ -31,6 +31,52 @@ cargo run -p zork-gui                          # gateway runtime on http://127.0
 cargo run -p zork-gui -- --gateway-url http://127.0.0.1:3000
 ```
 
+### Dev automation API
+
+`--dev` starts a token-protected HTTP API on loopback only. The default port is
+`8765`; pass `--dev-port 0` to choose an available port. A token is generated
+and printed at startup unless `--dev-token` or `ZORK_GUI_DEV_TOKEN` supplies
+one.
+
+```sh
+ZORK_GUI_DEV_TOKEN=local-dev cargo run -p zork-gui -- --dev
+
+curl -H "Authorization: Bearer $ZORK_GUI_DEV_TOKEN" \
+  http://127.0.0.1:8765/v1/elements
+
+curl -H "Authorization: Bearer $ZORK_GUI_DEV_TOKEN" \
+  http://127.0.0.1:8765/v1/screenshot -o /tmp/zork-gui.png
+
+curl -H "Authorization: Bearer $ZORK_GUI_DEV_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -X POST http://127.0.0.1:8765/v1/actions \
+  -d '{"type":"type_text","target":{"element_id":"composer-input"},"text":"hello"}'
+```
+
+| Route | Purpose |
+|---|---|
+| `GET /health` | Unauthenticated process readiness; contains no UI data |
+| `GET /v1` | Protocol metadata and supported action names |
+| `GET /v1/elements` | Visible actionable elements with IDs, roles, labels, bounds, centers, and supported actions |
+| `GET /v1/elements?include_hidden=true` | Also include rendered elements clipped by a viewport or scroll mask |
+| `GET /v1/elements?after_revision=N&timeout_ms=3000` | Wait for a newer rendered frame, up to 30 seconds |
+| `GET /v1/screenshot` | Current window as PNG, with dimensions and UI revision in response headers |
+| `POST /v1/actions` | Dispatch `click`, `move`, `type_text`, `key`, `scroll`, or `drag` input |
+
+Coordinates use logical pixels relative to the window content. The element
+response includes `scale_factor`; PNG dimensions are logical dimensions times
+that factor. An action target is either `{"element_id":"..."}` or an explicit
+`{"x":10,"y":20}` point. Scroll deltas are logical pixels; a negative
+`delta_y` reveals content below in GPUI scroll areas.
+
+The automation boundary is intentionally black-box. It can read rendered
+geometry and pixels, but its only mutations are GPUI mouse and keyboard events.
+There are no commands for creating sessions, changing models, sending messages,
+or mutating `RootView` directly. Component-ID actions resolve to the visible
+center and then dispatch the same events as coordinate actions. The API is not
+started without `--dev`, does not bind a non-loopback interface, and does not
+enable CORS.
+
 The real-process fixture starts a fake-model Agent plus the production gateway
 on isolated ports and verifies the explicit-message boundary:
 
@@ -52,7 +98,13 @@ and two tasks sharing one workspace still resolve their exact gateway binding.
 | Live delivery/activity | SSE `GET /v1/im/sessions/{id}/events` — `message` and `status` |
 | Composer send | `POST /v1/im/sessions/{id}/messages` (optionally preceded by `PUT .../selection`) |
 | Cancel | `POST /v1/im/sessions/{id}/cancel` |
+| Context menu | `GET` / `PUT /v1/im/sessions/{id}/context` |
 | New task | `POST /v1/im/sessions`; the initial prompt is then sent as an IM message |
+
+An existing task's composer has a context menu for summary retention targets
+(0, 8k, 20k, 40k tokens, plus the current custom value) or handoff documents.
+Changes are saved immediately and apply at the next context transition. The
+gateway reads and updates the Agent's policy directly; it has no policy copy.
 
 ### Status projection
 
@@ -135,6 +187,8 @@ uv run crates/zork-gui/tests/test_gateway_entry.py
 ## Files
 
 - `src/api.rs` — HTTP + SSE client and wire types.
+- `src/automation/` — dev-only loopback API, rendered-element geometry registry,
+  screenshot encoder, and GPUI user-input event bridge.
 - `src/design.rs` — Codex visual contract, design tokens, and default geometry.
 - `src/components/text_input.rs` — native multiline GPUI input handler, edit
   model, selection/caret renderer, and component-scoped key bindings.

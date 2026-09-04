@@ -32,6 +32,10 @@ pub fn router(state: AppState) -> Router {
             get(list_local_im_sessions).post(create_local_im_session),
         )
         .route(
+            "/v1/im/sessions/{session_id}/context",
+            get(get_local_im_context).put(update_local_im_context),
+        )
+        .route(
             "/v1/im/sessions/{session_id}/selection",
             axum::routing::put(update_local_im_selection),
         )
@@ -202,6 +206,39 @@ struct UpdateLocalImSelection {
     profile_id: String,
     model: String,
     thinking: String,
+}
+
+async fn get_local_im_context(
+    State(state): State<AppState>,
+    Path(session_id): Path<String>,
+) -> Response {
+    local_im_context(&state, &session_id, None).await
+}
+
+async fn update_local_im_context(
+    State(state): State<AppState>,
+    Path(session_id): Path<String>,
+    body: Result<Json<zork_agent_api::ContextConfig>, axum::extract::rejection::JsonRejection>,
+) -> Response {
+    let Json(config) = match body {
+        Ok(config) => config,
+        Err(_) => return fail(StatusCode::UNPROCESSABLE_ENTITY, "invalid_context"),
+    };
+    local_im_context(&state, &session_id, Some(&config)).await
+}
+
+async fn local_im_context(
+    state: &AppState,
+    session_id: &str,
+    update: Option<&zork_agent_api::ContextConfig>,
+) -> Response {
+    if let Err(response) = local_im_session(state, session_id) {
+        return *response;
+    }
+    match crate::agent::session_context(&state.config, session_id, update).await {
+        Ok(config) => Json(config).into_response(),
+        Err(error) => fail(error.status, &error.message),
+    }
 }
 
 async fn update_local_im_selection(

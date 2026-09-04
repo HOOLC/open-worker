@@ -72,6 +72,9 @@ fn provider_event_failure(event: &Value) -> ModelError {
     let error = event
         .get("error")
         .or_else(|| event.pointer("/response/error"));
+    let incomplete_reason = event
+        .pointer("/response/incomplete_details/reason")
+        .and_then(Value::as_str);
     let status_code = error
         .and_then(|error| error.get("status").or_else(|| error.get("status_code")))
         .and_then(Value::as_u64)
@@ -79,12 +82,16 @@ fn provider_event_failure(event: &Value) -> ModelError {
     let provider_code = error
         .and_then(|error| error.get("code").or_else(|| error.get("type")))
         .and_then(Value::as_str)
+        .or(incomplete_reason)
         .map(ToOwned::to_owned);
     let message = error
         .and_then(|error| error.get("message"))
         .and_then(Value::as_str)
-        .unwrap_or("provider returned a failed response")
-        .to_owned();
+        .map(ToOwned::to_owned)
+        .or_else(|| {
+            incomplete_reason.map(|reason| format!("provider response incomplete: {reason}"))
+        })
+        .unwrap_or_else(|| "provider returned a failed response".to_owned());
     let request_id = event
         .get("request_id")
         .and_then(Value::as_str)
@@ -99,6 +106,7 @@ fn provider_event_failure(event: &Value) -> ModelError {
         request_id,
         message,
         provider_input: None,
+        usage: parse_usage(event.pointer("/response/usage")).map(Box::new),
     })
 }
 
@@ -215,7 +223,9 @@ impl CodexResponsesProvider {
         execution: ProfileExecution,
     ) -> Result<ModelOutcome, ModelError> {
         if !execution.streaming() {
-            self.release_session(&request.session_id);
+            if !request.independent {
+                self.release_session(&request.session_id);
+            }
             return Err(ModelError::InvalidSelection);
         }
         let logical = build_request(request, &execution)?;
@@ -237,7 +247,9 @@ impl CodexResponsesProvider {
     ) -> Result<ModelOutcome, ModelError> {
         logical.body.insert("stream".to_owned(), Value::Bool(true));
         let identity = ConnectionIdentity::new(execution)?;
-        let session = {
+        let session = if request.independent {
+            Arc::new(AsyncMutex::new(SessionConnection::default()))
+        } else {
             let mut sessions = self
                 .sessions
                 .lock()
@@ -457,7 +469,9 @@ fn build_request(
     execution: &ProfileExecution,
 ) -> Result<LogicalRequest, ModelError> {
     let mut input = Vec::new();
-    input.push(additional_tools(request));
+    if !request.tools.is_empty() {
+        input.push(additional_tools(request));
+    }
     for message in request.transcript.iter() {
         match message.role {
             TranscriptRole::System => input.push(text_message("developer", &message.content)),
@@ -521,7 +535,10 @@ fn build_request(
         ("store".to_owned(), Value::Bool(false)),
         ("input".to_owned(), Value::Array(input)),
         ("tool_choice".to_owned(), Value::String("auto".to_owned())),
-        ("parallel_tool_calls".to_owned(), Value::Bool(true)),
+        (
+            "parallel_tool_calls".to_owned(),
+            Value::Bool(execution.parallel_tool_calls()),
+        ),
         (
             "reasoning".to_owned(),
             json!({
@@ -533,7 +550,14 @@ fn build_request(
         ("include".to_owned(), json!(["reasoning.encrypted_content"])),
         (
             "prompt_cache_key".to_owned(),
-            Value::String(request.session_id.clone()),
+            Value::String(
+                if request.independent {
+                    &request.step_id
+                } else {
+                    &request.session_id
+                }
+                .clone(),
+            ),
         ),
     ]);
     if let Some(service_tier) = execution.service_tier() {
@@ -616,13 +640,18 @@ async fn connect(
     handshake
         .headers_mut()
         .insert("openai-beta", HeaderValue::from_static(WEBSOCKET_BETA));
+    let routing_id = if request.independent {
+        &request.step_id
+    } else {
+        &request.session_id
+    };
     handshake.headers_mut().insert(
         "session-id",
-        HeaderValue::from_str(&request.session_id).map_err(|_| ModelError::InvalidSelection)?,
+        HeaderValue::from_str(routing_id).map_err(|_| ModelError::InvalidSelection)?,
     );
     handshake.headers_mut().insert(
         "x-client-request-id",
-        HeaderValue::from_str(&request.session_id).map_err(|_| ModelError::InvalidSelection)?,
+        HeaderValue::from_str(routing_id).map_err(|_| ModelError::InvalidSelection)?,
     );
     if let Some(proxy) = &identity.proxy {
         let mut stream = TcpStream::connect((proxy.host.as_str(), proxy.port))
@@ -1082,18 +1111,22 @@ fn outcome_from_items(
                 }
             }
             Some("function_call") => {
-                let tool_call_id = required_string(item, "call_id")?;
-                let tool_name = required_string(item, "name")?;
-                let arguments = required_string(item, "arguments")?;
-                let arguments = serde_json::from_str::<Value>(&arguments).map_err(|error| {
-                    protocol_failure("codex.output.tool_arguments_json", error.to_string())
-                })?;
-                if !arguments.is_object() {
-                    return Err(protocol_failure(
-                        "codex.output.tool_arguments_shape",
-                        "function call arguments are not an object",
-                    ));
-                }
+                let tool_call_id = item
+                    .get("call_id")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
+                let tool_name = item
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned();
+                let arguments = match item.get("arguments") {
+                    Some(Value::String(raw)) => serde_json::from_str::<Value>(raw)
+                        .unwrap_or_else(|_| Value::String(raw.to_owned())),
+                    Some(raw) => Value::Array(vec![raw.clone()]),
+                    None => Value::Null,
+                };
                 tool_calls.push(ProviderToolCall {
                     tool_call_id,
                     tool_name,
@@ -1117,19 +1150,6 @@ fn outcome_from_items(
         usage,
         provider_input: None,
     })
-}
-
-fn required_string(item: &Value, field: &str) -> Result<String, ModelError> {
-    item.get(field)
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-        .map(ToOwned::to_owned)
-        .ok_or_else(|| {
-            protocol_failure(
-                "codex.output.required_string",
-                format!("output item has no non-empty {field}"),
-            )
-        })
 }
 
 fn parse_usage(usage: Option<&Value>) -> Option<ModelTokenUsage> {
@@ -1183,6 +1203,69 @@ fn websocket_endpoint(base_url: &str) -> Result<String, ModelError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01]
+    fn request_uses_codex_wire_contract_and_profile_parallelism() {
+        let execution = ProfileExecution::new(
+            "profile".into(),
+            "openai".into(),
+            "gpt-5.6-luna".into(),
+            "openai-codex-responses".into(),
+            true,
+            false,
+            None,
+            "https://example.invalid".into(),
+            HashMap::new(),
+            "max".into(),
+            zork_agent::session::ports::ModelLimits {
+                context_window_tokens: 256_000,
+                max_output_tokens: 32_000,
+                reserve_percent: 10,
+            },
+            "secret".into(),
+        );
+        let request = ModelRequest {
+            session_id: "session".into(),
+            generation: 1,
+            step_id: "step".into(),
+            selection: zork_agent::session::wire::SessionSelection {
+                profile_id: "profile".into(),
+                model: "gpt-5.6-luna".into(),
+                thinking: "max".into(),
+            },
+            transcript: Arc::new(Vec::new()),
+            tools: Arc::new(Vec::new()),
+            max_output_tokens: Some(32_000),
+            independent: false,
+            stream_observer: Arc::new(zork_agent::session::model::SilentStreamObserver),
+        };
+
+        let body = build_request(&request, &execution).unwrap().body;
+        assert!(!body.contains_key("max_output_tokens"));
+        assert_eq!(body.get("parallel_tool_calls"), Some(&json!(false)));
+
+        let parallel_execution = ProfileExecution::new(
+            "profile".into(),
+            "openai".into(),
+            "gpt-5.6-luna".into(),
+            "openai-codex-responses".into(),
+            true,
+            true,
+            None,
+            "https://example.invalid".into(),
+            HashMap::new(),
+            "max".into(),
+            zork_agent::session::ports::ModelLimits {
+                context_window_tokens: 256_000,
+                max_output_tokens: 32_000,
+                reserve_percent: 10,
+            },
+            "secret".into(),
+        );
+        let body = build_request(&request, &parallel_execution).unwrap().body;
+        assert_eq!(body.get("parallel_tool_calls"), Some(&json!(true)));
+    }
 
     #[tokio::test]
     // Contract: docs/zork-agent-architecture.md [PROVIDER-01]
@@ -1267,6 +1350,7 @@ mod tests {
             transcript: std::sync::Arc::new(Vec::new()),
             tools: std::sync::Arc::new(Vec::new()),
             max_output_tokens: None,
+            independent: false,
             stream_observer: std::sync::Arc::new(zork_agent::session::model::SilentStreamObserver),
         };
         let started = std::time::Instant::now();
@@ -1314,6 +1398,38 @@ mod tests {
             Some("rate_limit_exceeded".to_owned())
         );
         assert_eq!(failure.message, "slow down");
+    }
+
+    #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01, RETRY-02]
+    fn incomplete_event_preserves_its_reason() {
+        let error = provider_event_failure(&json!({
+            "type": "response.incomplete",
+            "response": {
+                "status": "incomplete",
+                "incomplete_details": { "reason": "max_output_tokens" },
+                "usage": {
+                    "input_tokens": 321,
+                    "input_tokens_details": { "cached_tokens": 123 },
+                    "output_tokens": 45,
+                    "output_tokens_details": { "reasoning_tokens": 34 }
+                }
+            }
+        }));
+        let ModelError::ProviderFailed(failure) = error else {
+            panic!("expected provider failure");
+        };
+        assert_eq!(failure.provider_code.as_deref(), Some("max_output_tokens"));
+        assert_eq!(
+            failure.message,
+            "provider response incomplete: max_output_tokens"
+        );
+        let usage = failure.usage.expect("incomplete response usage");
+        assert_eq!(usage.input_tokens, 321);
+        assert_eq!(usage.cached_input_tokens, Some(123));
+        assert_eq!(usage.output_tokens, 45);
+        assert_eq!(usage.output_reasoning_tokens, Some(34));
+        assert!(failure.retryable);
     }
 
     /// 单连接 60 分钟硬限必须可重试：重试路径 session.reset() 已弃旧连接，

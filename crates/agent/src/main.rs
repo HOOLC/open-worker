@@ -98,7 +98,8 @@ async fn run(
         },
     )?;
 
-    let runner = ProfileStore::runner_options(&profiles);
+    let mut runner = ProfileStore::runner_options(&profiles);
+    runner.context = file.context.clone();
 
     let service = SessionService::start(
         ServiceDependencies {

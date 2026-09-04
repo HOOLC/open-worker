@@ -293,6 +293,7 @@ enum AgentEvent {
     SessionCreated,
     InputAppended,
     SelectionChanged,
+    ContextConfigured,
     TurnStarted,
     TurnCancelRequested,
     TurnFinished {
@@ -300,6 +301,7 @@ enum AgentEvent {
     },
     StepStarted,
     StepCompleted {
+        purpose: Option<String>,
         invocations: Vec<AgentInvocation>,
         auto_wait_deadline_ms: Option<i64>,
     },
@@ -312,8 +314,10 @@ enum AgentEvent {
     ToolResult {
         result: AgentToolResult,
     },
-    HandoffFailed,
-    HandoffApplied,
+    #[serde(alias = "handoff_failed")]
+    ContextFailed,
+    #[serde(alias = "handoff_applied")]
+    ContextApplied,
     DeadlineReached,
     RuntimeFault {
         failure: AgentFailure,
@@ -352,12 +356,17 @@ impl AgentEvent {
     fn status_event(self) -> Option<AgentStatusEvent> {
         match self {
             Self::SessionCreated => Some(AgentStatusEvent::Clear),
-            Self::TurnStarted | Self::StepStarted | Self::HandoffApplied => {
+            Self::TurnStarted | Self::StepStarted | Self::ContextApplied => {
                 Some(AgentStatusEvent::Thinking)
             }
             Self::StepCompleted {
+                purpose: Some(purpose),
+                ..
+            } if purpose != "conversation" => Some(AgentStatusEvent::Thinking),
+            Self::StepCompleted {
                 invocations,
                 auto_wait_deadline_ms,
+                ..
             } if !invocations.is_empty() => {
                 let calls = invocations
                     .into_iter()
@@ -410,10 +419,11 @@ impl AgentEvent {
                 AgentTurnOutcome::Cancelled => AgentStatusEvent::Interrupted,
             }),
             Self::DeadlineReached => Some(AgentStatusEvent::Thinking),
-            Self::HandoffFailed
+            Self::ContextFailed
             | Self::AutoWaitEnded
             | Self::InputAppended
             | Self::SelectionChanged
+            | Self::ContextConfigured
             | Self::ToolCancelRequested
             | Self::Snapshot => None,
         }

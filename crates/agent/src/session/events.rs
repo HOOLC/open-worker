@@ -23,11 +23,32 @@ pub const FILE_WRITE_NAME: &str = "file.write";
 pub const FILE_EDIT_NAME: &str = "file.edit";
 pub const SHELL_RUN_NAME: &str = "shell.run";
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Purpose {
+    #[default]
     Conversation,
+    Compaction,
     Handoff,
+}
+
+impl Purpose {
+    pub fn is_context(self) -> bool {
+        self != Self::Conversation
+    }
+}
+
+impl From<zork_config::ContextStrategy> for Purpose {
+    fn from(strategy: zork_config::ContextStrategy) -> Self {
+        match strategy {
+            zork_config::ContextStrategy::Compaction => Self::Compaction,
+            zork_config::ContextStrategy::Handoff => Self::Handoff,
+        }
+    }
+}
+
+pub(super) fn handoff_purpose() -> Purpose {
+    Purpose::Handoff
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -52,7 +73,8 @@ pub enum TurnOutcome {
 #[serde(rename_all = "snake_case")]
 pub enum StepInterruptionReason {
     Recovery,
-    HandoffTimeout,
+    #[serde(rename = "handoff_timeout")]
+    LegacyHandoffTimeout,
     TurnCancelled,
 }
 
@@ -82,8 +104,8 @@ pub struct OutstandingItem {
     pub summary: String,
 }
 
-/// Accepted zork-agent logical invocation. The provider call ID is retained
-/// only so projection can later produce a protocol-valid direct result.
+/// Durable zork-agent logical invocation. Rejected provider calls still have
+/// an invocation so projection can return a direct error for the original ID.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ToolInvocation {
     pub invocation_id: String,
@@ -94,15 +116,15 @@ pub struct ToolInvocation {
     pub arguments: Value,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool_version: Option<ToolVersion>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rejection: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ToolResultData {
-    pub result_id: String,
     pub invocation_id: String,
     pub tool: String,
     pub outcome: ToolOutcome,
-    pub message: String,
     pub data: Value,
     pub result_schema_version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -156,10 +178,26 @@ pub struct ProviderErrorRecord {
     pub provider_code: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub request_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_input: Option<Box<super::wire::ProviderInputDiagnostics>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
     pub message: String,
 }
 
 impl ProviderErrorRecord {
+    /// A completed generation that could not form a document, not a transport,
+    /// authentication or rate-limit failure. Those keep their own retry budget.
+    pub fn is_invalid_document(&self) -> bool {
+        matches!(
+            self.provider_code.as_deref(),
+            Some("max_output_tokens" | "content_filter")
+        ) || matches!(
+            self.stage.as_str(),
+            "provider.outcome.tool_arguments_json" | "provider.outcome.tool_arguments_shape"
+        )
+    }
+
     pub fn is_context_overflow(&self) -> bool {
         provider_error_is_context_overflow(
             self.status_code,
@@ -235,6 +273,9 @@ pub enum SessionEvent {
     SelectionChanged {
         selection: Selection,
     },
+    ContextConfigured {
+        config: zork_config::ContextConfig,
+    },
     TurnStarted {
         turn_id: String,
         started_at_ms: i64,
@@ -268,10 +309,14 @@ pub enum SessionEvent {
         outstanding: Vec<OutstandingItem>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         max_output_tokens: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        input_budget: Option<u64>,
         started_at_ms: i64,
     },
     StepCompleted {
         step_id: String,
+        #[serde(default)]
+        purpose: Purpose,
         assistant_text: String,
         provider_calls: Vec<ProviderToolCall>,
         invocations: Vec<ToolInvocation>,
@@ -281,6 +326,8 @@ pub enum SessionEvent {
         usage: Option<Usage>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         provider_context: Option<ProviderContext>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        provider_input: Option<Box<super::wire::ProviderInputDiagnostics>>,
         completed_at_ms: i64,
     },
     StepFailed {
@@ -299,24 +346,30 @@ pub enum SessionEvent {
         ended_at_ms: i64,
     },
     ToolCancelRequested {
-        request_id: String,
         invocation_id: String,
         requested_at_ms: i64,
     },
     ToolResult {
         result: ToolResultData,
     },
-    HandoffFailed {
-        handoff_id: String,
+    #[serde(alias = "handoff_failed")]
+    ContextFailed {
         generation: u64,
+        #[serde(default = "handoff_purpose")]
+        purpose: Purpose,
         message: String,
         failed_at_ms: i64,
     },
-    HandoffApplied {
-        handoff_id: String,
+    #[serde(alias = "handoff_applied")]
+    ContextApplied {
         generation: u64,
+        #[serde(default = "handoff_purpose")]
+        purpose: Purpose,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         document: Option<String>,
+        /// Range in the old generation. Moving entries does not replay tool effects.
+        #[serde(default)]
+        retained: std::ops::Range<usize>,
         tools: Vec<ToolIntroduction>,
         carried_tools: Vec<ToolInvocation>,
         applied_at_ms: i64,
@@ -344,6 +397,7 @@ impl SessionEvent {
             Self::SessionCreated { .. } => "session_created",
             Self::InputAppended { .. } => "input_appended",
             Self::SelectionChanged { .. } => "selection_changed",
+            Self::ContextConfigured { .. } => "context_configured",
             Self::TurnStarted { .. } => "turn_started",
             Self::TurnCancelRequested { .. } => "turn_cancel_requested",
             Self::TurnFinished { .. } => "turn_finished",
@@ -354,8 +408,8 @@ impl SessionEvent {
             Self::AutoWaitEnded { .. } => "auto_wait_ended",
             Self::ToolCancelRequested { .. } => "tool_cancel_requested",
             Self::ToolResult { .. } => "tool_result",
-            Self::HandoffFailed { .. } => "handoff_failed",
-            Self::HandoffApplied { .. } => "handoff_applied",
+            Self::ContextFailed { .. } => "context_failed",
+            Self::ContextApplied { .. } => "context_applied",
             Self::DeadlineReached { .. } => "deadline_reached",
             Self::RuntimeFault { .. } => "runtime_fault",
             Self::Snapshot { .. } => "snapshot",

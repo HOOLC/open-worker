@@ -5,8 +5,6 @@ use std::future::pending;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use serde_json::Value;
-
 use super::events::{ToolInvocation, ToolOutcome};
 use super::ports::{Clock, SystemClock};
 use super::tools::{ToolContext, ToolExecution, ToolKnowledge, ToolRegistry, ToolResolution};
@@ -59,6 +57,10 @@ impl ToolExecutor {
         invocation: ToolInvocation,
         cancellation: Option<tokio::sync::oneshot::Receiver<()>>,
     ) -> ToolExecution {
+        if let Some(reason) = &invocation.rejection {
+            return rejected_execution(reason);
+        }
+
         let mut cancelled = Box::pin(async move {
             match cancellation {
                 Some(receiver) => {
@@ -103,11 +105,12 @@ impl ToolExecutor {
             }
         };
 
-        if let Err(error) = instance.validate_arguments(&invocation.arguments) {
-            return failed_execution(format!("Invalid tool arguments: {error}"), None);
-        }
-
-        let arguments = invocation.arguments;
+        let arguments = match instance.prepare_arguments(invocation.arguments) {
+            Ok(arguments) => arguments,
+            Err(error) => {
+                return failed_execution(format!("Invalid tool arguments: {error}"), None);
+            }
+        };
         let mut task = tokio::spawn(async move { instance.execute(&context, &arguments).await });
         let timeout = self.clock.sleep(self.timeout);
         tokio::pin!(timeout);
@@ -123,8 +126,7 @@ impl ToolExecutor {
                 let _ = task.await;
                 ToolExecution {
                     outcome: ToolOutcome::TimedOut,
-                    message: "Tool execution timed out.".into(),
-                    data: Value::Object(Default::default()),
+                    data: serde_json::json!({"error": "Tool execution timed out."}),
                     result_schema_version: 1,
                     knowledge: None,
                 }
@@ -168,14 +170,15 @@ impl ToolExecutor {
                 let execution = executor
                     .execute_supervised(context, invocation_for_task.clone(), Some(cancel_rx))
                     .await;
-                executor.live.remove(&task_session_id, &invocation_id);
+                // Stay live until the result is queued, including under backpressure.
                 let _ = results
                     .send(CompletedTool {
-                        session_id: task_session_id,
+                        session_id: task_session_id.clone(),
                         invocation: invocation_for_task,
                         execution,
                     })
                     .await;
+                executor.live.remove(&task_session_id, &invocation_id);
             });
 
             self.live
@@ -209,8 +212,7 @@ pub struct CompletedTool {
 fn cancelled_execution() -> ToolExecution {
     ToolExecution {
         outcome: ToolOutcome::Cancelled,
-        message: "Tool execution was cancelled.".into(),
-        data: Value::Object(Default::default()),
+        data: serde_json::json!({"error": "Tool execution was cancelled."}),
         result_schema_version: 1,
         knowledge: None,
     }
@@ -219,11 +221,14 @@ fn cancelled_execution() -> ToolExecution {
 fn failed_execution(message: String, knowledge: Option<ToolKnowledge>) -> ToolExecution {
     ToolExecution {
         outcome: ToolOutcome::Failed,
-        message,
-        data: Value::Object(Default::default()),
+        data: serde_json::json!({"error": message}),
         result_schema_version: 1,
         knowledge,
     }
+}
+
+pub(super) fn rejected_execution(reason: &str) -> ToolExecution {
+    failed_execution(format!("Invalid provider call: {reason}"), None)
 }
 
 type Cancellation = Option<tokio::sync::oneshot::Sender<()>>;

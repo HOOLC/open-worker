@@ -8,7 +8,7 @@ use zork_agent_testkit::{
 // Contract: docs/zork-agent-architecture.md [PERF-01]
 async fn virtual_world_sustains_a_thousand_complete_session_lifecycles() {
     const SESSION_COUNT: usize = 1_000;
-    const EVENTS_PER_SESSION: usize = 8;
+    const EVENTS_PER_SESSION: usize = 9;
     const MAX_DEBUG_DURATION: Duration = Duration::from_secs(5);
 
     let result = measure_virtual_sessions(SESSION_COUNT).await;

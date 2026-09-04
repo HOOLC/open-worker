@@ -7,4 +7,5 @@ publish.workspace = true
 
 [dependencies]
 serde.workspace = true
+zork-config = { path = "../zork-config" }
 zork-profile = { path = "../profile" }

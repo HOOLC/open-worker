@@ -136,6 +136,7 @@ export class ControlledAgent {
         model: body.model,
         thinking: body.thinking,
         generation: 1,
+        context: body.context ?? { strategy: "compaction", keep_recent_tokens: 20_000 },
         status: "wait",
       };
       this.sessions.set(sessionId, session);
@@ -144,6 +145,19 @@ export class ControlledAgent {
       return;
     }
     const selectionPath = /^\/sessions\/([^/]+)\/selection$/.exec(url);
+    const contextPath = /^\/sessions\/([^/]+)\/context$/.exec(url);
+    if (request.method === "PUT" && contextPath) {
+      const session = this.sessions.get(decodeURIComponent(contextPath[1]));
+      if (!session) {
+        response.writeHead(404, { "content-type": "application/json" });
+        response.end(JSON.stringify({ error: { code: "not_found", message: "session not found" } }));
+        return;
+      }
+      session.context = await readJsonRequest(request);
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify(session));
+      return;
+    }
     if (request.method === "PUT" && selectionPath) {
       const sessionId = decodeURIComponent(selectionPath[1]);
       const selection = await readJsonRequest(request);

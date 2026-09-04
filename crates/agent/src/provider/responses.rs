@@ -43,6 +43,7 @@ pub(super) struct CapturedOutputItems {
 struct OutputItemsState {
     slots: Vec<Option<Value>>,
     error: Option<String>,
+    terminal_received: bool,
 }
 
 impl CapturedOutputItems {
@@ -88,31 +89,36 @@ impl CapturedOutputItems {
                     });
                 }
             }
-            Some("response.completed" | "response.incomplete") if self.is_empty() => {
-                let Some(items) = document
-                    .pointer("/response/output")
-                    .and_then(Value::as_array)
-                else {
-                    return;
-                };
+            Some("response.completed" | "response.incomplete") => {
                 let mut state = self
                     .state
                     .lock()
                     .expect("output item capture mutex poisoned");
+                state.terminal_received = true;
                 if state.slots.is_empty() {
-                    state.slots = items.iter().cloned().map(Some).collect();
+                    let items = document
+                        .pointer("/response/output")
+                        .and_then(Value::as_array);
+                    if let Some(items) = items {
+                        state.slots = items.iter().cloned().map(Some).collect();
+                    }
                 }
+            }
+            Some("response.failed" | "error") => {
+                self.state
+                    .lock()
+                    .expect("output item capture mutex poisoned")
+                    .terminal_received = true;
             }
             _ => {}
         }
     }
 
-    fn is_empty(&self) -> bool {
+    pub(super) fn terminal_received(&self) -> bool {
         self.state
             .lock()
             .expect("output item capture mutex poisoned")
-            .slots
-            .is_empty()
+            .terminal_received
     }
 
     pub(super) fn ordered(&self) -> Result<Arc<Vec<Value>>, String> {
@@ -422,6 +428,27 @@ mod tests {
             captured.ordered().unwrap_err(),
             "provider output has a gap at index 0"
         );
+    }
+
+    #[test]
+    // Contract: docs/zork-agent-architecture.md [PROVIDER-01]
+    fn terminal_state_requires_a_terminal_responses_event() {
+        let captured = CapturedOutputItems::default();
+        captured.observe(&output_item_done(
+            0,
+            serde_json::json!({ "id": "msg_1", "type": "message" }),
+        ));
+        assert!(!captured.terminal_received());
+
+        captured.observe(&Ok(SseEvent {
+            data: serde_json::json!({
+                "type": "response.completed",
+                "response": { "output": [] },
+            })
+            .to_string(),
+            ..Default::default()
+        }));
+        assert!(captured.terminal_received());
     }
 
     #[test]

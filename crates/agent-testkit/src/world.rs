@@ -101,7 +101,7 @@ impl TestWorld {
         workspace: impl Into<String>,
     ) -> Result<String, SupervisorError> {
         self.service()
-            .create_session(selection, system_prompt, workspace.into())
+            .create_session(selection, system_prompt, workspace.into(), None)
             .await
     }
 

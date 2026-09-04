@@ -100,7 +100,19 @@ async fn real_agent_uses_real_files_shell_store_and_recovers_after_restart() {
         std::fs::read_to_string(agent.workspace(&session_id).unwrap().join("note.txt")).unwrap(),
         "alpha"
     );
-    assert!(body_contains(&after_write, "Wrote 5 bytes"));
+    let write_result: serde_json::Value = serde_json::from_str(
+        after_write.json().unwrap()["messages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .rev()
+            .find(|message| message["role"] == "tool")
+            .and_then(|message| message["content"].as_str())
+            .expect("file.write returned one direct tool result"),
+    )
+    .unwrap();
+    assert_eq!(write_result["data"]["bytes"], 5);
+    assert!(write_result.get("message").is_none());
     after_write
         .respond_openai_calls(
             "chatcmpl-2",

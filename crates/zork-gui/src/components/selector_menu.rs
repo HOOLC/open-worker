@@ -6,6 +6,7 @@ pub enum SelectorKind {
     Profile,
     Thinking,
     Model,
+    Context,
 }
 
 impl SelectorKind {
@@ -14,6 +15,7 @@ impl SelectorKind {
             Self::Profile => "profile",
             Self::Thinking => "thinking",
             Self::Model => "model",
+            Self::Context => "context",
         }
     }
 }

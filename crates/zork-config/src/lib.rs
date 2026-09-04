@@ -16,6 +16,8 @@ const DEFAULT_SLACK_API: &str = "https://slack.com/api";
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FileConfig {
     #[serde(default)]
+    pub context: ContextConfig,
+    #[serde(default)]
     pub im_connections: Vec<ImConnectionConfig>,
     #[serde(default)]
     pub bind: BindConfig,
@@ -23,6 +25,31 @@ pub struct FileConfig {
     pub urls: UrlConfig,
     #[serde(default)]
     pub admin: AdminConfig,
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ContextStrategy {
+    #[default]
+    Compaction,
+    Handoff,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields)]
+pub struct ContextConfig {
+    pub strategy: ContextStrategy,
+    /// Approximate token target; call/result groups are never split.
+    pub keep_recent_tokens: u32,
+}
+
+impl Default for ContextConfig {
+    fn default() -> Self {
+        Self {
+            strategy: ContextStrategy::Compaction,
+            keep_recent_tokens: 20_000,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]

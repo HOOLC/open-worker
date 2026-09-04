@@ -22,10 +22,10 @@ pub fn provider_transcript(state: &SessionState) -> Arc<Vec<ProviderMessage>> {
         &tool_catalog_prompt(state),
         false,
     ));
-    if let Some(document) = state.generation.handoff_document.as_deref() {
+    if let Some(document) = state.generation.document.as_deref() {
         messages.push(message(
             TranscriptRole::System,
-            &format!("Context handoff from the previous generation:\n\n{document}"),
+            &format!("Context from the previous generation:\n\n{document}"),
             false,
         ));
     }
@@ -127,7 +127,7 @@ pub fn provider_transcript(state: &SessionState) -> Arc<Vec<ProviderMessage>> {
                     })
                     .collect::<Vec<_>>();
                 messages.push(runtime_notice(&format!(
-                    "These tool invocations were unfinished at handoff. They are not recreated as provider call/result pairs. Later outcomes will arrive as notifications:\n{}",
+                    "These tool invocations were unfinished at the context transition. They are not recreated as provider call/result pairs. Later outcomes will arrive as notifications:\n{}",
                     serde_json::to_string_pretty(&carried).unwrap_or_else(|_| "[]".into())
                 )));
             }
@@ -154,15 +154,9 @@ fn render_result(result: &super::events::ToolResultData) -> String {
         "invocation_id": result.invocation_id,
         "tool": result.tool,
         "outcome": result.outcome,
-        "message": result.message,
         "data": result.data,
     }))
-    .unwrap_or_else(|_| {
-        format!(
-            "tool {} returned {:?}: {}",
-            result.tool, result.outcome, result.message
-        )
-    })
+    .unwrap_or_else(|_| format!("tool {} returned {:?}", result.tool, result.outcome))
 }
 
 fn runtime_notice(content: &str) -> ProviderMessage {

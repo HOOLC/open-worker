@@ -72,6 +72,37 @@ pub(crate) struct HistoryRecord<'a> {
     pub(crate) line: &'a [u8],
 }
 
+/// Hold a segment open across scans even when rotation replaces its path.
+pub(crate) struct HistoryReader {
+    path: PathBuf,
+    file: File,
+}
+
+impl HistoryReader {
+    pub(crate) fn open(path: &Path) -> std::io::Result<Self> {
+        Ok(Self {
+            path: path.to_owned(),
+            file: File::open(path)?,
+        })
+    }
+
+    pub(crate) fn scan(
+        &mut self,
+        session_ulid: Ulid,
+        visit: &mut dyn FnMut(StreamItem<HistoryRecord<'_>>) -> bool,
+    ) -> std::io::Result<()> {
+        self.file.rewind()?;
+        let mut stream = HistoryStream::new(session_ulid);
+        let mut line_visit = |line: &[u8]| stream.push(&self.path, line, visit);
+        if self.path.to_string_lossy().ends_with(".jsonl.zst") {
+            let decoder = zstd::stream::read::Decoder::new(&mut self.file)?;
+            reader_lines(BufReader::new(decoder), &mut line_visit)
+        } else {
+            reader_lines(BufReader::new(&mut self.file), &mut line_visit)
+        }
+    }
+}
+
 pub(crate) fn commits_forward(
     paths: &[PathBuf],
     session_ulid: Ulid,
@@ -168,6 +199,19 @@ struct BorrowedEnvelope<'a> {
     batch_count: u32,
     #[serde(borrow)]
     event: &'a RawValue,
+}
+
+/// Query input already lives in a byte buffer. Borrow its raw event while
+/// migrating instead of allocating a second full JSON payload in StoredEnvelope.
+pub(crate) fn decode_envelope(line: &[u8]) -> Result<EventEnvelope, serde_json::Error> {
+    let raw: BorrowedEnvelope<'_> = serde_json::from_slice(line)?;
+    Ok(EventEnvelope {
+        event_id: raw.event_id.to_owned(),
+        schema_version: raw.schema_version,
+        batch_index: raw.batch_index,
+        batch_count: raw.batch_count,
+        event: migrate_event(raw.schema_version, raw.event).map_err(serde::de::Error::custom)?,
+    })
 }
 
 struct OwnedHistoryRecord {
@@ -578,6 +622,60 @@ fn segment_name(name: &str) -> Option<(&str, bool)> {
 #[cfg(test)]
 mod tests {
     use super::lines_reverse;
+
+    #[cfg(unix)]
+    #[test]
+    // Contract: docs/zork-agent-architecture.md [QUERY-01, SEGMENT-01]
+    fn repeated_history_scans_keep_the_open_segment_after_path_replacement() {
+        let root = tempfile::tempdir().unwrap();
+        let session = ulid::Ulid::new();
+        let event_id = super::EventId::from_sequence(session, 1)
+            .unwrap()
+            .to_string();
+        let mut data = serde_json::to_vec(&serde_json::json!({
+            "event_id": event_id,
+            "schema_version": crate::session::events::EVENT_SCHEMA_VERSION,
+            "batch_index": 0, "batch_count": 1,
+            "event": {"kind": "input_appended", "input": {
+                "input_id": "input-1", "content": "original", "received_at_ms": 0
+            }}
+        }))
+        .unwrap();
+        data.push(b'\n');
+        for compressed in [false, true] {
+            let path = root.path().join(if compressed {
+                "segment.jsonl.zst"
+            } else {
+                "segment.jsonl"
+            });
+            let bytes = if compressed {
+                zstd::encode_all(data.as_slice(), 1).unwrap()
+            } else {
+                data.clone()
+            };
+            std::fs::write(&path, bytes).unwrap();
+            let mut reader = super::HistoryReader::open(&path).unwrap();
+            for pass in 0..2 {
+                let mut ids = Vec::new();
+                reader
+                    .scan(session, &mut |item| {
+                        match item {
+                            super::StreamItem::Value(record) => {
+                                ids.push(record.event_id.to_owned())
+                            }
+                            super::StreamItem::Fault(error) => panic!("{error}"),
+                        }
+                        false
+                    })
+                    .unwrap();
+                assert_eq!(ids, vec![event_id.clone()]);
+                if pass == 0 {
+                    std::fs::remove_file(&path).unwrap();
+                    std::fs::write(&path, b"replacement inode").unwrap();
+                }
+            }
+        }
+    }
 
     #[test]
     // Contract: docs/zork-agent-architecture.md [EVENT-02, QUERY-01]

@@ -217,6 +217,20 @@ class GatewayEntryContractTest(unittest.TestCase):
         self.assertEqual(profiles["items"][0]["profile_id"], "fixture")
 
         first = self.create_session()
+        context_path = f"/v1/im/sessions/{first}/context"
+        self.assertEqual(self.request("GET", context_path),
+                         (200, {"strategy": "compaction", "keep_recent_tokens": 20000}))
+        updated_context = {"strategy": "handoff", "keep_recent_tokens": 8000}
+        self.assertEqual(self.request("PUT", context_path, updated_context), (200, updated_context))
+        status, agent_session = self.request_at(self.agent_url, "GET", f"/sessions/{first}")
+        self.assertEqual(status, 200)
+        self.assertEqual(agent_session["context"], updated_context)
+        invalid_status, _ = self.request("PUT", context_path,
+                                         {"strategy": "compaction", "keep_recent_tokens": -1})
+        self.assertEqual(invalid_status, 422)
+        self.assertEqual(self.request("GET", context_path), (200, updated_context))
+        missing_status, _ = self.request("GET", "/v1/im/sessions/not-a-session/context")
+        self.assertEqual(missing_status, 404)
         send_status, _ = self.request(
             "POST",
             f"/v1/im/sessions/{first}/messages",

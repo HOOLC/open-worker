@@ -105,6 +105,80 @@ fn request_input(request: &PendingCodexRequest) -> &[Value] {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [EVENT-05, PROVIDER-01, TOOL-10]
+async fn malformed_codex_call_arguments_remain_a_completed_provider_step() {
+    let mut provider = ControlledCodexProvider::start(8).unwrap();
+    let mut agent = RealAgent::new().unwrap();
+    agent
+        .install_profile("codex", profile(provider.base_url(), 872_000, 128_000))
+        .unwrap();
+    let session_id = agent
+        .create_configured_session(selection("codex"), None)
+        .await
+        .unwrap();
+    agent
+        .send_mail(&session_id, "recover from the malformed provider call")
+        .await
+        .unwrap();
+
+    provider
+        .request()
+        .await
+        .respond(
+            "resp_malformed_arguments",
+            &[json!({
+                "id": "fc_malformed_arguments",
+                "type": "function_call",
+                "status": "completed",
+                "arguments": "{",
+                "call_id": "call_malformed_arguments",
+                "name": "call",
+                "namespace": "functions"
+            })],
+            123,
+            9,
+        )
+        .await
+        .unwrap();
+
+    let correction = provider.request().await;
+    assert_eq!(
+        correction.body["previous_response_id"],
+        "resp_malformed_arguments"
+    );
+    assert!(request_input(&correction).iter().any(|item| {
+        item["type"] == "function_call_output"
+            && item["call_id"] == "call_malformed_arguments"
+            && item["output"]
+                .as_str()
+                .is_some_and(|output| output.contains("Invalid provider call"))
+    }));
+    finish(correction, "malformed_arguments").await;
+    agent
+        .wait_for_state(&session_id, |state| {
+            state.last_turn_outcome == Some(TurnOutcome::Finished)
+        })
+        .await;
+
+    let events = agent.history(&session_id, None, 200).unwrap();
+    assert!(!events
+        .iter()
+        .any(|event| matches!(event.event, SessionEvent::StepFailed { .. })));
+    assert!(events.iter().any(|event| matches!(
+        &event.event,
+        SessionEvent::StepCompleted {
+            provider_calls,
+            usage: Some(usage),
+            ..
+        } if usage.input_tokens == 123
+            && provider_calls.iter().any(|call| {
+                call.tool_call_id == "call_malformed_arguments"
+                    && call.arguments == json!("{")
+            })
+    )));
+}
+
+#[tokio::test(flavor = "multi_thread")]
 // Contract: docs/zork-agent-architecture.md [PROVIDER-01, PROVIDER-04, HANDOFF-02]
 async fn real_codex_websocket_reuses_continuations_and_resets_on_restart_and_handoff() {
     let started = Instant::now();
@@ -156,7 +230,8 @@ async fn real_codex_websocket_reuses_continuations_and_resets_on_restart_and_han
     assert_eq!(first.body["type"], "response.create");
     assert_eq!(first.body["stream"], true);
     assert_eq!(first.body["service_tier"], "priority");
-    assert_eq!(first.body["parallel_tool_calls"], true);
+    assert_eq!(first.body["parallel_tool_calls"], false);
+    assert!(first.body.get("max_output_tokens").is_none());
     assert_eq!(first.body["reasoning"]["effort"], "max");
     assert_eq!(first.body["prompt_cache_key"], parallel_session);
     assert!(first.body.get("previous_response_id").is_none());
@@ -436,6 +511,18 @@ async fn real_codex_websocket_reuses_continuations_and_resets_on_restart_and_han
         .await
         .unwrap();
     agent
+        .client()
+        .put(format!(
+            "{}/sessions/{handoff_session}/context",
+            agent.base_url()
+        ))
+        .json(&json!({"strategy": "handoff"}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap();
+    agent
         .send_mail(&handoff_session, "continue the durable task")
         .await
         .unwrap();
@@ -494,7 +581,7 @@ async fn real_codex_websocket_reuses_continuations_and_resets_on_restart_and_han
         .any(|event| {
             matches!(
                 &event.event,
-                SessionEvent::HandoffApplied {
+                SessionEvent::ContextApplied {
                     generation: 2,
                     document: Some(document),
                     ..
@@ -509,4 +596,91 @@ async fn real_codex_websocket_reuses_continuations_and_resets_on_restart_and_han
         "Codex WebSocket lifecycle took {:?}",
         started.elapsed()
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [COMPACTION-01, PROVIDER-02, PROVIDER-04]
+async fn compaction_uses_an_isolated_tool_free_codex_request_and_is_not_a_public_reply() {
+    let mut provider = ControlledCodexProvider::start(16).unwrap();
+    let mut agent = RealAgent::new().unwrap();
+    agent
+        .install_profile("compact", profile(provider.base_url(), 256_000, 131_072))
+        .unwrap();
+    let session = agent
+        .create_configured_session(selection("compact"), None)
+        .await
+        .unwrap();
+    agent
+        .send_mail(&session, "Continue this task")
+        .await
+        .unwrap();
+    let normal = provider.request().await;
+    normal
+        .respond(
+            "before-summary",
+            &[text_item("work", "work in progress")],
+            123_000,
+            20,
+        )
+        .await
+        .unwrap();
+    let summary = provider.request().await;
+    assert_ne!(summary.connection_id, normal.connection_id);
+    assert_ne!(
+        summary.body["prompt_cache_key"],
+        normal.body["prompt_cache_key"]
+    );
+    assert_ne!(
+        summary.headers.get("session-id"),
+        normal.headers.get("session-id")
+    );
+    assert!(summary.body.get("previous_response_id").is_none());
+    assert!(summary.body["input"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|item| item["type"] != "additional_tools" && item["type"] != "function_call"));
+    assert_eq!(summary.body["reasoning"]["effort"], "max");
+    summary
+        .respond(
+            "summary-only",
+            &[text_item("summary", "INTERNAL SUMMARY: keep progressing")],
+            500,
+            20,
+        )
+        .await
+        .unwrap();
+    let successor = provider.request().await;
+    assert_ne!(successor.connection_id, summary.connection_id);
+    assert_ne!(successor.connection_id, normal.connection_id);
+    assert!(successor.body.get("previous_response_id").is_none());
+    assert_eq!(
+        successor.body["prompt_cache_key"],
+        normal.body["prompt_cache_key"]
+    );
+    assert!(successor.body.to_string().contains("INTERNAL SUMMARY"));
+    assert!(successor.body["input"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["type"] == "additional_tools"));
+    assert!(!agent
+        .messages(&session)
+        .await
+        .unwrap()
+        .to_string()
+        .contains("INTERNAL SUMMARY"));
+    assert!(agent.history(&session, None, 100).unwrap().iter().any(
+        |event| matches!(&event.event, SessionEvent::StepCompleted {
+            purpose: zork_agent::session::events::Purpose::Compaction, usage: Some(usage), ..
+        } if usage.input_tokens == 500)
+    ));
+    finish(successor, "compact").await;
+    agent
+        .wait_for_state(&session, |state| {
+            state.last_turn_outcome == Some(TurnOutcome::Finished)
+        })
+        .await;
+    agent.shutdown().await;
+    provider.shutdown().await;
 }

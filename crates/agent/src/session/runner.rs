@@ -4,20 +4,21 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::compression::SegmentCompressor;
+use super::context::summary_transcript;
 use super::deadline::DeadlineScheduler;
-use super::decision::{decide, Decision, DecisionWorld};
+use super::decision::{decide, handoff_document, Decision, DecisionWorld};
 use super::events::{
     DeadlineKind, Input, ProviderErrorRecord, Purpose, RuntimeFailure, Selection, SessionEvent,
     ToolInvocation, ToolOutcome, ToolResultData, TurnOutcome, Usage, TOOL_CANCEL_NAME,
 };
-use super::executor::{CompletedTool, ToolExecutor};
+use super::executor::{rejected_execution, CompletedTool, ToolExecutor};
 use super::model::{
     ModelError, ModelGateway, ModelOutcome, ModelReleaseSuggestion, ModelRequest,
-    ModelStreamObserver, TOOL_INTERRUPTED_MESSAGE,
+    ModelStreamObserver, SilentStreamObserver, TOOL_INTERRUPTED_MESSAGE,
 };
 use super::ports::{Clock, IdGenerator};
 use super::projection::provider_transcript;
-use super::state::{snapshot_value, SessionState, STATE_SCHEMA_VERSION};
+use super::state::{snapshot_value, GenerationEntry, SessionState, STATE_SCHEMA_VERSION};
 use super::store::{EventEnvelope, SessionStore, StoreError};
 use super::tools::{provider_call_definition, DynamicCall, ToolExecution, ToolRegistry};
 
@@ -36,13 +37,13 @@ impl RunnerObserver for NoopRunnerObserver {}
 #[derive(Clone)]
 pub struct RunnerOptions {
     pub auto_wait: Duration,
-    pub handoff_timeout: Duration,
     pub provider_retry_limit: u32,
+    pub context_attempt_limit: u32,
+    pub context: zork_config::ContextConfig,
     pub provider_retry_base: Duration,
     pub provider_retry_max: Duration,
     pub tool_result_capacity: usize,
     pub max_tool_result_json_bytes: usize,
-    pub max_tool_result_message_bytes: usize,
     pub input_budget: InputBudget,
     pub max_output_tokens: MaxOutputTokens,
 }
@@ -51,13 +52,13 @@ impl Default for RunnerOptions {
     fn default() -> Self {
         Self {
             auto_wait: Duration::from_secs(60),
-            handoff_timeout: Duration::from_secs(10 * 60),
             provider_retry_limit: 10,
+            context_attempt_limit: 10,
+            context: zork_config::ContextConfig::default(),
             provider_retry_base: Duration::from_millis(500),
             provider_retry_max: Duration::from_secs(5),
             tool_result_capacity: 64,
             max_tool_result_json_bytes: 1024 * 1024,
-            max_tool_result_message_bytes: 64 * 1024,
             input_budget: Arc::new(|_| None),
             max_output_tokens: Arc::new(|_| None),
         }
@@ -83,6 +84,7 @@ pub enum RunnerCommand {
         selection: Selection,
         system_prompt: Option<String>,
         workspace: String,
+        context: Option<zork_config::ContextConfig>,
         response: Response,
         capacity: Option<tokio::sync::OwnedSemaphorePermit>,
     },
@@ -93,6 +95,11 @@ pub enum RunnerCommand {
     },
     SetSelection {
         selection: Selection,
+        response: Response,
+        capacity: Option<tokio::sync::OwnedSemaphorePermit>,
+    },
+    SetContext {
+        config: zork_config::ContextConfig,
         response: Response,
         capacity: Option<tokio::sync::OwnedSemaphorePermit>,
     },
@@ -183,13 +190,16 @@ impl SessionRunner {
                     Err(error) => return RunnerExit::Failed(error),
                 }
             }
+            // Completed tools leave the executor only after enqueueing. Snapshot
+            // before draining so completion cannot look like an interrupted tool.
+            let live_tools = self.dependencies.executor.live(&self.state.session_id);
             while let Ok(completed) = self.tool_results.try_recv() {
                 if let Err(error) = self.persist_tool_result(completed).await {
                     return RunnerExit::Failed(error);
                 }
             }
 
-            let world = self.world();
+            let world = self.world(live_tools);
             match decide(&self.state, &world) {
                 Decision::InterruptStep { step_id, reason } => {
                     if let Err(error) = self
@@ -208,19 +218,28 @@ impl SessionRunner {
                         .into_iter()
                         .filter_map(|invocation_id| {
                             self.state.pending(&invocation_id).map(|pending| {
+                                let execution =
+                                    pending.invocation.rejection.as_deref().map_or_else(
+                                        || ToolExecution {
+                                            outcome: ToolOutcome::Interrupted,
+                                            data: serde_json::json!({
+                                                "error": TOOL_INTERRUPTED_MESSAGE,
+                                                "reason": "runtime_interrupted",
+                                                "result_unknown": true,
+                                            }),
+                                            result_schema_version: 1,
+                                            knowledge: None,
+                                        },
+                                        rejected_execution,
+                                    );
                                 SessionEvent::ToolResult {
                                     result: ToolResultData {
-                                        result_id: self.dependencies.ids.next(),
                                         invocation_id,
                                         tool: pending.invocation.tool.clone(),
-                                        outcome: ToolOutcome::Interrupted,
-                                        message: TOOL_INTERRUPTED_MESSAGE.into(),
-                                        data: serde_json::json!({
-                                            "reason": "runtime_interrupted",
-                                            "result_unknown": true,
-                                        }),
-                                        result_schema_version: 1,
-                                        knowledge: None,
+                                        outcome: execution.outcome,
+                                        data: execution.data,
+                                        result_schema_version: execution.result_schema_version,
+                                        knowledge: execution.knowledge,
                                         finished_at_ms: self.dependencies.clock.now_ms(),
                                     },
                                 }
@@ -269,8 +288,15 @@ impl SessionRunner {
                         Err(error) => return RunnerExit::Failed(error),
                     }
                 }
-                Decision::ApplyHandoff { document, failure } => {
-                    if let Err(error) = self.apply_handoff(document, failure).await {
+                Decision::ApplyContext {
+                    purpose,
+                    document,
+                    failure,
+                } => {
+                    if let Err(error) = self
+                        .apply_context(Vec::new(), purpose, document, failure)
+                        .await
+                    {
                         return RunnerExit::Failed(error);
                     }
                 }
@@ -342,16 +368,16 @@ impl SessionRunner {
         }
     }
 
-    fn world(&self) -> DecisionWorld {
+    fn world(&self, live_tools: std::collections::BTreeSet<String>) -> DecisionWorld {
         DecisionWorld {
             now_ms: self.dependencies.clock.now_ms(),
-            live_tools: self.dependencies.executor.live(&self.state.session_id),
+            live_tools,
             tool_changes: self.dependencies.tools.changes(&self.state.known_tools),
             outstanding: self.state.outstanding(&self.dependencies.tools),
             estimated_input_tokens: estimate_input_tokens(&self.state),
             input_budget: (self.dependencies.options.input_budget)(&self.state),
             provider_retry_limit: self.dependencies.options.provider_retry_limit,
-            handoff_timeout_ms: duration_ms(self.dependencies.options.handoff_timeout),
+            context_attempt_limit: self.dependencies.options.context_attempt_limit,
         }
     }
 
@@ -410,7 +436,13 @@ impl SessionRunner {
         mut outstanding: Vec<super::events::OutstandingItem>,
     ) -> Result<StepEffect, RunnerFailure> {
         if let Some(turn) = &self.state.active_turn {
-            if turn.consecutive_provider_failures > 0 {
+            if turn.consecutive_provider_failures > 0
+                && !self
+                    .state
+                    .last_step_failure
+                    .as_ref()
+                    .is_some_and(|failure| failure.error.is_context_overflow())
+            {
                 match self
                     .wait_retry_backoff(turn.consecutive_provider_failures)
                     .await?
@@ -421,10 +453,6 @@ impl SessionRunner {
                     CommandEffect::Stop => return Ok(StepEffect::Stop),
                 }
             }
-        }
-
-        if purpose == Purpose::Handoff && self.handoff_expired() {
-            return Ok(StepEffect::Continue);
         }
 
         let turn_id = self
@@ -450,12 +478,67 @@ impl SessionRunner {
         };
         outstanding
             .retain(|item| item.kind != "mailbox_input" || !consumed_inputs.contains(&item.id));
-        let mut notices = self.state.pending_notices.clone();
+        let progress = self.state.context_progress();
+        let mut deliveries = self.state.planned_deliveries(include_pending_tools);
+        if let Some(progress) = progress {
+            // Only close calls from a failed handoff response. Real late results
+            // and notices wait for the successor, including across retries.
+            let control_calls = self.state.generation.entries[progress.source_entries..]
+                .iter()
+                .rev()
+                .find_map(|entry| match entry {
+                    GenerationEntry::Assistant { invocations, .. } => Some(invocations),
+                    _ => None,
+                });
+            deliveries.retain(|delivery| {
+                let invocation = match delivery {
+                    super::events::ToolDelivery::Result { invocation, .. }
+                    | super::events::ToolDelivery::Pending { invocation } => invocation,
+                };
+                purpose == Purpose::Handoff
+                    && control_calls.is_some_and(|calls| {
+                        calls
+                            .iter()
+                            .any(|call| call.invocation_id == invocation.invocation_id)
+                    })
+            });
+        }
+        let tool_changes = if progress.is_none() {
+            self.dependencies.tools.changes(&self.state.known_tools)
+        } else {
+            Vec::new()
+        };
+        let mut notices = if purpose == Purpose::Compaction {
+            Vec::new()
+        } else {
+            self.state
+                .pending_notices
+                .iter()
+                .filter(|notice| {
+                    !purpose.is_context() || !self.state.generation.entries.iter().any(|entry|
+                    matches!(entry, GenerationEntry::Notice { message } if message == *notice))
+                })
+                .cloned()
+                .collect()
+        };
         if purpose == Purpose::Handoff {
             notices.push(
-                "Prepare a complete successor-facing context handoff document, then call handoff. The handoff document is the only information that may be absent if this request fails."
+                "A context handoff is required. Do not call tool.help or any other logical tool, and do not return explanatory text. Make exactly one provider `call` with this shape: {\"tool\":\"handoff\",\"arguments\":{\"document\":\"<complete successor-facing context>\"}}. The non-empty successor-facing context handoff document must give the successor the task, completed work, current state, relevant files and commands, remaining work, and blockers."
                     .into(),
             );
+            if self
+                .state
+                .context_progress()
+                .is_some_and(|progress| progress.attempts > 0)
+            {
+                if let Some((_, invocations)) = self.state.latest_assistant() {
+                    if let Err(reason) = handoff_document(invocations) {
+                        notices.push(format!(
+                            "The previous handoff response was invalid: {reason}."
+                        ));
+                    }
+                }
+            }
         }
         let max_output_tokens = (self.dependencies.options.max_output_tokens)(&self.state);
         self.append(vec![SessionEvent::StepStarted {
@@ -463,11 +546,12 @@ impl SessionRunner {
             turn_id,
             purpose,
             consumed_inputs,
-            deliveries: self.state.planned_deliveries(include_pending_tools),
-            tool_changes: self.dependencies.tools.changes(&self.state.known_tools),
+            deliveries,
+            tool_changes,
             notices,
             outstanding,
             max_output_tokens,
+            input_budget: (self.dependencies.options.input_budget)(&self.state),
             started_at_ms: self.dependencies.clock.now_ms(),
         }])
         .await?;
@@ -480,26 +564,28 @@ impl SessionRunner {
             generation: self.state.generation.number,
             step_id: step_id.clone(),
             selection,
-            transcript: provider_transcript(&self.state),
-            tools: Arc::new(vec![provider_call_definition()]),
-            max_output_tokens,
-            stream_observer: Arc::new(StepStreamObserver {
-                observer: self.dependencies.observer.clone(),
+            transcript: if purpose == Purpose::Compaction {
+                summary_transcript(&self.state)
+            } else {
+                provider_transcript(&self.state)
+            },
+            tools: Arc::new(if purpose == Purpose::Compaction {
+                Vec::new()
+            } else {
+                vec![provider_call_definition()]
             }),
+            max_output_tokens,
+            independent: purpose == Purpose::Compaction,
+            stream_observer: if purpose == Purpose::Compaction {
+                Arc::new(SilentStreamObserver)
+            } else {
+                Arc::new(StepStreamObserver {
+                    observer: self.dependencies.observer.clone(),
+                })
+            },
         };
         let model = self.dependencies.model.clone();
         let mut task = tokio::spawn(async move { model.complete(&request).await });
-        let handoff_deadline_ms = (purpose == Purpose::Handoff)
-            .then(|| self.handoff_deadline_ms())
-            .flatten();
-        let clock = self.dependencies.clock.clone();
-        let handoff_timeout = async move {
-            match handoff_deadline_ms {
-                Some(deadline_ms) => clock.sleep_until(deadline_ms).await,
-                None => std::future::pending::<()>().await,
-            }
-        };
-        tokio::pin!(handoff_timeout);
 
         loop {
             tokio::select! {
@@ -519,16 +605,6 @@ impl SessionRunner {
                             Ok(StepEffect::Continue)
                         }
                     };
-                }
-                _ = &mut handoff_timeout => {
-                    task.abort();
-                    let _ = task.await;
-                    self.append(vec![SessionEvent::StepInterrupted {
-                        step_id,
-                        reason: super::events::StepInterruptionReason::HandoffTimeout,
-                        interrupted_at_ms: self.dependencies.clock.now_ms(),
-                    }]).await?;
-                    return Ok(StepEffect::Continue);
                 }
                 command = self.commands.recv() => match command {
                     Some(command) => match self.handle_command(command).await? {
@@ -599,58 +675,62 @@ impl SessionRunner {
         }
     }
 
-    fn handoff_deadline_ms(&self) -> Option<i64> {
-        self.state
-            .active_turn
-            .as_ref()?
-            .handoff
-            .as_ref()
-            .map(|progress| {
-                progress
-                    .started_at_ms
-                    .saturating_add(duration_ms(self.dependencies.options.handoff_timeout))
-            })
-    }
-
-    fn handoff_expired(&self) -> bool {
-        self.handoff_deadline_ms()
-            .is_some_and(|deadline_ms| self.dependencies.clock.now_ms() >= deadline_ms)
-    }
-
     async fn complete_step(
         &mut self,
         step_id: String,
         outcome: ModelOutcome,
     ) -> Result<(), RunnerFailure> {
+        let purpose = self
+            .state
+            .active_step
+            .as_ref()
+            .filter(|step| step.step_id == step_id)
+            .map(|step| step.purpose)
+            .ok_or_else(|| {
+                invariant_failure(
+                    "model.complete",
+                    "Model outcome arrived without a matching active step",
+                )
+            })?;
         let completed_at_ms = self.dependencies.clock.now_ms();
-        let invocations = match parse_invocations(
-            &self.state,
-            &outcome,
-            completed_at_ms,
-            self.dependencies.ids.as_ref(),
-        ) {
-            Ok(invocations) => invocations,
-            Err(error) => {
-                return self
-                    .fail_step_with_record(
-                        step_id,
-                        ProviderErrorRecord {
-                            stage: "provider.output.tool_call".into(),
-                            retryable: true,
-                            status_code: None,
-                            provider_code: Some("invalid_tool_call".into()),
-                            request_id: None,
-                            message: error,
-                        },
-                    )
-                    .await;
-            }
-        };
-        let auto_wait_deadline_ms = (!invocations.is_empty()).then(|| {
-            completed_at_ms.saturating_add(
-                i64::try_from(self.dependencies.options.auto_wait.as_millis()).unwrap_or(i64::MAX),
+        let mut invocations = if purpose == Purpose::Compaction {
+            Vec::new()
+        } else {
+            materialize_invocations(
+                &self.state,
+                &outcome,
+                completed_at_ms,
+                self.dependencies.ids.as_ref(),
             )
+        };
+        let context_document = purpose.is_context().then(|| {
+            let result = if purpose == Purpose::Compaction {
+                if !outcome.tool_calls.is_empty() {
+                    Err("compaction must return summary text without tool calls".into())
+                } else if outcome.text.trim().is_empty() {
+                    Err("compaction returned an empty summary".into())
+                } else {
+                    Ok(outcome.text.trim().to_owned())
+                }
+            } else {
+                handoff_document(&invocations)
+            };
+            if let Err(reason) = &result {
+                for invocation in &mut invocations {
+                    invocation.rejection.get_or_insert_with(|| {
+                        format!("not executable because the handoff response was invalid: {reason}")
+                    });
+                }
+            }
+            result
         });
+        let auto_wait_deadline_ms = (purpose == Purpose::Conversation && !invocations.is_empty())
+            .then(|| {
+                completed_at_ms.saturating_add(
+                    i64::try_from(self.dependencies.options.auto_wait.as_millis())
+                        .unwrap_or(i64::MAX),
+                )
+            });
         let usage = outcome.usage.map(|usage| Usage {
             input_tokens: usage.input_tokens,
             output_tokens: usage.output_tokens,
@@ -658,21 +738,70 @@ impl SessionRunner {
             output_reasoning_tokens: usage.output_reasoning_tokens,
             output_text_tokens: usage.output_text_tokens,
         });
-        self.append(vec![SessionEvent::StepCompleted {
+        let completed = SessionEvent::StepCompleted {
             step_id,
+            purpose,
             assistant_text: outcome.text,
             provider_calls: outcome.tool_calls,
             invocations: invocations.clone(),
             auto_wait_deadline_ms,
             usage,
             provider_context: outcome.provider_context,
+            provider_input: outcome.provider_input,
             completed_at_ms,
-        }])
-        .await?;
+        };
+
+        if let Some(context_document) = context_document {
+            return match context_document {
+                Ok(document) => {
+                    self.apply_context(vec![completed], purpose, Some(document), None)
+                        .await
+                }
+                Err(reason) => {
+                    let attempts = self
+                        .state
+                        .context_progress()
+                        .map_or(1, |progress| progress.attempts.saturating_add(1));
+                    if attempts >= self.dependencies.options.context_attempt_limit.max(1) {
+                        self.apply_context(
+                            vec![completed],
+                            purpose,
+                            None,
+                            Some(format!(
+                                "the model did not produce a valid context document in {attempts} attempts: {reason}"
+                            )),
+                        )
+                        .await
+                    } else {
+                        let mut events = Vec::with_capacity(invocations.len() + 1);
+                        events.push(completed);
+                        events.extend(invocations.iter().map(|invocation| {
+                            SessionEvent::ToolResult {
+                                result: ToolResultData {
+                                    invocation_id: invocation.invocation_id.clone(),
+                                    tool: invocation.tool.clone(),
+                                    outcome: ToolOutcome::Failed,
+                                    data: serde_json::json!({
+                                        "error": format!("Invalid handoff response: {reason}"),
+                                        "reason": "invalid_handoff_response",
+                                    }),
+                                    result_schema_version: 1,
+                                    knowledge: None,
+                                    finished_at_ms: completed_at_ms,
+                                },
+                            }
+                        }));
+                        self.append(events).await.map(|_| ())
+                    }
+                }
+            };
+        }
+
+        self.append(vec![completed]).await?;
 
         let mut executable = Vec::new();
         for invocation in invocations {
-            if invocation.tool == TOOL_CANCEL_NAME {
+            if invocation.rejection.is_none() && invocation.tool == TOOL_CANCEL_NAME {
                 let target = invocation
                     .arguments
                     .get("invocation_id")
@@ -718,7 +847,6 @@ impl SessionRunner {
         target_invocation_id: &str,
     ) -> Result<(), RunnerFailure> {
         self.append(vec![SessionEvent::ToolCancelRequested {
-            request_id: self.dependencies.ids.next(),
             invocation_id: target_invocation_id.to_owned(),
             requested_at_ms: self.dependencies.clock.now_ms(),
         }])
@@ -728,20 +856,17 @@ impl SessionRunner {
             .executor
             .cancel(&self.state.session_id, target_invocation_id);
         let result = ToolResultData {
-            result_id: self.dependencies.ids.next(),
             invocation_id: control_invocation_id.to_owned(),
             tool: TOOL_CANCEL_NAME.into(),
             outcome: ToolOutcome::Succeeded,
-            message: if signalled {
-                "Cancellation was signalled. The target's final ToolResult remains authoritative."
-                    .into()
-            } else {
-                "The cancellation request was recorded, but no live target executor was found. The target's final ToolResult remains authoritative."
-                    .into()
-            },
             data: serde_json::json!({
                 "target_invocation_id": target_invocation_id,
                 "signalled": signalled,
+                "note": if signalled {
+                    "Cancellation was signalled. The target's final ToolResult remains authoritative."
+                } else {
+                    "The cancellation request was recorded, but no live target executor was found. The target's final ToolResult remains authoritative."
+                },
             }),
             result_schema_version: 1,
             knowledge: None,
@@ -752,14 +877,22 @@ impl SessionRunner {
             .map(|_| ())
     }
 
-    async fn apply_handoff(
+    async fn apply_context(
         &mut self,
+        mut events: Vec<SessionEvent>,
+        purpose: Purpose,
         document: Option<String>,
         failure: Option<String>,
     ) -> Result<(), RunnerFailure> {
         let previous_generation = self.state.generation.number;
         let generation = previous_generation.saturating_add(1);
-        let handoff_id = self.dependencies.ids.next();
+        let retained = if document.is_some() && purpose == Purpose::Compaction {
+            self.state.context_progress().map_or(0..0, |progress| {
+                progress.retain_from..progress.source_entries
+            })
+        } else {
+            0..0
+        };
         let carried_tools = self
             .state
             .pending_tools
@@ -767,19 +900,20 @@ impl SessionRunner {
             .filter(|pending| pending.result.is_none())
             .map(|pending| pending.invocation.clone())
             .collect::<Vec<_>>();
-        let mut events = Vec::with_capacity(usize::from(failure.is_some()) + 1);
+        events.reserve(usize::from(failure.is_some()) + 1);
         if let Some(message) = failure {
-            events.push(SessionEvent::HandoffFailed {
-                handoff_id: handoff_id.clone(),
+            events.push(SessionEvent::ContextFailed {
                 generation,
+                purpose,
                 message,
                 failed_at_ms: self.dependencies.clock.now_ms(),
             });
         }
-        events.push(SessionEvent::HandoffApplied {
-            handoff_id,
+        events.push(SessionEvent::ContextApplied {
             generation,
+            purpose,
             document,
+            retained,
             tools: self.dependencies.tools.initial_catalog(),
             carried_tools,
             applied_at_ms: self.dependencies.clock.now_ms(),
@@ -824,11 +958,9 @@ impl SessionRunner {
         }
         let execution = bound_tool_execution(completed.execution, &self.dependencies.options);
         let result = ToolResultData {
-            result_id: self.dependencies.ids.next(),
             invocation_id: completed.invocation.invocation_id,
             tool: completed.invocation.tool,
             outcome: execution.outcome,
-            message: execution.message,
             data: execution.data,
             result_schema_version: execution.result_schema_version,
             knowledge: execution.knowledge,
@@ -848,6 +980,7 @@ impl SessionRunner {
                 selection,
                 system_prompt,
                 workspace,
+                context,
                 response,
                 capacity,
             } => {
@@ -857,14 +990,20 @@ impl SessionRunner {
                         message: "session already exists".into(),
                     })
                 } else {
-                    self.append(vec![SessionEvent::SessionCreated {
-                        session_id: self.state.session_id.clone(),
-                        created_at_ms: self.dependencies.clock.now_ms(),
-                        selection,
-                        system_prompt,
-                        workspace,
-                        tools: self.dependencies.tools.initial_catalog(),
-                    }])
+                    self.append(vec![
+                        SessionEvent::SessionCreated {
+                            session_id: self.state.session_id.clone(),
+                            created_at_ms: self.dependencies.clock.now_ms(),
+                            selection,
+                            system_prompt,
+                            workspace,
+                            tools: self.dependencies.tools.initial_catalog(),
+                        },
+                        SessionEvent::ContextConfigured {
+                            config: context
+                                .unwrap_or_else(|| self.dependencies.options.context.clone()),
+                        },
+                    ])
                     .await
                     .map(|_| ())
                     .map_err(request_error)
@@ -907,6 +1046,19 @@ impl SessionRunner {
                 let _capacity = capacity;
                 let result = self
                     .append(vec![SessionEvent::SelectionChanged { selection }])
+                    .await;
+                respond(response, &result);
+                result?;
+                Ok(CommandEffect::Continue)
+            }
+            RunnerCommand::SetContext {
+                config,
+                response,
+                capacity,
+            } => {
+                let _capacity = capacity;
+                let result = self
+                    .append(vec![SessionEvent::ContextConfigured { config }])
                     .await;
                 respond(response, &result);
                 result?;
@@ -971,6 +1123,8 @@ impl SessionRunner {
                 Ok(CommandEffect::Continue)
             }
             RunnerCommand::Stop(response) => {
+                // Unblock completed tools waiting to enqueue into a full result queue.
+                self.tool_results.close();
                 self.dependencies
                     .executor
                     .cancel_session_and_wait(&self.state.session_id)
@@ -1046,43 +1200,72 @@ impl ModelStreamObserver for StepStreamObserver {
     }
 }
 
-fn parse_invocations(
+fn materialize_invocations(
     state: &SessionState,
     outcome: &ModelOutcome,
     started_at_ms: i64,
     ids: &dyn IdGenerator,
-) -> Result<Vec<ToolInvocation>, String> {
+) -> Vec<ToolInvocation> {
     let turn_id = state
         .active_turn
         .as_ref()
         .map(|turn| turn.turn_id.clone())
-        .ok_or_else(|| "provider returned tool calls without an active turn".to_owned())?;
-    let mut provider_ids = std::collections::BTreeSet::new();
+        .unwrap_or_default();
+    let mut provider_id_counts = std::collections::BTreeMap::new();
+    for call in &outcome.tool_calls {
+        *provider_id_counts
+            .entry(call.tool_call_id.as_str())
+            .or_insert(0_usize) += 1;
+    }
     let mut invocations = Vec::with_capacity(outcome.tool_calls.len());
     for call in &outcome.tool_calls {
-        if call.tool_call_id.is_empty() || !provider_ids.insert(call.tool_call_id.clone()) {
-            return Err("provider returned an empty or duplicate tool call ID".into());
+        let mut rejection = Vec::new();
+        if turn_id.is_empty() {
+            rejection.push("provider returned tool calls without an active turn".to_owned());
+        }
+        if call.tool_call_id.is_empty() {
+            rejection.push("provider returned an empty tool call ID".to_owned());
+        } else if provider_id_counts[call.tool_call_id.as_str()] > 1 {
+            rejection.push("provider returned a duplicate tool call ID".to_owned());
         }
         if call.tool_name != super::tools::PROVIDER_CALL_NAME {
-            return Err(format!(
+            rejection.push(format!(
                 "provider called {:?}; the only registered provider tool is {:?}",
                 call.tool_name,
                 super::tools::PROVIDER_CALL_NAME
             ));
         }
-        let dynamic =
-            DynamicCall::from_value(call.arguments.clone()).map_err(|error| error.to_string())?;
+        let fallback_tool = call
+            .arguments
+            .get("tool")
+            .and_then(serde_json::Value::as_str)
+            .filter(|tool| !tool.trim().is_empty())
+            .unwrap_or(&call.tool_name)
+            .to_owned();
+        let (tool, arguments) = match DynamicCall::from_value(call.arguments.clone()) {
+            Ok(dynamic) => (dynamic.tool, dynamic.arguments),
+            Err(error) => {
+                rejection.push(error.to_string());
+                (fallback_tool, call.arguments.clone())
+            }
+        };
+        let rejection = (!rejection.is_empty()).then(|| rejection.join("; "));
+        let tool_version = rejection
+            .is_none()
+            .then(|| state.known_tools.get(&tool).cloned())
+            .flatten();
         invocations.push(ToolInvocation {
             invocation_id: ids.next(),
             provider_call_id: call.tool_call_id.clone(),
             turn_id: turn_id.clone(),
             started_at_ms,
-            tool_version: state.known_tools.get(&dynamic.tool).cloned(),
-            tool: dynamic.tool,
-            arguments: dynamic.arguments,
+            tool,
+            arguments,
+            tool_version,
+            rejection,
         });
     }
-    Ok(invocations)
+    invocations
 }
 
 fn provider_error_record(error: ModelError) -> ProviderErrorRecord {
@@ -1093,6 +1276,8 @@ fn provider_error_record(error: ModelError) -> ProviderErrorRecord {
             status_code: None,
             provider_code: Some("unavailable".into()),
             request_id: None,
+            provider_input: None,
+            usage: None,
             message: "Model gateway is temporarily unavailable.".into(),
         },
         ModelError::InvalidSelection => ProviderErrorRecord {
@@ -1101,6 +1286,8 @@ fn provider_error_record(error: ModelError) -> ProviderErrorRecord {
             status_code: None,
             provider_code: Some("invalid_selection".into()),
             request_id: None,
+            provider_input: None,
+            usage: None,
             message: "The provider selection is invalid.".into(),
         },
         ModelError::ProfileUnavailable => ProviderErrorRecord {
@@ -1109,15 +1296,9 @@ fn provider_error_record(error: ModelError) -> ProviderErrorRecord {
             status_code: None,
             provider_code: Some("profile_unavailable".into()),
             request_id: None,
+            provider_input: None,
+            usage: None,
             message: "The selected provider profile is unavailable or not authenticated.".into(),
-        },
-        ModelError::InvalidToolArguments => ProviderErrorRecord {
-            stage: "provider.output.tool_call".into(),
-            retryable: true,
-            status_code: None,
-            provider_code: Some("invalid_tool_call".into()),
-            request_id: None,
-            message: "The provider returned invalid tool arguments.".into(),
         },
         ModelError::ProviderFailed(failure) => ProviderErrorRecord {
             stage: failure.stage.into(),
@@ -1125,26 +1306,30 @@ fn provider_error_record(error: ModelError) -> ProviderErrorRecord {
             status_code: failure.status_code,
             provider_code: failure.provider_code,
             request_id: failure.request_id,
+            provider_input: failure.provider_input,
+            usage: failure.usage.map(|usage| Usage {
+                input_tokens: usage.input_tokens,
+                cached_input_tokens: usage.cached_input_tokens,
+                output_tokens: usage.output_tokens,
+                output_reasoning_tokens: usage.output_reasoning_tokens,
+                output_text_tokens: usage.output_text_tokens,
+            }),
             message: failure.message,
         },
     }
 }
 
 fn bound_tool_execution(mut execution: ToolExecution, options: &RunnerOptions) -> ToolExecution {
-    execution.message = truncate_utf8(
-        execution.message,
-        options.max_tool_result_message_bytes.max(1),
-    );
     let data_size = serde_json::to_vec(&execution.data)
         .map(|bytes| bytes.len())
         .unwrap_or(usize::MAX);
     if data_size > options.max_tool_result_json_bytes {
         execution.outcome = ToolOutcome::Failed;
-        execution.message = format!(
-            "Tool returned {data_size} bytes of JSON, exceeding the {} byte durable result limit. Side effects may already have occurred; the tool must place large display content in a file and return its path.",
-            options.max_tool_result_json_bytes
-        );
         execution.data = serde_json::json!({
+            "error": format!(
+                "Tool returned {data_size} bytes of JSON, exceeding the {} byte durable result limit. Side effects may already have occurred; the tool must place large display content in a file and return its path.",
+                options.max_tool_result_json_bytes
+            ),
             "result_too_large": true,
             "json_bytes": data_size,
             "limit_bytes": options.max_tool_result_json_bytes,
@@ -1152,19 +1337,6 @@ fn bound_tool_execution(mut execution: ToolExecution, options: &RunnerOptions) -
         execution.result_schema_version = 1;
     }
     execution
-}
-
-fn truncate_utf8(mut text: String, max_bytes: usize) -> String {
-    if text.len() <= max_bytes {
-        return text;
-    }
-    let mut end = max_bytes;
-    while !text.is_char_boundary(end) {
-        end -= 1;
-    }
-    text.truncate(end);
-    text.push_str("\n[tool result message truncated]");
-    text
 }
 
 fn estimate_input_tokens(state: &SessionState) -> Option<u64> {
@@ -1179,10 +1351,6 @@ fn estimate_input_tokens(state: &SessionState) -> Option<u64> {
         .saturating_add(3)
         / 4;
     Some(anchor.input_tokens.saturating_add(estimated_addition))
-}
-
-fn duration_ms(duration: Duration) -> i64 {
-    i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
 }
 
 fn respond(response: Response, result: &Result<Vec<EventEnvelope>, RunnerFailure>) {

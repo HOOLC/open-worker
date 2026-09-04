@@ -93,6 +93,78 @@ async fn send_mail(agent: &RealAgent, session_id: &str, content: &str) {
     assert_eq!(response.status(), StatusCode::ACCEPTED);
 }
 
+#[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [CONTEXT-01, HTTP-01, HTTP-02]
+async fn session_context_configuration_defaults_overrides_and_survives_restart() {
+    let mut agent = RealAgent::new().unwrap();
+    put_profile(
+        &agent,
+        "fixture",
+        &profile_document(agent.provider_base_url()),
+    )
+    .await;
+    let workspace = TempDir::new().unwrap();
+    let session = create_session(&agent, workspace.path(), "fixture", "low").await;
+    assert_eq!(
+        session["context"],
+        json!({"strategy": "compaction", "keep_recent_tokens": 20_000})
+    );
+    let id = session["session_id"].as_str().unwrap();
+    let changed = agent
+        .client()
+        .put(format!("{}/sessions/{id}/context", agent.base_url()))
+        .json(&json!({"strategy": "handoff", "keep_recent_tokens": 0}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(changed.status(), StatusCode::OK);
+    assert_eq!(
+        changed.json::<Value>().await.unwrap()["context"]["strategy"],
+        "handoff"
+    );
+    for invalid in [
+        json!({"strategy": "unknown"}),
+        json!({"keep_recent_tokens": -1}),
+        json!({"unexpected": true}),
+    ] {
+        let response = agent
+            .client()
+            .put(format!("{}/sessions/{id}/context", agent.base_url()))
+            .json(&invalid)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    }
+    agent.restart().await.unwrap();
+    let read = agent
+        .client()
+        .get(format!("{}/sessions/{id}", agent.base_url()))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(
+        read.json::<Value>().await.unwrap()["context"],
+        json!({"strategy": "handoff", "keep_recent_tokens": 0})
+    );
+    let response = agent
+        .client()
+        .post(format!("{}/sessions", agent.base_url()))
+        .json(&json!({
+            "profile_id": "fixture", "model": "fixture-model", "thinking": "low",
+            "workspace": workspace.path(), "context": {"strategy": "handoff"}
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::CREATED);
+    assert_eq!(
+        response.json::<Value>().await.unwrap()["context"]["strategy"],
+        "handoff"
+    );
+    agent.shutdown().await;
+}
+
 async fn read_messages(agent: &RealAgent, session_id: &str, query: &str) -> Value {
     let response = agent
         .client()
@@ -326,7 +398,7 @@ async fn real_http_lifecycle_covers_profiles_sessions_messages_sse_and_auth() {
     assert_eq!(session["status"], "wait");
     assert_eq!(session_id.len(), 26);
     assert!(session_id.parse::<ulid::Ulid>().is_ok());
-    assert_eq!(session.as_object().unwrap().len(), 7);
+    assert_eq!(session.as_object().unwrap().len(), 8);
 
     let read_session: Value = agent
         .client()

@@ -23,7 +23,8 @@ fn provider_exposes_one_fixed_call_shape_for_all_logical_tools() {
 
     let call = DynamicCall::from_value(json!({
         "tool": "file.read",
-        "arguments": {"path": "README.md"}
+        "arguments": {"path": "README.md"},
+        "comment": "ignored"
     }))
     .unwrap();
     assert_eq!(call.tool, "file.read");

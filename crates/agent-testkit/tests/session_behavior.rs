@@ -1,13 +1,19 @@
 use serde_json::json;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use zork_agent::session::events::{
-    AutoWaitEndReason, SessionEvent, StepInterruptionReason, ToolOutcome, TurnOutcome,
+    AutoWaitEndReason, SessionEvent, StepInterruptionReason, ToolDelivery, ToolOutcome, TurnOutcome,
 };
-use zork_agent::session::model::TOOL_INTERRUPTED_MESSAGE;
+use zork_agent::session::model::{
+    ModelError, ModelOutcome, ModelTokenUsage, ProviderFailure, TOOL_INTERRUPTED_MESSAGE,
+};
 use zork_agent::session::service::ServiceOptions;
+use zork_agent::session::state::GenerationEntry;
 use zork_agent::session::supervisor::PublicSlotStatus;
 use zork_agent::session::tools::{ToolContract, ToolVersion};
-use zork_agent::session::wire::{SessionSelection, TranscriptRole};
+use zork_agent::session::wire::{
+    ProviderContext, ProviderInputDiagnostics, ProviderInputMode, ProviderToolCall,
+    SessionSelection, TranscriptRole,
+};
 use zork_agent_testkit::TestWorld;
 
 fn selection() -> SessionSelection {
@@ -41,6 +47,9 @@ async fn one_provider_call_definition_continues_until_explicit_end() {
             .collect::<Vec<_>>(),
         vec!["call"]
     );
+    assert!(first.tools[0].input_schema["properties"]["tool"]
+        .get("enum")
+        .is_none());
     assert!(first.transcript.iter().any(|message| {
         message.role == TranscriptRole::User && message.content.as_ref() == "do the work"
     }));
@@ -78,6 +87,190 @@ async fn one_provider_call_definition_continues_until_explicit_end() {
             outcome: TurnOutcome::Finished,
             ..
         }
+    )));
+    world.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [TURN-01]
+async fn end_ignores_arguments_without_end_semantics() {
+    let mut world = TestWorld::new();
+    let session_id = session(&world, "/virtual/end-extra-arguments").await;
+
+    world.send_mail(&session_id, "do the work").await.unwrap();
+    world
+        .request()
+        .await
+        .respond_call(
+            "provider-end-with-reason",
+            "end",
+            json!({"reason": "Implemented the requested change."}),
+        )
+        .unwrap();
+
+    world
+        .wait_for_state(&session_id, |state| {
+            state.last_turn_outcome == Some(TurnOutcome::Finished)
+        })
+        .await;
+    assert!(world.events(&session_id).iter().any(|event| matches!(
+        &event.event,
+        SessionEvent::ToolResult { result }
+            if result.tool == "end" && result.outcome == ToolOutcome::Succeeded
+    )));
+    world.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [TURN-01]
+async fn failed_end_is_returned_to_the_agent_instead_of_finishing_the_turn() {
+    let mut world = TestWorld::new();
+    let session_id = session(&world, "/virtual/failed-end").await;
+
+    world.send_mail(&session_id, "do the work").await.unwrap();
+    world
+        .request()
+        .await
+        .respond_call(
+            "provider-invalid-end",
+            "end",
+            json!({"acknowledge_outstanding": "yes"}),
+        )
+        .unwrap();
+
+    let retry = world.request().await;
+    assert!(retry.transcript.iter().any(|message| {
+        message.role == TranscriptRole::Tool
+            && message.tool_call_id.as_deref() == Some("provider-invalid-end")
+            && message.content.contains("Invalid tool arguments")
+    }));
+    assert!(world
+        .state(&session_id)
+        .await
+        .unwrap()
+        .active_turn
+        .is_some());
+
+    retry
+        .respond_call("provider-valid-end", "end", json!({}))
+        .unwrap();
+    world
+        .wait_for_state(&session_id, |state| {
+            state.last_turn_outcome == Some(TurnOutcome::Finished)
+        })
+        .await;
+    world.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [EVENT-05, TOOL-01, TOOL-10]
+async fn malformed_dynamic_call_preserves_the_provider_outcome_and_returns_a_tool_error() {
+    let mut options = ServiceOptions::default();
+    options.runner.provider_retry_base = Duration::ZERO;
+    options.runner.provider_retry_max = Duration::ZERO;
+    let mut world = TestWorld::with_options(options);
+    let session_id = session(&world, "/virtual/malformed-dynamic-call").await;
+
+    world
+        .send_mail(&session_id, "finish the turn")
+        .await
+        .unwrap();
+    world
+        .request()
+        .await
+        .respond(Ok(ModelOutcome {
+            text: "provider response survives validation".into(),
+            tool_calls: vec![ProviderToolCall {
+                tool_call_id: "provider-malformed".into(),
+                tool_name: "call".into(),
+                arguments: json!({
+                    "tool": "end",
+                    "parameters": {"acknowledge_outstanding": true}
+                }),
+            }],
+            provider_context: Some(ProviderContext {
+                profile_id: "test-profile".into(),
+                provider: "controlled".into(),
+                model: "test-model".into(),
+                api: "responses".into(),
+                output_items: Arc::new(vec![json!({"id": "provider-malformed"})]),
+            }),
+            usage: Some(ModelTokenUsage {
+                input_tokens: 11,
+                cached_input_tokens: Some(3),
+                output_tokens: 7,
+                output_reasoning_tokens: Some(2),
+                output_text_tokens: Some(5),
+            }),
+            provider_input: Some(Box::new(ProviderInputDiagnostics {
+                mode: ProviderInputMode::Delta,
+                logical_input_items: 9,
+                sent_input_items: 2,
+                previous_response_id: Some("response-before".into()),
+                response_id: Some("response-after".into()),
+            })),
+        }))
+        .unwrap();
+
+    let correction = world.request().await;
+    assert!(correction.transcript.iter().any(|message| {
+        message.role == TranscriptRole::Assistant
+            && message.content.as_ref() == "provider response survives validation"
+            && message
+                .tool_calls
+                .iter()
+                .any(|call| call.tool_call_id == "provider-malformed")
+    }));
+    assert!(correction.transcript.iter().any(|message| {
+        message.role == TranscriptRole::Tool
+            && message.tool_call_id.as_deref() == Some("provider-malformed")
+            && message.content.contains("Invalid provider call")
+    }));
+    correction
+        .respond_call("provider-end-after-malformed", "end", json!({}))
+        .unwrap();
+    world
+        .wait_for_state(&session_id, |state| {
+            state.last_turn_outcome == Some(TurnOutcome::Finished)
+        })
+        .await;
+
+    let events = world.events(&session_id);
+    assert!(!events
+        .iter()
+        .any(|event| matches!(event.event, SessionEvent::StepFailed { .. })));
+    let completed = events
+        .iter()
+        .find(|event| {
+            matches!(
+                &event.event,
+                SessionEvent::StepCompleted { provider_calls, .. }
+                    if provider_calls.iter().any(|call| call.tool_call_id == "provider-malformed")
+            )
+        })
+        .expect("the malformed provider outcome must remain a completed step");
+    let completed = serde_json::to_value(&completed.event).unwrap();
+    assert_eq!(completed["usage"]["input_tokens"], 11);
+    assert_eq!(completed["provider_context"]["provider"], "controlled");
+    assert_eq!(completed["provider_input"]["sent_input_items"], 2);
+    assert_eq!(
+        completed["invocations"][0]["arguments"]["parameters"]["acknowledge_outstanding"],
+        true
+    );
+    assert!(completed["invocations"][0]["arguments"]
+        .get("arguments")
+        .is_none());
+    assert!(completed["invocations"][0]["rejection"]
+        .as_str()
+        .is_some_and(|reason| reason.contains("missing field `arguments`")));
+    assert!(events.iter().any(|event| matches!(
+        &event.event,
+        SessionEvent::ToolResult { result }
+            if result.tool == "end"
+                && result.outcome == ToolOutcome::Failed
+                && result.data["error"]
+                    .as_str()
+                    .is_some_and(|error| error.contains("Invalid provider call"))
     )));
     world.shutdown().await;
 }
@@ -141,14 +334,17 @@ async fn one_auto_wait_delivers_every_result_from_a_completed_tool_batch() {
         .unwrap();
 
     let second = world.request().await;
-    let mut result_ids = second
+    let mut tool_call_ids = second
         .transcript
         .iter()
         .filter(|message| message.role == TranscriptRole::Tool)
         .filter_map(|message| message.tool_call_id.as_deref())
         .collect::<Vec<_>>();
-    result_ids.sort_unstable();
-    assert_eq!(result_ids, vec!["provider-call-1-0", "provider-call-1-1"]);
+    tool_call_ids.sort_unstable();
+    assert_eq!(
+        tool_call_ids,
+        vec!["provider-call-1-0", "provider-call-1-1"]
+    );
     assert_eq!(
         world.files.read_text(format!("{workspace}/one.txt")),
         Some("one".into())
@@ -174,6 +370,50 @@ async fn one_auto_wait_delivers_every_result_from_a_completed_tool_batch() {
 
     second
         .respond_call("provider-call-2", "end", json!({}))
+        .unwrap();
+    world
+        .wait_for_state(&session_id, |state| {
+            state.last_turn_outcome == Some(TurnOutcome::Finished)
+        })
+        .await;
+    world.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+// Contract: docs/zork-agent-architecture.md [TOOL-11, WAIT-01, EVENT-05]
+async fn concurrent_tool_results_are_not_mistaken_for_interrupted_executions() {
+    let mut options = ServiceOptions::default();
+    options.runner.tool_result_capacity = 1;
+    let mut world = TestWorld::with_options(options);
+    let session_id = session(&world, "/virtual/result-backpressure").await;
+    world.send_mail(&session_id, "write files").await.unwrap();
+    let mut request = world.request().await;
+    for batch in 0..16 {
+        request
+            .respond_calls((0..16).map(|index| {
+                (
+                    format!("write-{batch}-{index}"),
+                    "file.write",
+                    json!({"path": format!("{batch}-{index}.txt"), "content": "ok"}),
+                )
+            }))
+            .unwrap();
+        request = world.request().await;
+        let results = world
+            .events(&session_id)
+            .into_iter()
+            .filter_map(|envelope| match envelope.event {
+                SessionEvent::ToolResult { result } => Some(result),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(results.len(), (batch + 1) * 16);
+        assert!(results
+            .iter()
+            .all(|result| result.outcome == ToolOutcome::Succeeded));
+    }
+    request
+        .respond_call("end-after-backpressure", "end", json!({}))
         .unwrap();
     world
         .wait_for_state(&session_id, |state| {
@@ -352,7 +592,10 @@ async fn end_with_unfinished_work_reports_it_then_finishes_after_the_result() {
             && message.content.contains("has not returned a final result")
     }));
     pending
-        .succeed("controlled work completed", json!({"value": "controlled"}))
+        .succeed(json!({
+            "message": "controlled work completed",
+            "value": "controlled",
+        }))
         .unwrap();
     outstanding
         .respond_text("I will use the completed result.")
@@ -497,17 +740,53 @@ async fn a_permanent_provider_failure_waits_for_new_mail_then_the_session_recove
     world
         .request()
         .await
-        .fail_provider(
-            "controlled.authentication",
-            false,
-            "provider login is required",
-        )
+        .respond(Err(ModelError::ProviderFailed(ProviderFailure {
+            stage: "controlled.authentication",
+            retryable: false,
+            status_code: Some(401),
+            provider_code: Some("login_required".into()),
+            request_id: Some("request-authentication".into()),
+            message: "provider login is required".into(),
+            provider_input: Some(Box::new(ProviderInputDiagnostics {
+                mode: ProviderInputMode::Full,
+                logical_input_items: 4,
+                sent_input_items: 4,
+                previous_response_id: None,
+                response_id: None,
+            })),
+            usage: Some(Box::new(zork_agent::session::model::ModelTokenUsage {
+                input_tokens: 321,
+                cached_input_tokens: Some(123),
+                output_tokens: 45,
+                output_reasoning_tokens: Some(34),
+                output_text_tokens: Some(11),
+            })),
+        })))
         .unwrap();
     world
         .wait_for_state(&session_id, |state| {
             state.last_turn_outcome == Some(TurnOutcome::Failed) && state.active_turn.is_none()
         })
         .await;
+    let failed = world
+        .events(&session_id)
+        .into_iter()
+        .find(|event| matches!(event.event, SessionEvent::StepFailed { .. }))
+        .expect("provider failure must be durable");
+    let failed = serde_json::to_value(failed.event).unwrap();
+    assert_eq!(failed["error"]["provider_input"]["sent_input_items"], 4);
+    assert_eq!(failed["error"]["usage"]["input_tokens"], 321);
+    assert_eq!(failed["error"]["usage"]["cached_input_tokens"], 123);
+    assert_eq!(failed["error"]["usage"]["output_tokens"], 45);
+    assert_eq!(
+        world
+            .state(&session_id)
+            .await
+            .unwrap()
+            .token_anchor
+            .map(|anchor| anchor.input_tokens),
+        Some(321)
+    );
 
     world
         .send_mail(&session_id, "login is fixed; continue")
@@ -653,7 +932,7 @@ async fn restart_preserves_a_recorded_tool_result_and_reports_the_unfinished_pee
         .unwrap();
     let first = requests.swap_remove(first_index);
     first
-        .succeed("first result is durable", json!({"value": "first"}))
+        .succeed(json!({"message": "first result is durable", "value": "first"}))
         .unwrap();
     world
         .wait_for_state(&session_id, |state| {
@@ -721,7 +1000,10 @@ async fn controlled_tools_start_together_and_project_results_in_declaration_orde
     let first = first_tool.request().await;
     let second = second_tool.request().await;
     second
-        .succeed("second completed first", json!({"value": "second"}))
+        .succeed(json!({
+            "message": "second completed first",
+            "value": "second",
+        }))
         .unwrap();
     world
         .wait_for_state(&session_id, |state| {
@@ -732,17 +1014,20 @@ async fn controlled_tools_start_together_and_project_results_in_declaration_orde
         })
         .await;
     first
-        .succeed("first completed second", json!({"value": "first"}))
+        .succeed(json!({
+            "message": "first completed second",
+            "value": "first",
+        }))
         .unwrap();
 
     let projected = world.request().await;
-    let result_ids = projected
+    let tool_call_ids = projected
         .transcript
         .iter()
         .filter(|message| message.role == TranscriptRole::Tool)
         .filter_map(|message| message.tool_call_id.as_deref())
         .collect::<Vec<_>>();
-    assert_eq!(result_ids, vec!["provider-first", "provider-second"]);
+    assert_eq!(tool_call_ids, vec!["provider-first", "provider-second"]);
     projected
         .respond_call("provider-end-after-order", "end", json!({}))
         .unwrap();
@@ -790,7 +1075,10 @@ async fn auto_wait_timeout_projects_pending_work_then_delivers_the_late_result()
         .iter()
         .any(|message| message.content.contains("timed out")));
     pending
-        .succeed("late result completed", json!({"value": "eventual"}))
+        .succeed(json!({
+            "message": "late result completed",
+            "value": "eventual",
+        }))
         .unwrap();
     after_timeout
         .respond_text("I will incorporate the late result.")
@@ -851,8 +1139,11 @@ async fn every_external_effect_observes_its_durable_preparation_without_replayin
                     && invocation.tool == "test.prepared"
             })
     )));
-    tool.succeed("prepared work finished", json!({"value": "ready"}))
-        .unwrap();
+    tool.succeed(json!({
+        "message": "prepared work finished",
+        "value": "ready",
+    }))
+    .unwrap();
     world
         .request()
         .await
@@ -1231,18 +1522,20 @@ async fn end_can_acknowledge_a_visible_outstanding_item_and_late_completion_rema
     )));
 
     pending
-        .succeed(
-            "acknowledged work later completed",
-            json!({"value": "eventual"}),
-        )
+        .succeed(json!({
+            "message": "acknowledged work later completed",
+            "value": "eventual",
+        }))
         .unwrap();
     world
         .wait_for_state(&session_id, |state| {
-            state.pending_tools.values().any(|pending| {
-                pending
-                    .result
-                    .as_ref()
-                    .is_some_and(|result| result.message == "acknowledged work later completed")
+            state.generation.entries.iter().any(|entry| {
+                matches!(
+                    entry,
+                    GenerationEntry::ToolDelivery {
+                        delivery: ToolDelivery::Result { result, .. },
+                    } if result.data["message"] == "acknowledged work later completed"
+                )
             })
         })
         .await;

@@ -2,7 +2,8 @@ use zork_agent_testkit::measure_virtual_sessions;
 
 fn main() {
     let session_count = std::env::args()
-        .nth(1)
+        .skip(1)
+        .find(|value| value != "--bench")
         .map(|value| {
             value
                 .parse::<usize>()

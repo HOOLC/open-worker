@@ -1,3 +1,4 @@
+import { verifyContextConfiguration } from "./testkit/context-contract.js";
 import fs from "node:fs/promises";
 import http, { type ServerResponse } from "node:http";
 import os from "node:os";
@@ -420,6 +421,8 @@ describe.sequential("Gateway mailbox delivery", () => {
 
     const adminBaseUrl = `http://127.0.0.1:${adminPort}`;
     const selectionKey = testSessionKey("C-SELECTION", "820.100");
+    const contextUrl = `${adminBaseUrl}/admin/api/sessions/${encodeURIComponent(selectionKey)}/context`;
+    await verifyContextConfiguration(contextUrl, agent, initialAppend.sessionId);
     const explicit = await fetch(`${adminBaseUrl}/admin/api/sessions/${encodeURIComponent(selectionKey)}/selection`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
@@ -451,6 +454,7 @@ describe.sequential("Gateway mailbox delivery", () => {
     const gatewayDb = new DatabaseSync(path.join(tempRoot, "state", "gateway.sqlite"));
     gatewayDb.prepare("UPDATE sessions SET id = NULL WHERE key = ?").run(selectionKey);
     gatewayDb.close();
+    expect((await fetch(contextUrl)).status).toBe(409);
     agent.createFailure = { status: 422, message: "selection disappeared" };
     const rejectedFreshSelection = await fetch(`${adminBaseUrl}/admin/api/sessions/${encodeURIComponent(selectionKey)}/selection`, {
       method: "PUT",
@@ -507,6 +511,7 @@ describe.sequential("Gateway mailbox delivery", () => {
     });
     const created = await agent.waitForCreate(1);
     expect(created).toEqual({
+      context: null,
       profile_id: "fixture",
       model: "grok-4.6",
       thinking: "xhigh",

@@ -124,6 +124,7 @@ mod tests {
             transcript: Arc::new(Vec::new()),
             tools: Arc::new(Vec::<ToolDefinition>::new()),
             max_output_tokens: Some(9_999),
+            independent: false,
             stream_observer: Arc::new(SilentStreamObserver),
         };
 

@@ -6,6 +6,7 @@
 
 pub mod api;
 pub mod assets;
+pub mod automation;
 pub mod components;
 pub mod design;
 pub mod transcript;

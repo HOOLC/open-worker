@@ -4,6 +4,7 @@ apps/*/dist
 coverage/
 artifacts/
 target/
+target-linux/
 .vite
 *.tsbuildinfo
 __pycache__/

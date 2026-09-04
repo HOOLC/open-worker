@@ -34,7 +34,10 @@ impl CompressionPerformance {
 
 // Contract: docs/zork-agent-architecture.md [SEGMENT-02]
 fn main() {
-    let arguments = std::env::args().skip(1).collect::<Vec<_>>();
+    let arguments = std::env::args()
+        .skip(1)
+        .filter(|value| value != "--bench")
+        .collect::<Vec<_>>();
     if arguments.first().map(String::as_str) == Some("--measure-child") {
         measure_child(&arguments);
         return;

@@ -25,7 +25,7 @@ export function AdminSessionsView({ connections = [] }: { readonly connections?:
   const snapshot = useSyncExternalStore(subscribeAdminStatus, getAdminStatusSnapshot, getAdminStatusSnapshot);
   const status = (snapshot.status || {}) as Record<string, any>;
   const connectionNames = new Map(connections.map((connection) => [connection.id, connection.name]));
-  const sessions = ((status.state?.sessions || []) as SessionRecord[]).map((session) => ({
+  const sessions = ((status.state?.sessions || []) as SessionRecord[]).map<SessionRecord>((session) => ({
     ...session,
     connectionName: connectionNames.get(String(session.connectionId || "")) || session.connectionName || session.connectionId,
   }));
