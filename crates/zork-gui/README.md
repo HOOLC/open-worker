@@ -5,24 +5,6 @@ A GPUI (Zed UI framework) desktop client for zork-gateway's built-in
 Codex Desktop layout. The gateway owns conversations and deliberate message
 delivery; `zork-agent` remains an internal execution service.
 
-## Layout
-
-```
-┌──────────────┬─────────────────────────────────────────────┐
-│ zork         │  measured Codex-style task canvas           │
-│ New task     │       What should we get done in …?         │
-│ Projects     │       [ four real prompt suggestions ]      │
-│ workspace    │                                             │
-│   Task …     │       ┌ workspace context ──────────┐       │
-│ • Task …     │       │ multiline task prompt        │       │
-│              │       │ model · thinking       Send │       │
-│ ● Local agent│       └──────────────────────────────┘       │
-├──────────────┼─────────────────────────────────────────────┤
-│ grouped task │ selected task: centered messages, separate  │
-│ navigation   │ agent activity, fixed composer              │
-└──────────────┴─────────────────────────────────────────────┘
-```
-
 ## Running
 
 ```sh
@@ -110,8 +92,9 @@ gateway reads and updates the Agent's policy directly; it has no policy copy.
 
 The gateway projects `clear`, `thinking`, `tools_started`, `tool_finished`,
 `waiting`, `failed`, `finished`, and `interrupted` as activity. These events may
-change the task status label/footer but never add chat rows. Agent commentary,
-final transcript text, streaming deltas, tool results, and waits are internal.
+change the task status label/footer but never add chat rows. Successful
+`finished` updates task/header state only and does not render inline activity.
+Agent commentary, final transcript text, streaming deltas, tool results, and waits are internal.
 A visible assistant reply exists only after the Agent explicitly invokes
 `zork-call chat post-message`.
 
@@ -144,36 +127,9 @@ A visible assistant reply exists only after the Agent explicitly invokes
   render Mermaid/math, or provide syntax highlighting in this pass.
 - One window; no diff/handoff pane (P3).
 
-## Codex UI regression evidence
-
-- `CODEX_UI_ACCEPTANCE.md` fixes the user goal and visible acceptance criteria.
-- `COMPOSER_ACCEPTANCE.md` fixes the live-CDP-measured 736 × 141 composer
-  geometry and interaction contract from Codex on mini2.
-- `COMPOSER_FOCUS_COLOR_ACCEPTANCE.md` fixes the neutral focused-editor color
-  while preserving caret and selection feedback.
-- `SHELL_ACCEPTANCE.md` fixes the live-CDP-measured sidebar, home, task-header,
-  transcript, and selected-task alignment contract from Codex on mini2.
-- `WINDOW_CHROME_ACCEPTANCE.md` fixes the complete native-window contract:
-  transparent full-size content, no native title, and AppKit traffic lights at
-  the Codex source-defined 16 × 16 inset.
-- `COMPONENT_PORT_ACCEPTANCE.md` fixes the native input and exact selector-menu
-  behavior while preserving the accepted Codex geometry.
-- `GATEWAY_IM_ENTRY_ACCEPTANCE.md` fixes the current message/gateway boundary.
-- `MESSAGE_RENDERING_ACCEPTANCE.md` is historical evidence for the retired
-  direct-Agent projection; its visual Markdown/history findings still apply.
-- `src/design.rs` contains the testable palette, hierarchy, and 1280 × 800
-  geometry contract used by the renderer.
-- `tests/codex_ui_contract.rs` prevents the shell, task rows, transcript, and
-  composer from drifting back to the old dashboard treatment.
-- `design-audit/` contains the live Codex CDP DOM/style evidence, before/after
-  native captures, baseline audit, proportional focused comparisons, final
-  Unicode/wrap/menu interaction captures `63` through `66`, and the message
-  baseline/final native matrix in captures `67` through `81`; captures `82`
-  through `86` document the reported blue focus wash, its neutral fix, and the
-  focused before/after comparison.
-- `design-qa.md` is the final visual QA gate and comparison history.
-- `assets/icons/` contains the embedded Phosphor icon subset and its MIT
-  license; no text glyphs or handcrafted SVG approximations are used.
+The executable UI contracts live in `tests/codex_ui_contract.rs`,
+`tests/component_port_regression.rs`, and `tests/message_rendering_regression.rs`.
+The palette and geometry are defined in `src/design.rs`.
 
 ## Verification
 
@@ -183,31 +139,3 @@ cargo clippy --locked -p zork-gui --all-targets -- -D warnings
 cargo build --locked -p zork-agent -p zork-gateway -p zork-call
 uv run crates/zork-gui/tests/test_gateway_entry.py
 ```
-
-## Files
-
-- `src/api.rs` — HTTP + SSE client and wire types.
-- `src/automation/` — dev-only loopback API, rendered-element geometry registry,
-  screenshot encoder, and GPUI user-input event bridge.
-- `src/design.rs` — Codex visual contract, design tokens, and default geometry.
-- `src/components/text_input.rs` — native multiline GPUI input handler, edit
-  model, selection/caret renderer, and component-scoped key bindings.
-- `src/components/selector_menu.rs` — one-open-menu and keyboard highlight
-  state.
-- `src/components/message.rs` — local GFM message model and GPUI renderer.
-- `src/transcript.rs` — role projection, optimistic echo reconciliation,
-  history prepending/title, and live-activity rules.
-- `src/views.rs` — `RootView`: layout, session/composer/status rendering,
-  SSE + polling tasks.
-- `src/main.rs` — CLI parsing, GPUI bootstrap.
-- `src/window_chrome.rs` — shared transparent, untitled native window options.
-- `tests/api_regression.rs` — real-contract and SSE transport regressions.
-- `tests/codex_ui_contract.rs` — shell, transcript, composer, and geometry
-  regressions.
-- `tests/component_port_regression.rs` — Unicode/IME input and exact menu
-  regressions.
-- `tests/message_rendering_regression.rs` — Markdown, long-content,
-  reconciliation, status, and history/title regressions.
-- `tests/test_gateway_entry.py` — real Agent + gateway explicit-delivery E2E.
-- `tests/fake_agent.py` and `tests/test_fake_agent.py` — retained Agent API
-  component fixture; the GUI itself does not connect to this API.

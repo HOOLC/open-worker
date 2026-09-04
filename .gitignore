@@ -24,3 +24,9 @@ logs/
 .DS_Store
 .workbuddy/
 test/fixtures/
+
+# Local design captures and historical process notes
+crates/zork-gui/design-audit/
+crates/zork-gui/design-qa.md
+crates/zork-gui/*_ACCEPTANCE.md
+docs/zork-agent-architecture-original.md

@@ -1,6 +1,6 @@
 # zork-agent 架构规范
 
-本文是实现、测试和审查共同使用的结构化规范，只描述已经确认的目标设计，不记录讨论过程，也不把阶段状态混入长期架构。原始选择过程保存在 [`zork-agent-architecture-original.md`](./zork-agent-architecture-original.md)；两者冲突时先回到原始记录核对并修正本文，代码和测试只引用本文。
+本文是实现、测试和审查共同使用的现行架构规范，只保留已确认的设计与可验证契约。实现与测试引用本文中的契约编号；验收结果和复现命令见 [`zork-agent-status.md`](./zork-agent-status.md)。
 
 ## 1. 目标
 
