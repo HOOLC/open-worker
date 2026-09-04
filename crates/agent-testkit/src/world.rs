@@ -8,8 +8,8 @@ use zork_agent::session::service::{
 };
 use zork_agent::session::state::SessionState;
 use zork_agent::session::store::{EventEnvelope, SessionStore};
-use zork_agent::session::supervisor::SessionSlotView;
 use zork_agent::session::supervisor::SupervisorError;
+use zork_agent::session::supervisor::{PublicSlotStatus, SessionSlotView};
 use zork_agent::session::tools::{ToolCompatibility, ToolContract, ToolRegistry};
 
 use crate::clock::ManualClock;
@@ -179,6 +179,28 @@ impl TestWorld {
         self.query.recovery_calls(session_id)
     }
 
+    pub async fn wait_for_slot(&self, session_id: &str, expected: PublicSlotStatus) {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            loop {
+                if self
+                    .sessions()
+                    .iter()
+                    .any(|slot| slot.session_id == session_id && slot.status == expected)
+                {
+                    return;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "session {session_id} did not reach {expected:?}; slots: {:?}",
+                self.sessions()
+            )
+        });
+    }
+
     pub fn sessions(&self) -> Vec<SessionSlotView> {
         self.service().sessions()
     }
@@ -236,16 +258,19 @@ impl TestWorld {
             self.model_gateway.clone(),
             self.options.clone(),
         ));
-        for _ in 0..4096 {
-            if sessions
-                .iter()
-                .all(|session_id| self.service().contains(session_id))
-            {
-                return Ok(());
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            loop {
+                if sessions
+                    .iter()
+                    .all(|session_id| self.service().contains(session_id))
+                {
+                    return;
+                }
+                tokio::task::yield_now().await;
             }
-            tokio::task::yield_now().await;
-        }
-        Err(TestWorldError::SessionsNotDiscovered)
+        })
+        .await
+        .map_err(|_| TestWorldError::SessionsNotDiscovered)
     }
 
     pub async fn shutdown(&mut self) {

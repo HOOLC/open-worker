@@ -173,7 +173,9 @@ async fn fifth_consecutive_runtime_fault_opens_only_that_sessions_circuit() {
         }
     }
 
-    wait_for_slot(&world, &failing_session, PublicSlotStatus::CircuitOpen).await;
+    world
+        .wait_for_slot(&failing_session, PublicSlotStatus::CircuitOpen)
+        .await;
     let counts = world
         .events(&failing_session)
         .iter()
@@ -264,7 +266,9 @@ async fn delete_rejects_new_work_before_waiting_for_the_active_runner() {
     let deleting_service = service.clone();
     let deleting_session = session_id.clone();
     let deleting = tokio::spawn(async move { deleting_service.delete(&deleting_session).await });
-    wait_for_slot(&world, &session_id, PublicSlotStatus::Deleting).await;
+    world
+        .wait_for_slot(&session_id, PublicSlotStatus::Deleting)
+        .await;
     assert_eq!(
         service.submit_input(&session_id, "too late".into()).await,
         Err(SupervisorError::Deleting)
@@ -435,23 +439,6 @@ async fn request(world: &mut TestWorld, stage: &str) -> PendingModelRequest {
     tokio::time::timeout(Duration::from_secs(1), world.request())
         .await
         .unwrap_or_else(|_| panic!("zork-agent did not issue the expected request for {stage}"))
-}
-
-async fn wait_for_slot(world: &TestWorld, session_id: &str, expected: PublicSlotStatus) {
-    tokio::time::timeout(Duration::from_secs(1), async {
-        loop {
-            if world
-                .sessions()
-                .iter()
-                .any(|slot| slot.session_id == session_id && slot.status == expected)
-            {
-                return;
-            }
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .unwrap_or_else(|_| panic!("session {session_id} did not reach {expected:?}"));
 }
 
 fn spawn_input(

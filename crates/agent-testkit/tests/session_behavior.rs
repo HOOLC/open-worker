@@ -606,7 +606,13 @@ async fn end_with_unfinished_work_reports_it_then_finishes_after_the_result() {
         .unwrap();
     let pending = slow.request().await;
     world
-        .wait_for_state(&session_id, |state| state.auto_wait.is_some())
+        .wait_for_state(&session_id, |state| {
+            state.auto_wait.is_some()
+                && state
+                    .pending_tools
+                    .values()
+                    .any(|pending| pending.invocation.tool == "end" && pending.result.is_some())
+        })
         .await;
 
     world
@@ -624,6 +630,14 @@ async fn end_with_unfinished_work_reports_it_then_finishes_after_the_result() {
             "value": "controlled",
         }))
         .unwrap();
+    world
+        .wait_for_state(&session_id, |state| {
+            state
+                .pending_tools
+                .values()
+                .any(|pending| pending.invocation.tool == "test.slow" && pending.result.is_some())
+        })
+        .await;
     outstanding
         .respond_text("I will use the completed result.")
         .unwrap();
@@ -1201,7 +1215,9 @@ async fn an_idle_session_recovers_once_then_keeps_folding_only_new_events_while_
             state.last_turn_outcome == Some(TurnOutcome::Finished)
         })
         .await;
-    wait_for_slot(&world, &session_id, PublicSlotStatus::Idle).await;
+    world
+        .wait_for_slot(&session_id, PublicSlotStatus::Idle)
+        .await;
     let recoveries_before_second_turn = world.recovery_calls(&session_id);
 
     world.send_mail(&session_id, "second turn").await.unwrap();
@@ -1599,18 +1615,4 @@ async fn wait_for_clock_deadline(world: &TestWorld, expected_deadline_ms: i64) {
     )
     .await
     .unwrap_or_else(|_| panic!("zork-agent did not arm virtual deadline {expected_deadline_ms}"));
-}
-
-async fn wait_for_slot(world: &TestWorld, session_id: &str, expected: PublicSlotStatus) {
-    for _ in 0..512 {
-        if world
-            .sessions()
-            .iter()
-            .any(|slot| slot.session_id == session_id && slot.status == expected)
-        {
-            return;
-        }
-        tokio::task::yield_now().await;
-    }
-    panic!("session {session_id} did not reach slot state {expected:?}");
 }
