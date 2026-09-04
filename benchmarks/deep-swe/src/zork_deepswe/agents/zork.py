@@ -42,9 +42,9 @@ Recommended workflow:
 4. Verify the fix by running the relevant checks again.
 5. Test edge cases that follow from the task.
 
-Use read to examine files instead of cat or sed. Use bash for file discovery such as ls, rg, and find. Use edit for precise changes. Each edits[].oldText is matched against the original file, and separate locations can be changed in one call. Use write only for new files or complete rewrites. While work remains, every response MUST include at least one tool call. A bash call runs in a fresh shell, so shell-local directory and environment changes do not carry into a later call; filesystem changes do.
+Use file.read to examine files instead of cat or sed. Use shell.run for file discovery such as ls, rg, and find. Use file.edit for precise changes and file.write only for new files or complete rewrites. Consult tool.help for a tool's current arguments when needed. While work remains, every response MUST include at least one tool call. A shell.run call runs in a fresh shell, so shell-local directory and environment changes do not carry into a later call; filesystem changes do.
 
-When and only when the implementation is complete and verified, call end as the only tool call in that model response. An assistant response without end does not submit or finish the task. Never call end alongside read, edit, write, bash, or any other tool. Do not merely describe a solution: make the changes. This benchmark has no interactive user, so resolve the task from the supplied instruction and repository evidence."""
+When and only when the implementation is complete and verified, call end as the only tool call in that model response. An assistant response without end does not submit or finish the task. Never call end alongside any other tool. Do not merely describe a solution: make the changes. This benchmark has no interactive user, so resolve the task from the supplied instruction and repository evidence."""
 
 
 def _boolean_argument(value: bool | str, name: str) -> bool:
@@ -159,6 +159,10 @@ def aggregate_event_records(records: Iterable[dict[str, Any]]) -> dict[str, Any]
     provider_requests = 0
     provider_requests_with_usage = 0
     context_handoffs = 0
+    context_compactions = 0
+    compaction_input_tokens = 0
+    compaction_output_tokens = 0
+    step_purposes: dict[str, str] = {}
     total_tool_calls = 0
     multi_tool_call_rounds = 0
     max_tool_calls_per_round = 0
@@ -183,9 +187,15 @@ def aggregate_event_records(records: Iterable[dict[str, Any]]) -> dict[str, Any]
             last_end_result_ok = False
         elif event_type in ("model_attempt_started", "step_started"):
             provider_requests += 1
-        elif event_type in ("model_request_completed", "step_completed"):
-            agent_steps += 1
+            if isinstance(event.get("step_id"), str):
+                step_purposes[event["step_id"]] = event.get("purpose", "conversation")
+        elif event_type in ("model_request_completed", "step_completed", "step_failed"):
+            agent_steps += int(event_type != "step_failed")
+            purpose = event.get("purpose", step_purposes.get(event.get("step_id"), "conversation"))
             usage = event.get("usage")
+            if event_type == "step_failed":
+                error = event.get("error")
+                usage = error.get("usage") if isinstance(error, dict) else None
             if (
                 isinstance(usage, dict)
                 and "input_tokens" in usage
@@ -205,12 +215,16 @@ def aggregate_event_records(records: Iterable[dict[str, Any]]) -> dict[str, Any]
                 output_text_tokens = _accumulate_optional_usage(
                     output_text_tokens, usage.get("output_text_tokens")
                 )
-                peak_context_tokens = max(peak_context_tokens, current_input)
-            if event_type == "step_completed":
+                if purpose == "compaction":
+                    compaction_input_tokens += current_input
+                    compaction_output_tokens += current_output
+                else:
+                    peak_context_tokens = max(peak_context_tokens, current_input)
+            if event_type == "step_completed" and purpose == "conversation":
                 text = event.get("assistant_text")
                 final_assistant_content = text if isinstance(text, str) else ""
                 counted = _count_assistant_tools(
-                    event.get("tool_calls"),
+                    event.get("tool_calls", event.get("invocations")),
                     end_tool_call_ids,
                 )
                 final_assistant_tool_call_count = counted
@@ -220,6 +234,11 @@ def aggregate_event_records(records: Iterable[dict[str, Any]]) -> dict[str, Any]
                 last_end_result_ok = False
         elif event_type in ("context_handoff_created", "handoff_applied"):
             context_handoffs += 1
+        elif event_type == "context_applied":
+            if event.get("purpose") == "compaction":
+                context_compactions += 1
+            else:
+                context_handoffs += 1
         elif event_type == "message_appended":
             message = event.get("message")
             if not isinstance(message, dict) or message.get("role") != "assistant":
@@ -236,10 +255,13 @@ def aggregate_event_records(records: Iterable[dict[str, Any]]) -> dict[str, Any]
             multi_tool_call_rounds += int(counted > 1)
             max_tool_calls_per_round = max(max_tool_calls_per_round, counted)
         elif event_type == "tool_result":
+            result = event.get("result")
+            result = result if isinstance(result, dict) else event
             if (
-                event.get("tool_name") == "end"
-                and event.get("outcome") == "succeeded"
-                and event.get("tool_call_id") in end_tool_call_ids
+                result.get("tool_name", result.get("tool")) == "end"
+                and result.get("outcome") == "succeeded"
+                and result.get("tool_call_id", result.get("invocation_id"))
+                in end_tool_call_ids
             ):
                 last_end_result_ok = True
         elif event_type == "activation_finished":
@@ -284,6 +306,9 @@ def aggregate_event_records(records: Iterable[dict[str, Any]]) -> dict[str, Any]
             provider_requests - provider_requests_with_usage
         ),
         "context_handoffs": context_handoffs,
+        "context_compactions": context_compactions,
+        "compaction_input_tokens": compaction_input_tokens,
+        "compaction_output_tokens": compaction_output_tokens,
         "tool_calls": total_tool_calls,
         "multi_tool_call_rounds": multi_tool_call_rounds,
         "max_tool_calls_per_round": max_tool_calls_per_round,
@@ -295,16 +320,12 @@ def aggregate_event_records(records: Iterable[dict[str, Any]]) -> dict[str, Any]
     }
 
 
-def _stream_event_kinds(stream_file: Path) -> set[str]:
+def _session_event_kinds(session_dir: Path) -> set[str]:
     kinds: set[str] = set()
-    with stream_file.open("r", encoding="utf-8") as stream:
-        for line in stream:
-            if not line.strip():
-                continue
-            record = json.loads(line)
-            event = record.get("event")
-            if isinstance(event, dict) and isinstance(event.get("kind"), str):
-                kinds.add(event["kind"])
+    for record in iter_session_event_records(session_dir):
+        event = _record_event(record)
+        if event is not None and isinstance(event.get("kind"), str):
+            kinds.add(event["kind"])
     return kinds
 
 
@@ -315,6 +336,8 @@ def _record_event(record: dict[str, Any]) -> dict[str, Any] | None:
     if record.get("record") == "event" and isinstance(event, dict):
         return event
     if record.get("kind") == "domain" and isinstance(event, dict):
+        return event
+    if isinstance(record.get("event_id"), str) and isinstance(event, dict):
         return event
     return None
 
@@ -327,10 +350,11 @@ def _count_assistant_tools(
         return 0
     if len(tool_calls) == 1:
         call = tool_calls[0]
-        if isinstance(call, dict) and call.get("tool_name") == "end":
+        if isinstance(call, dict) and call.get("tool_name", call.get("tool")) == "end":
             # 唯一的 end 调用即提交，参数可含 acknowledge_outstanding。
-            if isinstance(call.get("tool_call_id"), str):
-                end_tool_call_ids.add(call["tool_call_id"])
+            call_id = call.get("tool_call_id", call.get("invocation_id"))
+            if isinstance(call_id, str):
+                end_tool_call_ids.add(call_id)
     return len(tool_calls)
 
 
@@ -624,19 +648,16 @@ class ZorkDeepSweAgent(BaseAgent):
             source_dir="/tmp/zork-session-copy",
             target_dir=session_logs,
         )
-        # 身份核验：必须拿到单文件会话流（kind 词汇）。
-        stream_files = sorted(session_logs.glob("*.jsonl"))
-        if stream_files:
-            kinds = _stream_event_kinds(stream_files[0])
-            if "session_created" not in kinds:
-                raise RuntimeError(
-                    "session stream does not look like zork-agent "
-                    f"(kinds: {sorted(kinds)[:6]}); expected the session API"
-                )
-        else:
+        kinds = _session_event_kinds(session_logs)
+        if not kinds:
             raise RuntimeError(
                 "zork-agent produced no session stream; "
                 "the running binary does not expose the session API"
+            )
+        if "session_created" not in kinds:
+            raise RuntimeError(
+                "session stream does not look like zork-agent "
+                f"(kinds: {sorted(kinds)[:6]}); expected the session API"
             )
         metrics = aggregate_event_records(iter_session_event_records(session_logs))
         metrics.update(
@@ -668,7 +689,7 @@ class ZorkDeepSweAgent(BaseAgent):
         context.n_output_tokens = metrics["output_tokens"]
         context.peak_context_tokens = metrics["peak_context_tokens"]
         context.n_agent_steps = metrics["agent_steps"]
-        context.summarization_count = metrics["context_handoffs"]
+        context.summarization_count = metrics["context_handoffs"] + metrics.get("context_compactions", 0)
         context.metadata = metrics
 
     async def _upload_request_documents(
@@ -787,12 +808,6 @@ class ZorkDeepSweAgent(BaseAgent):
     async def _wait_for_session_wait(
         self, environment: BaseEnvironment, session_id: str
     ) -> None:
-        # 活性哨兵：status 停在 working 但会话流长期不增长 = runtime 停摆
-        # （而非模型在途），主动失败，不空耗到题面超时。
-        stall_limit_seconds = 900
-        last_size: int | None = None
-        last_change = time.monotonic()
-        polls = 0
         while True:
             body, status = await self._request(
                 environment,
@@ -806,31 +821,12 @@ class ZorkDeepSweAgent(BaseAgent):
             session_status = (
                 document.get("status") if isinstance(document, dict) else None
             )
-            if session_status == "wait":
+            if session_status in ("wait", "finished"):
                 return
-            if session_status != "working":
+            if session_status not in ("thinking", "waiting", "working", "recovering"):
                 raise RuntimeError(
                     f"zork-agent returned invalid session status: {session_status!r}"
                 )
-            polls += 1
-            if polls % 30 == 0:
-                sized = await environment.exec(
-                    f"wc -c < {shlex.quote(f'{REMOTE_STORE}/{session_id}.jsonl')} "
-                    "2>/dev/null || echo 0",
-                    cwd="/tmp",
-                )
-                try:
-                    size = int((sized.stdout or "0").strip() or "0")
-                except ValueError:
-                    size = 0
-                if size != last_size:
-                    last_size = size
-                    last_change = time.monotonic()
-                elif time.monotonic() - last_change > stall_limit_seconds:
-                    raise RuntimeError(
-                        f"zork-agent session stream stalled at {size} bytes "
-                        f"for over {stall_limit_seconds}s while status=working"
-                    )
             await asyncio.sleep(1)
 
     async def _request(

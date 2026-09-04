@@ -16,6 +16,8 @@ from pier.environments.base import BaseEnvironment
 from pier.models.agent.context import AgentContext
 from pier.models.agent.network import NetworkAllowlist
 
+from zork_deepswe.agents.zork import load_benchmark_profile
+
 PI_PROVIDER = "openai-codex"
 PI_MODEL = "gpt-5.6-luna"
 PI_THINKING = "max"
@@ -113,11 +115,13 @@ def build_pi_models_document(
     }
 
 
-def build_pi_settings_document(max_output_tokens: int) -> dict[str, Any]:
+def build_pi_settings_document(
+    max_output_tokens: int, *, transport: str = "websocket-cached"
+) -> dict[str, Any]:
     if max_output_tokens <= 0:
         raise ValueError("max output tokens must be positive")
     return {
-        "transport": "websocket-cached",
+        "transport": transport,
         "httpIdleTimeoutMs": 0,
         "defaultProjectTrust": "never",
         "compaction": {
@@ -131,16 +135,25 @@ def build_pi_settings_document(max_output_tokens: int) -> dict[str, Any]:
     }
 
 
-def build_fast_extension_source() -> str:
+def build_fast_extension_source(
+    provider: str = PI_PROVIDER,
+    model: str = PI_MODEL,
+    service_tier: str | None = PI_SERVICE_TIER,
+) -> str:
     summary_path = json.dumps(REMOTE_WIRE)
+    payload = (
+        "event.payload"
+        if service_tier is None
+        else f"{{ ...event.payload, service_tier: {json.dumps(service_tier)} }}"
+    )
     return f"""import {{ appendFileSync }} from "node:fs";
 
 export default function registerFastServiceTier(pi) {{
   pi.on("before_provider_request", (event, ctx) => {{
-    if (ctx.model?.provider !== {json.dumps(PI_PROVIDER)} || ctx.model?.id !== {json.dumps(PI_MODEL)}) {{
+    if (ctx.model?.provider !== {json.dumps(provider)} || ctx.model?.id !== {json.dumps(model)}) {{
       throw new Error(`unexpected benchmark model: ${{ctx.model?.provider}}/${{ctx.model?.id}}`);
     }}
-    const payload = {{ ...event.payload, service_tier: {json.dumps(PI_SERVICE_TIER)} }};
+    const payload = {payload};
     appendFileSync(
       {summary_path},
       JSON.stringify({{
@@ -152,6 +165,8 @@ export default function registerFastServiceTier(pi) {{
         store: payload.store ?? null,
         stream: payload.stream ?? null,
         parallel_tool_calls: payload.parallel_tool_calls ?? null,
+        max_output_tokens: payload.max_output_tokens ?? null,
+        context_window_tokens: ctx.model.contextWindow,
         input_items: Array.isArray(payload.input) ? payload.input.length : null,
         tools: Array.isArray(payload.tools) ? payload.tools.length : 0,
       }}) + "\\n",
@@ -337,7 +352,7 @@ def _positive_integer_argument(value: int | str, name: str) -> int:
 
 
 class PiDeepSweAgent(BaseAgent):
-    """Pier adapter for a frozen native Pi OpenAI Codex benchmark runtime."""
+    """Pier adapter for native Pi with subscription auth or an API-key profile."""
 
     SUPPORTS_ATIF = False
 
@@ -347,44 +362,128 @@ class PiDeepSweAgent(BaseAgent):
         model_name: str | None = None,
         pi_bundle: str | None = None,
         codex_auth_file: str | None = None,
+        profile_file: str | None = None,
         thinking: str = PI_THINKING,
-        context_window_tokens: int | str = 256_000,
-        max_output_tokens: int | str = 32_000,
+        context_window_tokens: int | str | None = None,
+        max_output_tokens: int | str | None = None,
         service_tier: str = PI_SERVICE_TIER,
         pi_version: str = PI_VERSION,
         **kwargs: Any,
     ) -> None:
         super().__init__(logs_dir=logs_dir, model_name=model_name, **kwargs)
-        normalized_model = (
-            model_name.removeprefix(f"{PI_PROVIDER}/") if model_name else None
-        )
-        if normalized_model != PI_MODEL:
-            raise ValueError(f"model_name must be {PI_PROVIDER}/{PI_MODEL}")
-        if service_tier != PI_SERVICE_TIER:
-            raise ValueError(f"service_tier must be {PI_SERVICE_TIER}")
         if not pi_bundle:
             raise ValueError("pi_bundle is required")
-        if not codex_auth_file:
-            raise ValueError("codex_auth_file is required")
-
         self._bundle = Path(pi_bundle).expanduser().resolve()
-        self._codex_auth_file = Path(codex_auth_file).expanduser().resolve()
         if not self._bundle.is_file():
             raise FileNotFoundError(f"Pi bundle not found: {self._bundle}")
-        if not self._codex_auth_file.is_file():
-            raise FileNotFoundError(
-                f"Codex auth file not found: {self._codex_auth_file}"
+        if profile_file:
+            if codex_auth_file:
+                raise ValueError("use either profile_file or codex_auth_file")
+            profile = load_benchmark_profile(
+                Path(profile_file), model_name=model_name or "", thinking=thinking
             )
-        build_pi_auth_document(self._codex_auth_file)
+            selected = next(
+                m for m in profile.document["models"] if m["id"] == profile.model
+            )
+            auth = profile.document.get("auth", {})
+            if auth.get("type") != "api_key":
+                raise ValueError("Pi profile requires API-key auth")
+            if selected.get("api") != "openai-responses" or not profile.streaming:
+                raise ValueError("Pi profile requires streaming openai-responses")
+            limits = selected["limits"]
+            for name, override in (
+                ("context_window_tokens", context_window_tokens),
+                ("max_output_tokens", max_output_tokens),
+            ):
+                if override is not None and int(override) != limits[name]:
+                    raise ValueError(f"{name} must match the profile")
+            self._provider, self._model = profile.provider, profile.model
+            self._context_window_tokens = limits["context_window_tokens"]
+            self._max_output_tokens = limits["max_output_tokens"]
+            self._transport = "sse"
+            self._service_tier = None
+            self._network_domains = [profile.network_domain]
+            self._auth_document = {
+                self._provider: {
+                    "type": "api_key",
+                    "key": _required_string(auth, "key", profile.source_path),
+                }
+            }
+            self._models_document = {
+                "providers": {
+                    self._provider: {
+                        "baseUrl": profile.base_url,
+                        "api": selected["api"],
+                        "headers": profile.document.get("headers", {}),
+                        "models": [
+                            {
+                                "id": self._model,
+                                "name": self._model,
+                                "reasoning": True,
+                                "thinkingLevelMap": {
+                                    level: level
+                                    if level in selected["thinking"]
+                                    else None
+                                    for level in (
+                                        "off",
+                                        "minimal",
+                                        "low",
+                                        "medium",
+                                        "high",
+                                        "xhigh",
+                                        "max",
+                                    )
+                                },
+                                "input": selected["capabilities"]["input"],
+                                "contextWindow": self._context_window_tokens,
+                                "maxTokens": self._max_output_tokens,
+                                "samplingParams": {
+                                    "parallel_tool_calls": profile.parallel_tool_calls
+                                },
+                                "cost": {
+                                    "input": 0,
+                                    "output": 0,
+                                    "cacheRead": 0,
+                                    "cacheWrite": 0,
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        else:
+            normalized_model = (
+                model_name.removeprefix(f"{PI_PROVIDER}/") if model_name else None
+            )
+            if normalized_model != PI_MODEL:
+                raise ValueError(f"model_name must be {PI_PROVIDER}/{PI_MODEL}")
+            if service_tier != PI_SERVICE_TIER:
+                raise ValueError(f"service_tier must be {PI_SERVICE_TIER}")
+            if not codex_auth_file:
+                raise ValueError("codex_auth_file is required")
+            self._provider, self._model = PI_PROVIDER, PI_MODEL
+            self._context_window_tokens = (
+                256_000 if context_window_tokens is None else context_window_tokens
+            )
+            self._max_output_tokens = (
+                32_000 if max_output_tokens is None else max_output_tokens
+            )
+            self._transport = "websocket-cached"
+            self._service_tier = service_tier
+            self._network_domains = ["auth.openai.com", "chatgpt.com"]
+            self._auth_document = build_pi_auth_document(Path(codex_auth_file))
+            self._models_document = build_pi_models_document(
+                int(self._context_window_tokens), int(self._max_output_tokens)
+            )
         self._context_window_tokens = _positive_integer_argument(
-            context_window_tokens, "context_window_tokens"
+            self._context_window_tokens, "context_window_tokens"
         )
         self._max_output_tokens = _positive_integer_argument(
-            max_output_tokens, "max_output_tokens"
+            self._max_output_tokens, "max_output_tokens"
         )
-        build_pi_models_document(self._context_window_tokens, self._max_output_tokens)
+        if self._max_output_tokens >= self._context_window_tokens:
+            raise ValueError("max output tokens must be less than context")
         self._thinking = thinking
-        self._service_tier = service_tier
         self._pi_version = pi_version
         self._bundle_sha256 = _file_sha256(self._bundle)
 
@@ -396,7 +495,7 @@ class PiDeepSweAgent(BaseAgent):
         return f"{self._pi_version}+sha256:{self._bundle_sha256}"
 
     def network_allowlist(self) -> NetworkAllowlist:
-        return NetworkAllowlist(domains=["auth.openai.com", "chatgpt.com"])
+        return NetworkAllowlist(domains=self._network_domains)
 
     async def setup(self, environment: BaseEnvironment) -> None:
         created = await environment.exec(
@@ -435,21 +534,21 @@ class PiDeepSweAgent(BaseAgent):
             settings_path = root / "settings.json"
             prompt_path = root / "append-system-prompt.md"
             extension_path = root / "fast-service-tier.mjs"
-            _write_json_private(
-                auth_path, build_pi_auth_document(self._codex_auth_file)
-            )
-            _write_json_private(
-                models_path,
-                build_pi_models_document(
-                    self._context_window_tokens, self._max_output_tokens
-                ),
-            )
+            _write_json_private(auth_path, self._auth_document)
+            _write_json_private(models_path, self._models_document)
             _write_json_private(
                 settings_path,
-                build_pi_settings_document(self._max_output_tokens),
+                build_pi_settings_document(
+                    self._max_output_tokens, transport=self._transport
+                ),
             )
             prompt_path.write_text(PI_APPEND_SYSTEM_PROMPT + "\n", encoding="utf-8")
-            extension_path.write_text(build_fast_extension_source(), encoding="utf-8")
+            extension_path.write_text(
+                build_fast_extension_source(
+                    self._provider, self._model, self._service_tier
+                ),
+                encoding="utf-8",
+            )
             await environment.upload_file(auth_path, f"{REMOTE_CONFIG}/auth.json")
             await environment.upload_file(models_path, f"{REMOTE_CONFIG}/models.json")
             await environment.upload_file(
@@ -492,7 +591,7 @@ class PiDeepSweAgent(BaseAgent):
             )
         auth_check = await environment.exec(
             f"node {shlex.quote(REMOTE_PI_ENTRYPOINT)} auth check "
-            f"--provider {shlex.quote(PI_PROVIDER)} --no-refresh",
+            f"--provider {shlex.quote(self._provider)} --no-refresh",
             cwd="/tmp",
             env=environment_variables,
         )
@@ -535,9 +634,9 @@ class PiDeepSweAgent(BaseAgent):
                 shlex.quote(REMOTE_PI_ENTRYPOINT),
                 "--mode json",
                 "--provider",
-                shlex.quote(PI_PROVIDER),
+                shlex.quote(self._provider),
                 "--model",
-                shlex.quote(PI_MODEL),
+                shlex.quote(self._model),
                 "--thinking",
                 shlex.quote(self._thinking),
                 "--session-dir",
@@ -589,8 +688,12 @@ class PiDeepSweAgent(BaseAgent):
             raise RuntimeError(
                 f"Pi stopped without its native stop completion: {metrics['final_stop_reason']!r}"
             )
-        if metrics["providers"] != [PI_PROVIDER] or metrics["models"] != [PI_MODEL]:
-            raise RuntimeError("Pi session did not use only openai-codex/gpt-5.6-luna")
+        if metrics["providers"] != [self._provider] or metrics["models"] != [
+            self._model
+        ]:
+            raise RuntimeError(
+                "Pi session did not use only the configured provider/model"
+            )
 
     async def _collect_artifacts(self, environment: BaseEnvironment) -> dict[str, Any]:
         session_logs = self.logs_dir / "pi-session"
@@ -614,13 +717,13 @@ class PiDeepSweAgent(BaseAgent):
                 "pi_version": self._pi_version,
                 "bundle_sha256": self._bundle_sha256,
                 "dataset_commit": DATASET_COMMIT,
-                "provider": PI_PROVIDER,
-                "model": PI_MODEL,
+                "provider": self._provider,
+                "model": self._model,
                 "thinking": self._thinking,
                 "service_tier": self._service_tier,
                 "context_window_tokens": self._context_window_tokens,
                 "max_output_tokens": self._max_output_tokens,
-                "transport": "websocket-cached",
+                "transport": self._transport,
                 "streaming": True,
             }
         )
@@ -656,13 +759,13 @@ class PiDeepSweAgent(BaseAgent):
             "pi_version": self._pi_version,
             "bundle_sha256": self._bundle_sha256,
             "dataset_commit": DATASET_COMMIT,
-            "provider": PI_PROVIDER,
-            "model": PI_MODEL,
+            "provider": self._provider,
+            "model": self._model,
             "thinking": self._thinking,
             "service_tier": self._service_tier,
             "context_window_tokens": self._context_window_tokens,
             "max_output_tokens": self._max_output_tokens,
-            "transport": "websocket-cached",
+            "transport": self._transport,
         }
         (self.logs_dir / "pi-manifest.json").write_text(
             json.dumps(manifest, indent=2, sort_keys=True) + "\n",

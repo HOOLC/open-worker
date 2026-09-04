@@ -33,6 +33,10 @@ class DeepSweRunTest(unittest.TestCase):
         self.assertEqual(command[command.index("--include-task-name") + 1], "task-a")
         self.assertEqual(command[command.index("--n-attempts") + 1], "4")
         self.assertEqual(command[command.index("--n-concurrent") + 1], "4")
+        self.assertEqual(
+            command[command.index("--environment-import-path") + 1],
+            "zork_deepswe.environment:RetainedDockerEnvironment",
+        )
         self.assertNotIn("--n-tasks", command)
         self.assertNotIn("--sample-seed", command)
 
@@ -56,15 +60,15 @@ class DeepSweRunTest(unittest.TestCase):
     def test_default_binary_is_always_rebuilt(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repo_root = Path(directory)
-            output = repo_root / "target/deepswe/zork-agent-linux-amd64"
+            output = repo_root / "target/deepswe/zork-agent-linux-arm64"
             output.parent.mkdir(parents=True)
             output.write_text("stale")
 
             with patch("zork_deepswe.run.build_zork_agent") as build:
-                resolved = _resolve_binary(None, repo_root)
+                resolved = _resolve_binary(None, repo_root, "linux/arm64")
 
         self.assertEqual(resolved, output)
-        build.assert_called_once_with(repo_root, output)
+        build.assert_called_once_with(repo_root, output, platform="linux/arm64")
 
     def test_prepares_images_before_starting_pier(self) -> None:
         events: list[str] = []
@@ -109,7 +113,7 @@ class DeepSweRunTest(unittest.TestCase):
                 patch("zork_deepswe.run.collect_unique_images", return_value=[]),
                 patch(
                     "zork_deepswe.run.pull_images_serially",
-                    side_effect=lambda _images: events.append("pull"),
+                    side_effect=lambda _images, _platform: events.append("pull"),
                 ),
                 patch("zork_deepswe.run.subprocess.run", side_effect=run_command),
             ):

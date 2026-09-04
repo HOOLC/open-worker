@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from importlib.resources import as_file, files
 from pathlib import Path
 
-from zork_deepswe.build import build_zork_agent
+from zork_deepswe.build import SUPPORTED_PLATFORMS, build_zork_agent, native_linux_platform
 from zork_deepswe.prepare import (
     collect_unique_images,
     pull_images_serially,
@@ -111,6 +111,8 @@ def pier_command(
         task_name,
         "--agent-import-path",
         AGENT_IMPORT_PATH,
+        "--environment-import-path",
+        "zork_deepswe.environment:RetainedDockerEnvironment",
         "--model",
         model,
         "--agent-kwarg",
@@ -168,6 +170,9 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--attempts", type=int, default=4)
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--responses-probe", action="store_true")
+    parser.add_argument(
+        "--platform", choices=SUPPORTED_PLATFORMS, default=native_linux_platform()
+    )
 
 
 def execute(arguments: argparse.Namespace) -> None:
@@ -201,14 +206,14 @@ def execute(arguments: argparse.Namespace) -> None:
         profile_file, model, thinking, auth_domains = _resolve_profile(
             arguments, Path(directory)
         )
-        binary = _resolve_binary(arguments.binary, repo_root)
+        binary = _resolve_binary(arguments.binary, repo_root, arguments.platform)
 
         subprocess.run(["docker", "compose", "version"], check=True)
         checkout_dataset(dataset_root)
         task_paths = asyncio.run(
             select_task_paths(dataset_root / "tasks", n_tasks=10, sample_seed=0)
         )
-        pull_images_serially(collect_unique_images(task_paths))
+        pull_images_serially(collect_unique_images(task_paths), arguments.platform)
         jobs_root.mkdir(parents=True, exist_ok=True)
 
         responses_probe_script = None
@@ -235,14 +240,14 @@ def execute(arguments: argparse.Namespace) -> None:
         )
 
 
-def _resolve_binary(explicit: Path | None, repo_root: Path) -> Path:
+def _resolve_binary(explicit: Path | None, repo_root: Path, platform: str) -> Path:
     if explicit is not None:
         binary = explicit.expanduser().resolve()
         if not binary.is_file() or not os.access(binary, os.X_OK):
             raise ValueError(f"explicit zork-agent binary is not executable: {binary}")
         return binary
-    binary = repo_root / "target/deepswe/zork-agent-linux-amd64"
-    build_zork_agent(repo_root, binary)
+    binary = repo_root / f"target/deepswe/zork-agent-{platform.replace('/', '-')}"
+    build_zork_agent(repo_root, binary, platform=platform)
     return binary
 
 

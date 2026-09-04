@@ -10,6 +10,7 @@ from zork_deepswe.agents.pi import (
     PI_SERVICE_TIER,
     PiDeepSweAgent,
     aggregate_pi_session_entries,
+    build_fast_extension_source,
     build_pi_auth_document,
     build_pi_models_document,
     build_pi_settings_document,
@@ -220,6 +221,81 @@ class PiSessionAggregationTest(unittest.TestCase):
 
 
 class PiDeepSweAgentTest(unittest.TestCase):
+    def test_api_key_profile_is_the_single_source_of_model_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root / "pi.tar.gz"
+            bundle.write_bytes(b"bundle")
+            profile = root / "muse13.json"
+            profile.write_text(
+                json.dumps(
+                    {
+                        "provider": "opencode-go",
+                        "billing": "subscription",
+                        "base_url": "https://opencode.ai/zen/go/v1",
+                        "auth": {"type": "api_key", "key": "private-muse-key"},
+                        "models": [
+                            {
+                                "id": "muse-spark-1.3-contributor",
+                                "api": "openai-responses",
+                                "streaming": True,
+                                "parallel_tool_calls": False,
+                                "thinking": ["off", "high", "xhigh"],
+                                "capabilities": {"input": ["text"]},
+                                "limits": {
+                                    "context_window_tokens": 256_000,
+                                    "max_output_tokens": 131_072,
+                                },
+                            }
+                        ],
+                    }
+                )
+            )
+            args = dict(
+                logs_dir=root,
+                model_name="muse-spark-1.3-contributor",
+                pi_bundle=str(bundle),
+                profile_file=str(profile),
+                thinking="xhigh",
+            )
+            agent = PiDeepSweAgent(**args)
+            model = agent._models_document["providers"]["opencode-go"]["models"][0]
+            self.assertEqual(model["contextWindow"], 256_000)
+            self.assertEqual(model["maxTokens"], 131_072)
+            self.assertEqual(model["thinkingLevelMap"]["xhigh"], "xhigh")
+            self.assertEqual(model["samplingParams"], {"parallel_tool_calls": False})
+            self.assertEqual(agent._transport, "sse")
+            self.assertIsNone(agent._service_tier)
+            self.assertEqual(agent.network_allowlist().domains, ["opencode.ai"])
+            settings = build_pi_settings_document(
+                agent._max_output_tokens, transport=agent._transport
+            )
+            self.assertEqual(settings["compaction"]["reserveTokens"], 131_072)
+            self.assertEqual(settings["compaction"]["keepRecentTokens"], 20_000)
+            agent._write_public_manifest()
+            manifest = (root / "pi-manifest.json").read_text()
+            self.assertNotIn("private-muse-key", manifest)
+            self.assertNotIn("private-muse-key", repr(agent))
+            self.assertEqual(
+                json.loads(manifest)["model"], "muse-spark-1.3-contributor"
+            )
+            with self.assertRaisesRegex(ValueError, "max_output_tokens must match"):
+                PiDeepSweAgent(**args, max_output_tokens=8192)
+            with self.assertRaisesRegex(ValueError, "context_window_tokens must match"):
+                PiDeepSweAgent(**args, context_window_tokens=512_000)
+            with self.assertRaisesRegex(ValueError, "either profile_file"):
+                PiDeepSweAgent(**args, codex_auth_file="unused.json")
+
+    def test_api_key_wire_audit_does_not_inject_subscription_service_tier(self) -> None:
+        source = build_fast_extension_source(
+            "opencode-go", "muse-spark-1.3-contributor", None
+        )
+        self.assertIn("const payload = event.payload;", source)
+        self.assertNotIn('service_tier: "priority"', source)
+        self.assertIn('ctx.model?.provider !== "opencode-go"', source)
+        self.assertIn("max_output_tokens: payload.max_output_tokens", source)
+        self.assertIn("context_window_tokens: ctx.model.contextWindow", source)
+
     def test_constructor_forwards_thinking_and_freezes_network_boundary(
         self,
     ) -> None:

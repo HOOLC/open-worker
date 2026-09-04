@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock
 from zork_deepswe.agents.zork import (
     BENCHMARK_SYSTEM_PROMPT,
     ZorkDeepSweAgent,
+    _session_event_kinds,
     aggregate_event_records,
     load_benchmark_profile,
     parse_session_id,
@@ -195,6 +196,9 @@ class ZorkDeepSweAgentTest(unittest.TestCase):
                 "provider_requests": 2,
                 "provider_requests_missing_usage": 1,
                 "context_handoffs": 0,
+                "context_compactions": 0,
+                "compaction_input_tokens": 0,
+                "compaction_output_tokens": 0,
                 "tool_calls": 0,
                 "multi_tool_call_rounds": 0,
                 "max_tool_calls_per_round": 0,
@@ -206,25 +210,51 @@ class ZorkDeepSweAgentTest(unittest.TestCase):
             },
         )
 
+    def test_compaction_usage_is_counted_without_becoming_the_final_answer(self) -> None:
+        records = [
+            {"event": {"kind": "step_started", "step_id": "normal"}},
+            {"event": {"kind": "step_completed", "step_id": "normal", "assistant_text": "working", "invocations": [],
+                       "usage": {"input_tokens": 100, "output_tokens": 10}}},
+            {"event": {"kind": "step_started", "step_id": "bad-summary", "purpose": "compaction"}},
+            {"event": {"kind": "step_failed", "step_id": "bad-summary",
+                       "error": {"usage": {"input_tokens": 500, "output_tokens": 20}}}},
+            {"event": {"kind": "step_started", "step_id": "summary", "purpose": "compaction"}},
+            {"event": {"kind": "step_completed", "step_id": "summary", "purpose": "compaction",
+                       "assistant_text": "internal summary", "invocations": [],
+                       "usage": {"input_tokens": 400, "output_tokens": 30}}},
+            {"event": {"kind": "context_applied", "purpose": "compaction", "document": "internal summary"}},
+            {"event": {"kind": "context_applied", "purpose": "handoff", "document": "handoff"}},
+        ]
+        records = [{"event_id": str(index), **record} for index, record in enumerate(records)]
+        metrics = aggregate_event_records(records)
+        self.assertEqual(metrics["total_tokens"], 1060)
+        self.assertEqual(metrics["compaction_input_tokens"], 900)
+        self.assertEqual(metrics["compaction_output_tokens"], 50)
+        self.assertEqual(metrics["peak_context_tokens"], 100)
+        self.assertEqual(metrics["provider_requests_missing_usage"], 0)
+        self.assertEqual(metrics["context_compactions"], 1)
+        self.assertEqual(metrics["context_handoffs"], 1)
+        self.assertEqual(metrics["final_assistant_content_bytes"], len("working"))
+
     def test_aggregates_stream_end_turn(self) -> None:
         records = [
             {
-                "record": "event",
+                "event_id": "01",
                 "event": {"kind": "turn_started", "turn_id": "t1"},
             },
             {
-                "record": "event",
+                "event_id": "02",
                 "event": {"kind": "step_started", "step_id": "s1"},
             },
             {
-                "record": "event",
+                "event_id": "03",
                 "event": {
                     "kind": "step_completed",
                     "assistant_text": "",
-                    "tool_calls": [
+                    "invocations": [
                         {
-                            "tool_call_id": "e1",
-                            "tool_name": "end",
+                            "invocation_id": "e1",
+                            "tool": "end",
                             "arguments": {},
                         }
                     ],
@@ -237,16 +267,18 @@ class ZorkDeepSweAgentTest(unittest.TestCase):
                 },
             },
             {
-                "record": "event",
+                "event_id": "04",
                 "event": {
                     "kind": "tool_result",
-                    "tool_call_id": "e1",
-                    "tool_name": "end",
-                    "outcome": "succeeded",
+                    "result": {
+                        "invocation_id": "e1",
+                        "tool": "end",
+                        "outcome": "succeeded",
+                    },
                 },
             },
             {
-                "record": "event",
+                "event_id": "05",
                 "event": {"kind": "turn_finished", "outcome": "finished"},
             },
         ]
@@ -500,15 +532,17 @@ class ZorkDeepSweAgentTest(unittest.TestCase):
             "every response MUST include at least one tool call",
             "call end as the only tool call",
             "assistant response without end does not submit",
-            "Use read to examine files instead of cat or sed.",
-            "Use bash for file discovery such as ls, rg, and find.",
-            "Each edits[].oldText is matched against the original file",
-            "Use write only for new files or complete rewrites.",
+            "Use file.read to examine files instead of cat or sed.",
+            "Use shell.run for file discovery such as ls, rg, and find.",
+            "Use file.edit for precise changes and file.write only for new files or complete rewrites.",
+            "Consult tool.help for a tool's current arguments when needed.",
         ):
             self.assertIn(requirement, BENCHMARK_SYSTEM_PROMPT)
         self.assertNotIn(
             "COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT", BENCHMARK_SYSTEM_PROMPT
         )
+        for obsolete in ("oldText", "newText", "Use read ", "Use bash ", "Use edit ", "Use write "):
+            self.assertNotIn(obsolete, BENCHMARK_SYSTEM_PROMPT)
 
 
 class ZorkDeepSweAgentProcessEnvironmentTest(unittest.IsolatedAsyncioTestCase):
@@ -587,18 +621,46 @@ class ZorkDeepSweAgentProcessEnvironmentTest(unittest.IsolatedAsyncioTestCase):
         agent = object.__new__(ZorkDeepSweAgent)
         agent._request = AsyncMock(
             side_effect=[
+                ('{"status":"thinking"}', 200),
+                ('{"status":"waiting"}', 200),
                 ('{"status":"working"}', 200),
-                ('{"status":"wait"}', 200),
+                ('{"status":"recovering"}', 200),
+                ('{"status":"finished"}', 200),
             ]
         )
 
         await agent._wait_for_session_wait(object(), "01K3ABCDEF0123456789ABCDEF")
 
-        self.assertEqual(agent._request.await_count, 2)
+        self.assertEqual(agent._request.await_count, 5)
         for call in agent._request.await_args_list:
             self.assertEqual(call.args[1], "GET")
             self.assertEqual(call.args[2], "/sessions/01K3ABCDEF0123456789ABCDEF")
             self.assertIsNone(call.args[3])
+
+    async def test_wait_rejects_failed_session_status(self) -> None:
+        agent = object.__new__(ZorkDeepSweAgent)
+        agent._request = AsyncMock(return_value=('{"status":"failed"}', 200))
+
+        with self.assertRaisesRegex(RuntimeError, "'failed'"):
+            await agent._wait_for_session_wait(object(), "01K3ABCDEF0123456789ABCDEF")
+
+    def test_segmented_session_identity_uses_all_event_segments(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            segments = Path(directory) / "segments"
+            segments.mkdir()
+            (segments / "01.jsonl").write_text(
+                '{"event_id":"01","event":{"kind":"session_created"}}\n',
+                encoding="utf-8",
+            )
+            (segments / "02.jsonl").write_text(
+                '{"event_id":"02","event":{"kind":"turn_started"}}\n',
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                _session_event_kinds(Path(directory)),
+                {"session_created", "turn_started"},
+            )
 
     async def test_run_collects_partial_session_metrics_before_reraising(self) -> None:
         agent = object.__new__(ZorkDeepSweAgent)

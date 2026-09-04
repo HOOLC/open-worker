@@ -14,11 +14,16 @@ uv run --project benchmarks/deep-swe python -m unittest discover \
   -s benchmarks/deep-swe/tests
 ```
 
-`run` validates the fixed seed-0 task subset, builds a fresh Linux/amd64
-`zork-agent` unless an explicit binary is supplied, checks out the pinned
+`run` validates the fixed seed-0 task subset, builds a fresh `zork-agent` Linux
+binary for the native host architecture by default (override with `--platform`)
+unless an explicit binary is supplied, checks out the pinned
 DeepSWE dataset revision, pulls the selected task images, and starts Pier. Its
 defaults can be inspected with `zork-deep-swe run --help`; command-line options
 replace the former `ZORK_DEEPSWE_*` shell environment contract.
+
+Containers stay running after completion, failure, or interruption for inspection;
+the `run` command uses `zork_deepswe.environment:RetainedDockerEnvironment` and
+never automatically stops or deletes them. Stop them explicitly when finished.
 
 Other subcommands expose the reusable stages independently:
 

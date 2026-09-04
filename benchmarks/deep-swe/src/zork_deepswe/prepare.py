@@ -9,6 +9,8 @@ from pathlib import Path
 import tomllib
 from pier.models.job.config import DatasetConfig
 
+from zork_deepswe.build import SUPPORTED_PLATFORMS, native_linux_platform
+
 RATE_LIMIT_ATTEMPTS = 6
 RATE_LIMIT_DELAY_SECONDS = 30
 
@@ -42,7 +44,7 @@ def collect_unique_images(task_paths: list[Path]) -> list[str]:
     return images
 
 
-def pull_images_serially(images: list[str]) -> None:
+def pull_images_serially(images: list[str], platform: str) -> None:
     for index, image in enumerate(images, start=1):
         present = subprocess.run(
             ["docker", "image", "inspect", image],
@@ -60,7 +62,7 @@ def pull_images_serially(images: list[str]) -> None:
                 flush=True,
             )
             pulled = subprocess.run(
-                ["docker", "pull", "--platform", "linux/amd64", image],
+                ["docker", "pull", "--platform", platform, image],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -86,13 +88,16 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--tasks-path", type=Path, required=True)
     parser.add_argument("--n-tasks", type=int, required=True)
     parser.add_argument("--sample-seed", type=int, required=True)
+    parser.add_argument(
+        "--platform", choices=SUPPORTED_PLATFORMS, default=native_linux_platform()
+    )
 
 
 def execute(args: argparse.Namespace) -> None:
     task_paths = asyncio.run(
         select_task_paths(args.tasks_path, args.n_tasks, args.sample_seed)
     )
-    pull_images_serially(collect_unique_images(task_paths))
+    pull_images_serially(collect_unique_images(task_paths), args.platform)
 
 
 def main(argv: list[str] | None = None) -> None:
