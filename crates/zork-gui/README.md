@@ -64,7 +64,7 @@ on isolated ports and verifies the explicit-message boundary:
 
 ```sh
 cargo build --locked -p zork-agent -p zork-gateway -p zork-call
-uv run crates/zork-gui/tests/test_gateway_entry.py
+python3 crates/zork-gui/tests/test_gateway_entry.py
 ```
 
 The fixture proves that ordinary assistant transcript text stays hidden, an
@@ -137,5 +137,5 @@ The palette and geometry are defined in `src/design.rs`.
 cargo test --locked -p zork-gui
 cargo clippy --locked -p zork-gui --all-targets -- -D warnings
 cargo build --locked -p zork-agent -p zork-gateway -p zork-call
-uv run crates/zork-gui/tests/test_gateway_entry.py
+python3 crates/zork-gui/tests/test_gateway_entry.py
 ```

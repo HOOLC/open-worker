@@ -20,7 +20,7 @@
   "scripts": {
     "build": "vp run build:js && vp run build:rust",
     "build:js": "vp run --filter @zork/admin-ui build",
-    "build:rust": "cargo build -p zork -p zork-gateway -p zork-agent -p zork-call",
+    "build:rust": "cargo build --locked -p zork -p zork-gateway -p zork-agent -p zork-call",
     "benchmark:deep-swe": "uv run --project benchmarks/deep-swe zork-deep-swe",
     "benchmark:deep-swe:test": "uv run --frozen --project benchmarks/deep-swe python -m unittest discover -s benchmarks/deep-swe/tests -p 'test_*.py'",
     "dev": "cargo run -p zork",
@@ -40,7 +40,9 @@
     "release:pack": "vp run build && vp run release:stage && find artifacts -maxdepth 1 -name '*.tgz' -delete && npm pack artifacts/npm-packages/zork --pack-destination artifacts",
     "start": "cargo run -p zork --release",
     "start:gateway": "cargo run -p zork-gateway --release",
-    "test": "vp test test/"
+    "test": "vp test --run",
+    "test:rust": "cargo test --locked --workspace --exclude zork-gui",
+    "test:desktop": "cargo test --locked -p zork-gui"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

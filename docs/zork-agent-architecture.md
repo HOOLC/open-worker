@@ -471,7 +471,7 @@ HTTP wire contract 单独放在无运行时逻辑的 `zork-agent-api` crate 中�
 
 本文件同时是测试合同的唯一语义入口。可观察行为由自动化测试证明；只能检查模块所有权或“不增加某抽象”的要求由结构审查证明；只有产生真实旧 schema 后才有输入的 migration，在第一次版本升级时连同旧 fixture 一起提交。
 
-每个 zork-agent 与 agent-testkit Rust 测试都在定义旁引用本文件中存在的合同编号，格式固定为：
+涉及关键合同的测试可在定义旁标注编号，便于定位语义；不以源码注释或实现字符串匹配代替行为验证：
 
 ```rust
 // Contract: docs/zork-agent-architecture.md [PERSIST-01]
@@ -493,13 +493,13 @@ zork-agent 的行为测试直接使用 Rust，不引入脚本语言、测试 DSL
 
 虚拟实现不能代替真实 adapter 的合同证明。真实文件系统的锁、同步和原子操作，真实 shell 的解析、进程组和信号，以及 HTTP/SSE/WS framing 分别由真实合同或综合测试覆盖。同一项逻辑不因测试模式而复制；真实和虚拟模式只在明确的副作用端口处替换实现。
 
-性能验收分为两层。虚拟层用大量独立 session 执行完整的 mailbox -> provider request -> provider response -> durable finish 路径，测量总耗时、每秒完成数和最终 event 数；工作负载中不得出现真实 sleep、磁盘、网络或进程。真实层在一次 agent 生命周期中复用 provider 对端和服务，执行多 session、真实 HTTP、真实 workspace、真实 shell、持久化和一次重启，测量启动成本与整批场景耗时。两层都保留可重复运行的 benchmark；CI 另用宽于本机基线的明确上限阻止数量级退化，不能用一次偶然跑分证明性能。
+性能验收分为两层。虚拟层用大量独立 session 执行完整的 mailbox -> provider request -> provider response -> durable finish 路径，测量总耗时、每秒完成数和最终 event 数；工作负载中不得出现真实 sleep、磁盘、网络或进程。真实层在一次 agent 生命周期中复用 provider 对端和服务，执行多 session、真实 HTTP、真实 workspace、真实 shell、持久化和一次重启，测量启动成本与整批场景耗时。两层都保留按需运行的 release benchmark；默认 CI 验证功能正确性，不重复执行依赖主机速度的 debug 跑分。性能变更和发布前使用下述完整门槛单独验收，不能用一次偶然跑分证明性能。
 
 event ID、event/segment 编解码、query 游标、ToolRegistry、ToolExecutor 和 provider 协议解析等局部合同直接保留在所属 Rust 模块。Gateway、Slack、Admin 和发布流程测试只消费 zork-agent 公共接口，不属于 zork-agent 测试框架。
 
 ### 13.3 稳定性能门槛（`PERF-03`、`PERF-04`）
 
-- debug/CI 使用 1000 个完整虚拟 session，五秒内完成；release 保留 10000-session 基线。
+- release 使用 10000 个完整虚拟 session，检查持久化 event 总数并报告耗时和吞吐。
 - 32 MiB 半结构化高熵 segment 使用正式 zstd level 12 流式压缩，独立进程峰值 RSS 不超过 256 MiB，并报告压缩率与吞吐。
 - 启动基准使用十万个真实 session 目录，fixture 构造不计入测量；精准恢复不超过 0.1 秒，请求优先恢复不超过 1 秒，后台完整检查不超过 10 秒，独立进程峰值 RSS 不超过 512 MiB。
 - 正式随机查询门槛使用单个 131072-event session，执行 1024 次 before/after 查询，每次返回 1024 events；串行和 8-worker 吞吐都不得低于 20 queries/s，独立进程峰值 RSS 不超过 256 MiB。

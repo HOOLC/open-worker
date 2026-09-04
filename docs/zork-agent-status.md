@@ -15,9 +15,8 @@
 
 ## 回归与实测
 
-- Rust 全工作区 243 项通过；Agent / testkit 其中 131 项通过，含 compaction、handoff、恢复、取消、迟到工具结果、HTTP/SSE、provider 对端和真实 shell/文件系统合同。
-- Gateway / GUI：57 项 Rust 测试通过。
-- JS：28 项集成与合同测试通过；DeepSWE harness 66 项、桌面 fake-agent 7 项测试通过。
+- Rust 全工作区 231 项通过（后端 200 项、原生 GUI 31 项）；Agent / testkit 其中 128 项通过，含 compaction、handoff、恢复、取消、迟到工具结果、HTTP/SSE、provider 对端和真实 shell/文件系统合同。
+- JS / Admin UI：26 项行为与集成测试通过。DeepSWE adapter 的 66 项单元测试在独立、按路径触发的工作流运行。
 - Admin TypeScript、构建、lint 和格式检查通过；会话列表的返回类型显式标注为 SessionRecord。
 - 真实 Agent + Gateway 桌面入口测试通过，包括上下文读写、非法值拒绝和显式消息边界。
 - 界面实测：Admin 保存 12345 tokens，切换 handoff 并刷新；桌面读取这个自定义值，改为 compaction/8000，Admin 刷新显示一致。
@@ -38,7 +37,9 @@ mini1 release 基准（fixture 构造不计入测量）：
 
 分配器替换和固定线程池实验没有提供足够收益，均已撤回；最终验收未连接堆采样工具。
 
-本地原始日志、截图和跨端验证结果保存在 `artifacts/agent-readiness-20260905/`。
+测试精简后，本机后端 200 项测试的执行时间合计约 7.5 秒（不含编译），原生 GUI 31 项约 0.02 秒，JS / Admin UI 26 项约 8.9 秒。默认测试移除重复的 debug 性能跑分、源码字符串/样式常量自测和旧直连 Agent 的 GUI 假服务自测；性能门槛仍由独立 release benchmark 验收。普通 CI 覆盖全部后端和 Admin UI；原生 GUI 按相关路径独立运行。
+
+本地原始日志、截图和跨端验证结果保存在 `artifacts/agent-readiness-20260905/`；本轮测试和 CI 日志在 `artifacts/merge-agent-readiness/`。
 
 ## 仍需实证的模型行为
 
@@ -53,13 +54,12 @@ mini1 release 基准（fixture 构造不计入测量）：
 ```sh
 export CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4
 cargo build --locked --workspace
-cargo test --locked --workspace -- --test-threads=1
-npx --yes pnpm@10.33.0 test --run
+cargo test --locked --workspace
+npx --yes pnpm@10.33.0 test
 npx --yes pnpm@10.33.0 format:check
 npx --yes pnpm@10.33.0 lint
 npx --yes pnpm@10.33.0 build:js
-uv run crates/zork-gui/tests/test_gateway_entry.py
-uv run crates/zork-gui/tests/test_fake_agent.py
+python3 crates/zork-gui/tests/test_gateway_entry.py
 npx --yes pnpm@10.33.0 benchmark:deep-swe:test
 cargo bench --locked -p zork-agent-testkit --bench test_world --bench startup_recovery --bench query_api --bench segment_compression
 cargo bench --locked -p zork-agent-testkit --bench query_pressure

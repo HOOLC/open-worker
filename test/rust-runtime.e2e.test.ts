@@ -1,4 +1,4 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import http from "node:http";
@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import { brokerRoot, getFreePort, removeTempRoot, writeConfig } from "./helpers.js";
+import { brokerRoot, getFreePort, removeTempRoot, stopChild, waitForReady, writeConfig } from "./helpers.js";
 
 describe.sequential("rust runtime", () => {
   const connectionId = "01J00000000000000000000RUN";
@@ -125,15 +125,8 @@ describe.sequential("rust runtime", () => {
 
 function spawnRuntime(options: { readonly cwd: string; readonly args: readonly string[]; readonly env: Record<string, string> }): ChildProcess {
   const binary = path.join(options.cwd, "target/debug/zork-gateway");
-  const result = spawnSync("cargo", ["build", "-p", "zork-gateway", "-p", "zork-call"], {
-    cwd: options.cwd,
-    encoding: "utf8",
-  });
-  if (result.status !== 0) {
-    throw new Error(`failed to build zork-gateway:\n${result.stderr || result.stdout}`);
-  }
   if (!existsSync(binary)) {
-    throw new Error(`zork-gateway missing at ${binary}`);
+    throw new Error(`zork-gateway missing at ${binary}; run pnpm build:rust first`);
   }
   return spawn(binary, [...options.args], {
     cwd: options.cwd,
@@ -150,6 +143,7 @@ function runCommand(binary: string, args: readonly string[], env: Record<string,
     const child = spawn(binary, [...args], {
       env: { ...process.env, ...env },
       stdio: ["ignore", "pipe", "pipe"],
+      timeout: 20_000,
     });
     let stdout = "";
     let stderr = "";
@@ -164,39 +158,4 @@ function runCommand(binary: string, args: readonly string[], env: Record<string,
       resolve({ status: code ?? 1, stdout, stderr });
     });
   });
-}
-
-async function stopChild(child: ChildProcess): Promise<void> {
-  if (child.exitCode != null || child.signalCode != null) {
-    return;
-  }
-  child.kill("SIGTERM");
-  await new Promise<void>((resolve) => {
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      resolve();
-    }, 2_000);
-    child.once("exit", () => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
-}
-
-async function waitForReady(url: string): Promise<void> {
-  const deadline = Date.now() + 20_000;
-  let lastError = "not ready";
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        return;
-      }
-      lastError = `status ${response.status}`;
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-  throw new Error(`runtime readyz failed: ${lastError}`);
 }

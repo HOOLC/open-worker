@@ -206,11 +206,24 @@ bash scripts/dev/update-binaries.sh
 ## Checks
 
 ```bash
-vp check
-vp lint
-vp test test/
-pnpm benchmark:deep-swe:test
+pnpm format:check
+pnpm lint
+pnpm build                       # build once before process tests
+pnpm test                        # JS + Admin UI behavior and process tests
+pnpm test:rust                   # all backend Rust tests
+pnpm test:desktop                # native GUI tests on macOS
 ```
+
+Core CI runs the JS/Admin UI and backend suites plus the real Agent/Gateway
+entry check. Process tests use the binaries from the build step. Desktop tests
+run separately on macOS when GUI, shared configuration, or Cargo dependencies
+change. DeepSWE adapter unit tests run only for benchmark-project changes (or
+manually with `pnpm benchmark:deep-swe:test`); they do not run model evaluations.
+
+Performance gates are separate from functional tests. For storage, query, or
+runtime performance changes and before release, run the standalone release
+benchmarks listed in [the validation guide](docs/zork-agent-status.md#复现命令).
+Do not run them alongside builds or other load tests.
 
 The runtime needs `git`, `gh`, and `rg` on `PATH` for coding work.
 

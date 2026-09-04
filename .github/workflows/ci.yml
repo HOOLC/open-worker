@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -39,16 +43,13 @@ jobs:
           node-version: 22.15
           cache: pnpm
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: 0.11.7
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Check formatting
-        run: pnpm format:check
+        run: |
+          pnpm format:check
+          cargo fmt --all -- --check
 
       - name: Lint
         run: pnpm lint
@@ -59,16 +60,11 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Run DeepSWE benchmark tests
-        run: pnpm benchmark:deep-swe:test
+      - name: Run backend tests
+        run: pnpm test:rust
 
-      - name: Run zork-agent architecture contracts
-        run: cargo test -p zork-agent -p zork-agent-testkit
-
-      - name: Run desktop entry contracts
-        run: |
-          uv run crates/zork-gui/tests/test_fake_agent.py
-          uv run crates/zork-gui/tests/test_gateway_entry.py
+      - name: Run desktop entry contract
+        run: python3 crates/zork-gui/tests/test_gateway_entry.py
 
       - name: Stage release packages
         run: pnpm release:stage

@@ -55,9 +55,9 @@ impl ControlledTool {
     }
 
     pub async fn request(&mut self) -> PendingToolRequest {
-        self.requests
-            .recv()
+        tokio::time::timeout(std::time::Duration::from_secs(10), self.requests.recv())
             .await
+            .expect("timed out waiting for the expected tool request")
             .expect("zork-agent stopped before issuing the expected tool request")
             .request
     }

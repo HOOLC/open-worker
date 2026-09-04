@@ -125,7 +125,7 @@ export async function waitForReady(url: string, label = "readyz"): Promise<void>
   let lastError = "not ready";
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: AbortSignal.timeout(1_000) });
       if (response.ok) {
         return;
       }

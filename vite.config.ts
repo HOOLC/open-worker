@@ -45,7 +45,7 @@ export default defineConfig({
     cache: true,
   },
   test: {
-    include: ["test/**/*.test.ts"],
+    include: ["test/**/*.test.ts", "apps/admin-ui/test/**/*.test.{ts,tsx}"],
     environment: "node",
   },
   staged: {

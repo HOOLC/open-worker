@@ -1,11 +1,8 @@
-use std::io::{Read, Write};
-use std::net::TcpListener;
-use std::sync::mpsc;
-use std::thread;
 use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::{stream, StreamExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use zork_gui::api::{ApiError, GatewayClient, MessagePage, Role, SseStream, TranscriptMessage};
 
 #[test]
@@ -73,17 +70,28 @@ fn sse_parser_preserves_utf8_split_across_transport_chunks() {
 
 #[test]
 fn opening_sse_returns_and_delivers_data_while_connection_is_still_open() {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("bind test server");
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("test runtime");
+    let listener = runtime
+        .block_on(tokio::net::TcpListener::bind("127.0.0.1:0"))
+        .expect("bind test server");
     let address = listener.local_addr().expect("test server address");
-    let server = thread::spawn(move || {
-        let (mut socket, _) = listener.accept().expect("accept SSE request");
-        socket
-            .set_read_timeout(Some(Duration::from_secs(2)))
-            .expect("set read timeout");
+    // GatewayClient also owns a blocking client; construct and drop it outside
+    // the async runtime while exercising its streaming API inside the runtime.
+    let client = GatewayClient::new(format!("http://{address}"), None);
+    runtime.block_on(async {
+    let (close, until_client_receives) = tokio::sync::oneshot::channel();
+    let server = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.expect("accept SSE request");
         let mut request = Vec::new();
         let mut byte = [0_u8; 1];
         while !request.ends_with(b"\r\n\r\n") {
-            socket.read_exact(&mut byte).expect("read HTTP request");
+            socket
+                .read_exact(&mut byte)
+                .await
+                .expect("read HTTP request");
             request.push(byte[0]);
         }
         assert!(
@@ -94,37 +102,32 @@ fn opening_sse_returns_and_delivers_data_while_connection_is_still_open() {
             .write_all(
                 b"HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\nconnection: close\r\n\r\nevent: message\ndata: {\"type\":\"message\",\"role\":\"assistant\",\"content\":\"live\"}\n\n",
             )
+            .await
             .expect("write SSE response");
-        socket.flush().expect("flush SSE response");
-        thread::sleep(Duration::from_millis(600));
+        socket.flush().await.expect("flush SSE response");
+        // Keep the response open until the client has actually received an event.
+        let _ = until_client_receives.await;
     });
 
-    let (result_tx, result_rx) = mpsc::channel();
-    let client_thread = thread::spawn(move || {
-        let client = GatewayClient::new(format!("http://{address}"), None);
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .expect("test runtime");
-        let result = runtime.block_on(async {
-            let mut events = client.stream_events("live").await?;
-            let event = events.next().await.transpose()?.expect("one live event");
-            Ok::<_, ApiError>((event.name, event.data))
-        });
-        result_tx.send(result).expect("send client result");
-    });
+    let event = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut events = client.stream_events("live").await.expect("open SSE stream");
+        events
+            .next()
+            .await
+            .expect("one live event")
+            .expect("valid SSE event")
+    })
+    .await
+    .expect("the first event must arrive while the SSE response remains open");
+    close
+        .send(())
+        .expect("server is still holding the connection open");
+    server.await.expect("test server task");
 
-    let early_result = result_rx.recv_timeout(Duration::from_millis(300));
-    server.join().expect("test server thread");
-    client_thread.join().expect("client thread");
-
-    let (name, data) = early_result.expect(
-        "stream_events must return and deliver the first event before the server closes the SSE connection",
-    )
-    .expect("SSE request succeeds");
-    assert_eq!(name, "message");
+    assert_eq!(event.name, "message");
     assert_eq!(
-        data,
+        event.data,
         r#"{"type":"message","role":"assistant","content":"live"}"#
     );
+    });
 }

@@ -128,7 +128,17 @@ impl TestWorld {
     }
 
     pub async fn state(&self, session_id: &str) -> Result<SessionState, SupervisorError> {
-        self.service().state(session_id).await
+        tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            self.service().state(session_id),
+        )
+        .await
+        .unwrap_or_else(|_| {
+            panic!(
+                "timed out inspecting session {session_id}; slots: {:?}",
+                self.sessions()
+            )
+        })
     }
 
     pub async fn wait_for_state(
@@ -139,6 +149,7 @@ impl TestWorld {
         let mut subscription = self
             .subscribe(session_id)
             .expect("the test session remains available");
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
         loop {
             let state = self
                 .state(session_id)
@@ -147,7 +158,7 @@ impl TestWorld {
             if condition(&state) {
                 return state;
             }
-            tokio::time::timeout(std::time::Duration::from_secs(5), subscription.recv())
+            tokio::time::timeout_at(deadline, subscription.recv())
                 .await
                 .unwrap_or_else(|_| {
                     panic!("virtual state condition did not become true; latest state: {state:#?}")
@@ -212,7 +223,9 @@ impl TestWorld {
             .map(|session| session.session_id)
             .collect::<Vec<_>>();
         if let Some(service) = self.service.take() {
-            service.shutdown().await;
+            tokio::time::timeout(std::time::Duration::from_secs(10), service.shutdown())
+                .await
+                .expect("timed out shutting down the virtual test world");
         }
         self.service = Some(start_service(
             &self.store,
@@ -237,7 +250,9 @@ impl TestWorld {
 
     pub async fn shutdown(&mut self) {
         if let Some(service) = self.service.take() {
-            service.shutdown().await;
+            tokio::time::timeout(std::time::Duration::from_secs(10), service.shutdown())
+                .await
+                .expect("timed out shutting down the virtual test world");
         }
     }
 

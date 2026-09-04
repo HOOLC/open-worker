@@ -19,6 +19,8 @@ fn main() {
 
 async fn run(session_count: usize) {
     let result = measure_virtual_sessions(session_count).await;
+    assert_eq!(result.session_count, session_count);
+    assert_eq!(result.event_count, session_count * 9);
     println!(
         "TestWorld: {} complete sessions, {} durable events, {:.3}s, {:.0} sessions/s",
         result.session_count,

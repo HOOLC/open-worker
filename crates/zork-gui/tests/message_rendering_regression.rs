@@ -259,10 +259,3 @@ fn live_activity_is_separate_from_messages_and_keeps_waits_and_failures() {
         Some(&last_message)
     ));
 }
-
-#[test]
-fn renderer_has_no_silent_user_or_tool_character_cutoff() {
-    let source = include_str!("../src/views.rs");
-    assert!(!source.contains("truncate(content, 4000)"));
-    assert!(!source.contains("truncate(content, 1500)"));
-}
