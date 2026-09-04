@@ -31,6 +31,33 @@ async fn session(world: &TestWorld, workspace: &str) -> String {
         .expect("create session")
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+// Contract: docs/zork-agent-architecture.md [SUPERVISOR-03]
+async fn concurrent_inspection_of_an_idle_session_does_not_wait_for_new_input() {
+    let mut world = TestWorld::new();
+    let mut inspections = tokio::task::JoinSet::new();
+    for _ in 0..8 {
+        let session_id = session(&world, "/virtual/idle-inspection").await;
+        let service = world.service_handle();
+        inspections.spawn(async move {
+            for _ in 0..100 {
+                let state = service.state(&session_id).await.unwrap();
+                assert_eq!(state.session_id, session_id);
+                assert!(state.active_turn.is_none());
+                tokio::task::yield_now().await;
+            }
+        });
+    }
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while let Some(result) = inspections.join_next().await {
+            result.unwrap();
+        }
+    })
+    .await
+    .expect("idle session inspections must complete without another input");
+    world.shutdown().await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
 // Contract: docs/zork-agent-architecture.md [TOOL-01, TURN-01]
 async fn one_provider_call_definition_continues_until_explicit_end() {

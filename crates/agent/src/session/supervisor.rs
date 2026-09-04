@@ -844,9 +844,16 @@ impl SessionSupervisor {
                 let status = slot.status.lock().await;
                 match &*status {
                     SlotStatus::Active { runner_id, sender } => (*runner_id, sender.clone()),
-                    SlotStatus::Recovering | SlotStatus::Unchecked | SlotStatus::Idle => {
+                    SlotStatus::Recovering => {
                         drop(status);
                         notified.await;
+                        continue;
+                    }
+                    SlotStatus::Unchecked | SlotStatus::Idle => {
+                        // The runner can become idle after ensure_active returns,
+                        // before this notification is registered. Nothing will wake
+                        // an idle slot: retry activation instead of waiting for it.
+                        drop(status);
                         continue;
                     }
                     SlotStatus::CircuitOpen(message) => {
