@@ -283,7 +283,7 @@ def main():
         report["model_steps"] = len(usage)
         report["duration_seconds"] = round(time.monotonic() - started, 2)
         report["binaries"] = {p.name: subprocess.check_output(["shasum", "-a", "256", str(p)], text=True).split()[0]
-                              for p in (f.TARGET / "zork", f.TARGET / "zork-gateway")}
+                              for p in (f.TARGET / "zork", f.TARGET / "zork-station")}
         (args.output / "report.json").write_text(redact(report))
         shutil.rmtree(scratch)
         print(json.dumps({"outcome": report["outcome"], "report": str(args.output / "report.json"), "model_steps": len(usage)}), flush=True)

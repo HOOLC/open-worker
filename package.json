@@ -2,15 +2,15 @@
   "name": "zork",
   "version": "0.1.30",
   "private": true,
-  "description": "IM gateway that routes deliberate chat delivery into durable agent workspaces.",
-  "homepage": "https://github.com/HOOLC/open-worker#readme",
+  "description": "Local-first AI workspace with durable agents, native clients, and mesh-connected stations.",
+  "homepage": "https://github.com/HOOLC/zork#readme",
   "bugs": {
-    "url": "https://github.com/HOOLC/open-worker/issues"
+    "url": "https://github.com/HOOLC/zork/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HOOLC/open-worker.git"
+    "url": "git+https://github.com/HOOLC/zork.git"
   },
   "workspaces": [
     "packages/*",
@@ -19,11 +19,11 @@
   "type": "module",
   "scripts": {
     "build": "vp run build:rust",
-    "build:rust": "python3 scripts/lib/build_env.py -- cargo build --locked -p zork -p zork-gateway -p zork-agent-server -p zork-gh",
+    "build:rust": "python3 scripts/lib/build_env.py -- cargo build --locked -p zork -p zork-station -p zork-agent-server -p zork-gh",
     "benchmark:deep-swe": "uv run --project benchmarks/deep-swe zork-deep-swe",
     "benchmark:deep-swe:test": "uv run --frozen --project benchmarks/deep-swe python -m unittest discover -s benchmarks/deep-swe/tests -p 'test_*.py'",
     "dev": "python3 scripts/lib/build_env.py -- cargo run -p zork",
-    "dev:gateway": "python3 scripts/lib/build_env.py -- cargo run -p zork-gateway",
+    "dev:station": "python3 scripts/lib/build_env.py -- cargo run -p zork-station",
     "dev:binaries:linux": "bash scripts/dev/update-binaries.sh",
     "check": "vp check",
     "format": "vp fmt --write",
@@ -32,9 +32,9 @@
     "lint": "vp lint",
     "lint:fix": "vp lint --fix",
     "release:stage": "python3 scripts/build/native-release.py stage",
-    "release:pack": "python3 scripts/lib/build_env.py -- sh -c \"cargo build --locked --release -p zork -p zork-gateway -p zork-agent-server -p zork-gh && python3 scripts/build/native-release.py stage\"",
+    "release:pack": "python3 scripts/lib/build_env.py -- sh -c \"cargo build --locked --release -p zork -p zork-station -p zork-agent-server -p zork-gh && python3 scripts/build/native-release.py stage\"",
     "start": "python3 scripts/lib/build_env.py -- cargo run -p zork --release",
-    "start:gateway": "python3 scripts/lib/build_env.py -- cargo run -p zork-gateway --release",
+    "start:station": "python3 scripts/lib/build_env.py -- cargo run -p zork-station --release",
     "test": "vp test --run",
     "test:rust": "python3 scripts/lib/build_env.py -- cargo test --locked --workspace --exclude zork-gui --exclude zork-browser-runtime",
     "test:desktop": "python3 scripts/lib/build_env.py -- cargo test --locked -p zork-gui",

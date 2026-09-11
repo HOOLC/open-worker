@@ -2,7 +2,7 @@
 members = [
   "crates/zork-browser-runtime",
   "crates/zork-browser",
-  "crates/gateway",
+  "crates/station",
   "crates/agent",
   "crates/agent-http",
   "crates/agent-server",

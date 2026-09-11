@@ -8,12 +8,12 @@
 
 | 共享实现 | 桌面接入 | Android 接入 |
 | --- | --- | --- |
-| `api.rs`：Gateway HTTP/Mesh 请求、DTO、错误语义、SSE 字节解析 | `zork_gui::api` 重新导出 | core `Client` 使用同一 `GatewayClient` |
+| `api.rs`：Station HTTP/Mesh 请求、DTO、错误语义、SSE 字节解析 | `zork_gui::api` 重新导出 | core `Client` 使用同一 `GatewayClient` |
 | `live.rs`：订阅、重连退避、先订阅后补齐、授权撤销处理 | 核心 `Device` / `Conversation` 消费 `LiveFeed` | 同一核心控制器驱动 |
 | `delivery.rs`：持久发送记录与单次投递调度 | 核心 `Outbox` 订阅驱动队列 UI | 同一 `Outbox` 驱动 JNI 状态快照 |
 | `state`：业务状态、变化检测、持久化和订阅 | 视图应用核心快照与列表 splice | 会话适配器将同一快照编码为 wire delta |
 | `conversation.rs`：活动归并、发送权限、任务修订合并、停止确认 | 由核心控制器调用 | 由同一核心控制器调用 |
-| `transcript.rs`：Gateway 消息身份、重放去重、分页与投影 | `zork_gui::transcript` 重新导出 | core 会话适配器使用同一投影函数 |
+| `transcript.rs`：Station 消息身份、重放去重、分页与投影 | `zork_gui::transcript` 重新导出 | core 会话适配器使用同一投影函数 |
 | `store.rs`：SQLite 草稿、缓存和 outbox 事务 | `desktop::store` 重新导出 | 独立 `LocalClient` 通道 |
 | `transport.rs`：client-only Mesh 启动、配置、身份 | GPUI 平台提供执行器和网络配置 | JNI 平台提供执行器和私有目录 |
 
@@ -51,7 +51,7 @@ Android 的 multicast lock 随连接恢复／暂停获取和释放。显式 offl
 - core / JNI：14 项测试，包括消息可见性边界、UTF-8 分片、重连补齐、授权
   撤销、同 ID 重试、工具活动归并，以及网络等待期间的独立草稿写入。
 - 桌面：6 项 API/outbox 回归与 3 项嵌入式传输测试。
-- Android API 36 arm64 模拟器：6 项真实 JNI/Mesh/Gateway/Agent 集成测试。
+- Android API 36 arm64 模拟器：6 项真实 JNI/Mesh/Station/Agent 集成测试。
   新测试仅调用入队、订阅和状态读取，由 Rust 自动完成发送、投影与缓存。
 - APK 校验 v2 开发签名及 16 KiB ZIP 对齐；真机、省电策略和蜂窝切换待验证。
 

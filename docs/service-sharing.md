@@ -1,6 +1,6 @@
 # 服务管理与 Mesh 共享
 
-服务由稳定 ID 标识，启动配置、运行意图和共享开关分别持久化。Gateway 执行进程管理、
+服务由稳定 ID 标识，启动配置、运行意图和共享开关分别持久化。Station 执行进程管理、
 权限检查与重启恢复；客户端通过已有 Synch Socket 和本地入口访问应用。
 
 ## 工具与 skill 的边界
@@ -17,7 +17,7 @@ Skill 随 Agent 的版本化 bundled skills 安装，沿用现有发现、读取
 | `service.list` | 列出当前 Session 的服务，包括停止和未共享的记录；不逐个探测端口 |
 | `service.inspect` | 返回状态、TCP 就绪情况、进程 PID、最近退出码/错误、revision、链接和日志路径 |
 | `service.restart` | 按保存的配置重新启动托管进程，保留 ID、链接和日志 |
-| `service.stop` | 停止托管进程组并持久化停止意图；Gateway 重启不会再次启动它 |
+| `service.stop` | 停止托管进程组并持久化停止意图；Station 重启不会再次启动它 |
 | `service.share` | 开启现有服务的长期 Mesh 访问，返回稳定链接；不会启动进程 |
 | `service.unshare` | 关闭共享并断开连接；保留服务身份、配置、进程和日志 |
 
@@ -32,12 +32,12 @@ Skill 随 Agent 的版本化 bundled skills 安装，沿用现有发现、读取
 ## 持久化与进程生命周期
 
 元数据和请求凭据位于节点数据目录的 `state/shared-services.sqlite`。没有八小时或十二小时
-服务时限。关闭浏览器视图不改变运行/共享意图；Gateway 重启自动恢复期望运行的托管服务。
+服务时限。关闭浏览器视图不改变运行/共享意图；Station 重启自动恢复期望运行的托管服务。
 端口暂时不可用不会删除登记。停止服务后，只有新的显式启动/重启操作才会恢复运行意图。
 
-每次启动由一个轻量进程守护者拥有应用进程组。Gateway 停止或异常退出时，父进程管道关闭，
+每次启动由一个轻量进程守护者拥有应用进程组。Station 停止或异常退出时，父进程管道关闭，
 守护者终止并回收进程组及后代，避免旧服务占用端口。进程退出和启动错误以结构化状态保存，
-不用解析日志判断。失败进程不进入紧密重启循环；显式 restart 或下一次 Gateway 启动再尝试。
+不用解析日志判断。失败进程不进入紧密重启循环；显式 restart 或下一次 Station 启动再尝试。
 
 日志捕获使用有背压的有界字节缓冲区，stdout/stderr 分开写入：
 
@@ -56,7 +56,7 @@ Agent 在日志所属节点复用文件读取、搜索和 shell 工具。返回�
 
 共享链接为 `zork://service/<节点公钥>/<服务ID>/<路径>?查询#片段`，不是绕过成员授权的令牌。
 客户端建立 `http://s<节点与服务摘要>.localhost:<临时端口>/` 的 loopback 入口，并在内置浏览器打开。
-桌面消息/地址栏和 Android 消息支持这个入口；不需要公网 HTTP Gateway 或手机 CLI。
+桌面消息/地址栏和 Android 消息支持这个入口；不需要公网 HTTP Station 或手机 CLI。
 
 每条连接复用 `zork-control/mesh.sock` 的认证前导，完成有界 JSON 鉴权后转为原始双向字节流。
 HTTP body、资源与 WebSocket 不经过 JSON 编码。服务端核验共享状态、当前 client 权限以及控制端口限制；
@@ -70,7 +70,7 @@ Synch v0.1.8 默认在 300 秒无字节进展后结束流，应用 WebSocket 需
 
 ## 验证
 
-按构建环境规则重建 Gateway 等进程二进制及 `service-listener` example 后，运行
+按构建环境规则重建 Station 等进程二进制及 `service-listener` example 后，运行
 `scripts/test-shared-services.py`。可配置 `ZORK_SERVICE_CHROMIUM` 和 `ZORK_PLAYWRIGHT_MODULE`
 加入真实 Chromium 检查。覆盖 Agent 命名工具、持久化、进程启停/重启与异常恢复、日志文件、
 重试、权限、HTTP/大文件/WebSocket、取消共享与进程组清理。它使用隔离身份与 fixture 模型，

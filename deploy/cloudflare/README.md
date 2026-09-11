@@ -64,9 +64,9 @@ the current allowlist on every request.
 ```
 
 Apply this through the service configuration described in
-[`docs/mesh-onboarding.md`](../../docs/mesh-onboarding.md). The running Gateway
+[`docs/mesh-onboarding.md`](../../docs/mesh-onboarding.md). The running Station
 needs its Mesh configuration updated separately. That operation restarts the
-Gateway, so check for active tasks first. Preserve membership, grants and identities.
+Station, so check for active tasks first. Preserve membership, grants and identities.
 `offline: true` must be disabled for public services to work.
 
 ## Validation

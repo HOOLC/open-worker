@@ -1,4 +1,4 @@
-//! The installer only prepares local prerequisites. Gateway owns mesh joins.
+//! The installer only prepares local prerequisites. Station owns mesh joins.
 use anyhow::{ensure, Context, Result};
 use serde_json::{json, Value};
 use std::{
@@ -6,11 +6,11 @@ use std::{
     time::Duration,
 };
 
-struct LocalGateway {
+struct LocalStation {
     root: PathBuf,
     http: reqwest::Client,
 }
-impl LocalGateway {
+impl LocalStation {
     fn new(root: PathBuf) -> Result<Self> {
         Ok(Self {
             root,
@@ -50,13 +50,13 @@ impl LocalGateway {
         let response = request.send().await?;
         let status = response.status();
         if status == reqwest::StatusCode::NOT_FOUND {
-            anyhow::bail!("The running Gateway does not support mesh enrollment; update it before retrying. Its tasks have been left running.");
+            anyhow::bail!("The running Station does not support mesh enrollment; update it before retrying. Its tasks have been left running.");
         }
         let value: Value = response.json().await?;
         ensure!(
             status.is_success(),
             "{}",
-            value["error"].as_str().unwrap_or("Gateway request failed")
+            value["error"].as_str().unwrap_or("Station request failed")
         );
         Ok(value)
     }
@@ -80,12 +80,12 @@ impl LocalGateway {
             .await?;
         ensure!(
             status["protocol"] == 1 && status["mesh_join"] == 1,
-            "Gateway version does not support this invitation"
+            "Station version does not support this invitation"
         );
         let root = status["data_root"]
             .as_str()
-            .context("Gateway omitted its data directory")?;
-        ensure!(Path::new(root).canonicalize()?==self.root.canonicalize()?,"Gateway listener belongs to a different data directory; specify the correct --data directory");
+            .context("Station omitted its data directory")?;
+        ensure!(Path::new(root).canonicalize()?==self.root.canonicalize()?,"Station listener belongs to a different data directory; specify the correct --data directory");
         Ok(())
     }
 }
@@ -104,7 +104,7 @@ async fn choose_root(explicit: Option<PathBuf>) -> Result<PathBuf> {
         if installed.contains(&root) {
             continue;
         }
-        if LocalGateway::new(root.clone())?.ready().await {
+        if LocalStation::new(root.clone())?.ready().await {
             running.push(root.clone());
         }
         installed.push(root);
@@ -116,7 +116,7 @@ async fn choose_root(explicit: Option<PathBuf>) -> Result<PathBuf> {
     };
     ensure!(
         candidates.len() <= 1,
-        "Multiple Gateway installations found. Repeat with --data and one of: {}",
+        "Multiple Station installations found. Repeat with --data and one of: {}",
         candidates
             .iter()
             .map(|p| p.display().to_string())
@@ -132,7 +132,7 @@ async fn choose_root(explicit: Option<PathBuf>) -> Result<PathBuf> {
 fn install_binaries(root: &Path) -> Result<PathBuf> {
     let current = std::env::current_exe()?;
     let mut sources = vec![("zork", current)];
-    for name in ["zork-gateway", "zork-agent", "zork-gh"] {
+    for name in ["zork-station", "zork-agent", "zork-gh"] {
         sources.push((
             name,
             zork_config::find_bin(name, root).with_context(|| {
@@ -209,17 +209,17 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
     if action == "status" {
         ensure!(
             zork_config::config_path(&root).exists(),
-            "No Gateway is installed on this device"
+            "No Station is installed on this device"
         );
-        let gateway = LocalGateway::new(root.clone())?;
-        gateway.verify().await?;
-        let value = gateway
+        let station = LocalStation::new(root.clone())?;
+        station.verify().await?;
+        let value = station
             .request(reqwest::Method::GET, "/v1/node/mesh", None)
             .await?;
         if json_output {
             println!("{value}");
         } else {
-            println!("Gateway: {}", root.display());
+            println!("Station: {}", root.display());
             for peer in value["config"]["peers"].as_array().into_iter().flatten() {
                 println!("  {}", peer["name"].as_str().unwrap_or("Device"));
             }
@@ -230,16 +230,16 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
     zork_config::ensure_layout(&root)?;
     let root = root.canonicalize()?;
     let _setup = zork_config::service::exclusive_lock(&root.join("run/mesh-setup.lock"))
-        .context("Another Gateway setup is already running for this device")?;
-    let gateway = LocalGateway::new(root.clone())?;
-    let running = gateway.ready().await;
+        .context("Another Station setup is already running for this device")?;
+    let station = LocalStation::new(root.clone())?;
+    let running = station.ready().await;
     if running {
-        gateway.verify().await?;
-        eprintln!("Using the running Gateway at {}", root.display());
+        station.verify().await?;
+        eprintln!("Using the running Station at {}", root.display());
     } else {
         // A supervisor may still be starting. Do not create a competing service.
         if zork_config::service::running(&root) {
-            eprintln!("Waiting for the existing Gateway to become ready…");
+            eprintln!("Waiting for the existing Station to become ready…");
         } else {
             let binary = install_binaries(&root)?;
             zork_config::update_config(&root, |config| {
@@ -291,7 +291,7 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
             zork_mesh::managed::validate(&config.mesh)?;
             zork_config::service::install(&root, &binary, true)?;
             eprintln!(
-                "Gateway installed as a background service at {}",
+                "Station installed as a background service at {}",
                 root.display()
             );
         }
@@ -302,8 +302,8 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
             loop {
                 changes.checkpoint();
                 events.refresh()?;
-                let announced = zork_config::read_ready_pid(&root, "zork-gateway")?.is_some();
-                if announced && gateway.ready().await {
+                let announced = zork_config::read_ready_pid(&root, "zork-station")?.is_some();
+                if announced && station.ready().await {
                     return Ok::<_, anyhow::Error>(());
                 }
                 tokio::select! {
@@ -313,14 +313,14 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
             }
         })
         .await
-        .context("Gateway did not become ready")??;
-        gateway.verify().await?;
+        .context("Station did not become ready")??;
+        station.verify().await?;
     }
     if action == "install" {
         if json_output {
             println!("{}", json!({"installed":true,"data_root":root}));
         } else {
-            println!("Gateway ready at {}", root.display());
+            println!("Station ready at {}", root.display());
             println!(
                 "Manage it with: '{}' service status --data '{}'",
                 root.join("bin/zork").display(),
@@ -329,13 +329,13 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
         }
         return Ok(());
     }
-    let value = gateway
+    let value = station
         .request(reqwest::Method::GET, "/v1/node/mesh", None)
         .await?;
     let mut config: zork_config::MeshConfig = serde_json::from_value(value["config"].clone())?;
     let previous = config.clone();
     config.enabled = true;
-    // A running, unpaired Gateway must use the invitation's network too.
+    // A running, unpaired Station must use the invitation's network too.
     // Existing memberships/manual peers retain their operator-selected transport.
     if config.peers.is_empty() && config.group.is_none() {
         if let Some(invite) = &invitation {
@@ -346,10 +346,10 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
     }
     let mut replaced_pid = None;
     if config != previous {
-        let status = gateway
+        let status = station
             .request(reqwest::Method::GET, "/v1/node/status", None)
             .await?;
-        let saved = gateway
+        let saved = station
             .request(reqwest::Method::PUT, "/v1/node/mesh", Some(json!(config)))
             .await?;
         if saved["restarting"] == true {
@@ -364,9 +364,9 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
             changes.checkpoint();
             events.refresh()?;
             let ready = async {
-                let status = gateway.request(reqwest::Method::GET, "/v1/node/status", None).await?;
+                let status = station.request(reqwest::Method::GET, "/v1/node/status", None).await?;
                 if replaced_pid.as_ref().is_some_and(|pid| *pid == status["pid"]) { return Ok::<_, anyhow::Error>(false); }
-                let value = gateway.request(reqwest::Method::GET, "/v1/node/mesh", None).await?;
+                let value = station.request(reqwest::Method::GET, "/v1/node/mesh", None).await?;
                 Ok(value["origin"].is_string())
             };
             let failed = match tokio::time::timeout(Duration::from_secs(2), ready).await {
@@ -379,10 +379,10 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
                 _ = retry.wait(), if failed => {},
             }
         }
-    }).await.context("Gateway Mesh did not become ready after applying network settings; check node logs and retry the join command")??;
+    }).await.context("Station Mesh did not become ready after applying network settings; check node logs and retry the join command")??;
     match action.as_str() {
         "invite" => {
-            let value = gateway
+            let value = station
                 .request(reqwest::Method::POST, "/v1/node/mesh/invites", None)
                 .await?;
             if json_output {
@@ -396,7 +396,7 @@ pub async fn run(mut argv: Vec<String>) -> Result<()> {
         }
         "join" => {
             eprintln!("Joining your mesh: devices may assign tasks to each other, access task files and manage nodes.");
-            let value = gateway
+            let value = station
                 .request(
                     reqwest::Method::POST,
                     "/v1/node/mesh/join",

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 
 import { describe, expect, it } from "vite-plus/test";
 
-const CANONICAL_REPOSITORY = "HOOLC/open-worker";
+const CANONICAL_REPOSITORY = "HOOLC/zork";
 const CANONICAL_REPOSITORY_URL = `https://github.com/${CANONICAL_REPOSITORY}`;
 
 type PackageMetadata = {
@@ -29,7 +29,7 @@ describe("npm provenance repository identity", () => {
     expect(manifests[0]?.version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it("publishes zork and zork-gateway from one package", async () => {
+  it("publishes zork and zork-station from one package", async () => {
     const manifest = JSON.parse(await fs.readFile(new URL("../packages/zork/package.json", import.meta.url), "utf8")) as {
       readonly name?: string;
       readonly bin?: Record<string, string>;
@@ -37,7 +37,7 @@ describe("npm provenance repository identity", () => {
     expect(manifest.name).toBe("@agent-session-broker/zork");
     expect(manifest.bin).toMatchObject({
       zork: "./bin/zork.mjs",
-      "zork-gateway": "./bin/zork-gateway.mjs",
+      "zork-station": "./bin/zork-station.mjs",
     });
     expect(Object.keys(manifest.bin ?? {})).not.toContain("zork-control");
   });

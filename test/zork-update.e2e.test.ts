@@ -98,9 +98,9 @@ describe.sequential("zork update", () => {
     expect(supervisor.exitCode).toBeNull();
 
     const [gateway, runtime, control, agent] = await Promise.all([readReady(`http://127.0.0.1:${gatewayPort}/readyz`), readReady(`http://127.0.0.1:${runtimePort}/readyz`), readReady(`http://127.0.0.1:${controlPort}/readyz`), readReady(`http://127.0.0.1:${agentPort}/readyz`)]);
-    expect(gateway).toMatchObject({ ok: true, service: "zork-gateway", pid: after.runtime });
-    expect(runtime).toMatchObject({ ok: true, service: "zork-gateway", pid: after.runtime });
-    expect(control).toMatchObject({ ok: true, service: "zork-gateway", pid: after.control });
+    expect(gateway).toMatchObject({ ok: true, service: "zork-station", pid: after.runtime });
+    expect(runtime).toMatchObject({ ok: true, service: "zork-station", pid: after.runtime });
+    expect(control).toMatchObject({ ok: true, service: "zork-station", pid: after.control });
     expect(agent).toMatchObject({ ok: true, service: "zork-agent", pid: after.agent, embedded: true });
   }, 90_000);
 });

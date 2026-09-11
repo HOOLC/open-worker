@@ -164,7 +164,7 @@ struct PresentInput {
 
 `present` 只能输出 UI 描述，不能返回业务 effects 或持久化状态；`migrate` 也不能调用业务能力。WASM 内部可以有缓存，但它不是持久权威，不能依赖缓存恢复业务事实。三个入口都没有直接产生外部副作用的 host import。
 
-效果类型使用已注册业务动作，例如 `RefreshTasks`、`OpenResource`、`SetDraft`、`CallMcpTool`，具体参数遵循各自 core 契约。插件生成的是动作参数，HTTP 方法、URL、凭据和重试由能力代理处理。不能暴露一个允许 UI 随意构造 Gateway 请求的 `Request(method, path, body)`。
+效果类型使用已注册业务动作，例如 `RefreshTasks`、`OpenResource`、`SetDraft`、`CallMcpTool`，具体参数遵循各自 core 契约。插件生成的是动作参数，HTTP 方法、URL、凭据和重试由能力代理处理。不能暴露一个允许 UI 随意构造 Station 请求的 `Request(method, path, body)`。
 
 写操作流程如下：
 

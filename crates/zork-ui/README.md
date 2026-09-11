@@ -1,6 +1,6 @@
 # zork-ui
 
-Shared Rust/GPUI visual components used by the native client and the design handbook's interactive WebAssembly examples. The package owns tokens, fonts/SVG assets, buttons, fields, dropdowns, navigation rows, avatars, provider marks, Markdown rendering and text selection, activity and brand motion. It has no Gateway, database, mesh or HTTP service dependency.
+Shared Rust/GPUI visual components used by the native client and the design handbook's interactive WebAssembly examples. The package owns tokens, fonts/SVG assets, buttons, fields, dropdowns, navigation rows, avatars, provider marks, Markdown rendering and text selection, activity and brand motion. It has no Station, database, mesh or HTTP service dependency.
 
 The `stories` feature adds the primitive catalog and isolated examples. Normal client builds omit it. `zork-gui` composes these controls into application views; the Web example harness compiles those same settings view files against an in-memory adapter. Full conversation pages currently have native snapshots only.
 

@@ -32,7 +32,7 @@ def main():
         for attempt in range(2):
             with (root / f'start-{attempt}.log').open('wb') as log:
                 started = time.monotonic()
-                gateway = subprocess.Popen([str(fixture.TARGET / 'zork-gateway'), '--data', str(node.root), '--fake-agent'], stdout=log, stderr=log)
+                gateway = subprocess.Popen([str(fixture.TARGET / 'zork-station'), '--data', str(node.root), '--fake-agent'], stdout=log, stderr=log)
                 try:
                     def ready():
                         assert gateway.poll() is None, 'Gateway exited during startup'

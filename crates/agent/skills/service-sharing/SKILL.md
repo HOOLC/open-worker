@@ -13,11 +13,11 @@ Service tools act on the current Agent's execution node and Session. The user's 
 
 Check `service.list` for an existing service that matches the task. Use `service.inspect` to distinguish a running process, a reachable port and enabled sharing. A stopped or unshared service still has an identity and can be reused.
 
-Use `service.start` when Gateway should own the command and restore it on restart. Use `service.attach` for a server already managed elsewhere. Attaching does not give Gateway control of the external process or access to its logs. Do not start a duplicate server just to obtain a link.
+Use `service.start` when Station should own the command and restore it on restart. Use `service.attach` for a server already managed elsewhere. Attaching does not give Station control of the external process or access to its logs. Do not start a duplicate server just to obtain a link.
 
 For a managed service, choose a stable workspace directory and an explicit port. Keep the command in the foreground so its lifetime remains observable. Pass an argv array; when shell syntax is necessary, use an explicit shell command that ends in `exec` for the server. Avoid daemonization, `nohup`, trailing `&`, and port fallback: an orphan or an automatically changed port breaks process ownership or the registered endpoint.
 
-Bind the server to `127.0.0.1`. Gateway handles Mesh transport; opening the server on all interfaces is normally unnecessary. Configure a development server to accept `*.localhost` Host headers. Build asset, API and WebSocket URLs from the current page origin; do not hardcode the execution node's localhost port into browser-facing URLs. For HMR, avoid overrides that send the client's browser to a different localhost port.
+Bind the server to `127.0.0.1`. Station handles Mesh transport; opening the server on all interfaces is normally unnecessary. Configure a development server to accept `*.localhost` Host headers. Build asset, API and WebSocket URLs from the current page origin; do not hardcode the execution node's localhost port into browser-facing URLs. For HMR, avoid overrides that send the client's browser to a different localhost port.
 
 ## Verify and deliver
 
@@ -27,7 +27,7 @@ Once the requested app is usable, enable access with `service.share`. Deliver th
 
 When the user wants an application to keep using across tasks, separately call `page.publish` with its title and exact URL. This adds the persistent entry to the client’s global application start page. A delivered page, a shared service or a long-running process does not automatically become a published application. Use `page.unpublish` to remove an application you published; it does not stop the service or remove prior conversation references.
 
-Keep the service when the user asks for persistent availability. Closing a browser view does not stop it. Gateway restores the saved running/sharing intent after restart. Stopping a managed service prevents that automatic launch while preserving its configuration. Unsharing disables access while leaving the process running; re-sharing preserves the URL. Choose these operations according to what the user actually wants to end.
+Keep the service when the user asks for persistent availability. Closing a browser view does not stop it. Station restores the saved running/sharing intent after restart. Stopping a managed service prevents that automatic launch while preserving its configuration. Unsharing disables access while leaving the process running; re-sharing preserves the URL. Choose these operations according to what the user actually wants to end.
 
 ## Diagnose using existing filesystem tools
 
@@ -39,4 +39,4 @@ If the logs are on another node, have the Agent on that node read the relevant e
 
 Delivery deduplication is handled by the runtime. If a result reports an uncertain outcome, inspect/list the existing service before deciding any further action; do not repeat a start or restart with unknown effects. A revision/configuration conflict requires reading current state; do not remove the revision check to overwrite it. Keep the registered ID and URL during recovery instead of creating new names on every retry.
 
-A process that exits is reported with its exit status; Gateway does not repeatedly restart a failing command in a tight loop. Fix the cause from its status and logs, then restart that service. Do not stop unrelated services to free a port.
+A process that exits is reported with its exit status; Station does not repeatedly restart a failing command in a tight loop. Fix the cause from its status and logs, then restart that service. Do not stop unrelated services to free a port.

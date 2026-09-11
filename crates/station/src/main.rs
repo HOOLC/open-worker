@@ -57,7 +57,7 @@ async fn run() -> Result<()> {
         .skip(1)
         .any(|arg| arg == "--help" || arg == "-h")
     {
-        println!("Usage: zork-gateway [--data DIR] [--listen HOST] [--agent-token TOKEN] [--no-streaming]");
+        println!("Usage: zork-station [--data DIR] [--listen HOST] [--agent-token TOKEN] [--no-streaming]");
         return Ok(());
     }
     tracing_subscriber::fmt()
@@ -206,7 +206,7 @@ async fn run() -> Result<()> {
     state.draining.store(true, Ordering::Release);
     runtime.shutdown().await;
     state.status_projection.shutdown().await;
-    zork_config::clear_ready_pid(&config.data_root, "zork-gateway");
+    zork_config::clear_ready_pid(&config.data_root, "zork-station");
     let _ = stop_mesh.send(true);
     while let Some(stopped) = mesh_tasks.join_next().await {
         stopped??;
@@ -313,7 +313,7 @@ async fn serve(
     let (stop_connections, connections_stopped) = watch::channel(false);
     let socket_state = state.clone();
     let mut socket_task = tokio::spawn(socket::run_connections(socket_state, connections_stopped));
-    zork_config::write_ready_pid(&state.config.data_root, "zork-gateway")?;
+    zork_config::write_ready_pid(&state.config.data_root, "zork-station")?;
     state.draining.store(false, Ordering::Release);
     let mcp_state = state.clone();
     let mcp_maintenance = tokio::spawn(async move {
@@ -325,13 +325,13 @@ async fn serve(
             }
         }
     });
-    info!(runtime = %state.config.bind_addr, agent = %state.config.agent_bind, "gateway ready with embedded Agent");
+    info!(runtime = %state.config.bind_addr, agent = %state.config.agent_bind, "station ready with embedded Agent");
     let result = tokio::select! {
         () = shutdown => Ok(()),
-        result = servers.join_next() => Err(anyhow::anyhow!("Gateway HTTP listener stopped: {result:?}")),
-        _ = &mut socket_task => Err(anyhow::anyhow!("Gateway connections stopped")),
+        result = servers.join_next() => Err(anyhow::anyhow!("Station HTTP listener stopped: {result:?}")),
+        _ = &mut socket_task => Err(anyhow::anyhow!("Station connections stopped")),
         result = mesh_tasks.join_next() => {
-            Err(anyhow::anyhow!("Gateway Mesh task stopped: {result:?}"))
+            Err(anyhow::anyhow!("Station Mesh task stopped: {result:?}"))
         }
     };
     state.draining.store(true, Ordering::Release);
@@ -339,7 +339,7 @@ async fn serve(
     state.mcp.shutdown();
     state.node_tools.shutdown().await;
     let draining_started = std::time::Instant::now();
-    zork_config::clear_ready_pid(&state.config.data_root, "zork-gateway");
+    zork_config::clear_ready_pid(&state.config.data_root, "zork-station");
     let _ = stop_connections.send(true);
     runtime.shutdown().await;
     info!(

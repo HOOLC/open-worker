@@ -4,7 +4,7 @@ use anyhow::{ensure, Result};
 use serde_json::{json, Value};
 use std::{fs, path::Path};
 
-pub const RELEASE_BASE: &str = "https://github.com/HOOLC/open-worker/releases";
+pub const RELEASE_BASE: &str = "https://github.com/HOOLC/zork/releases";
 
 pub fn valid_version(version: &str) -> bool {
     if version.len() > 64 {
@@ -38,7 +38,7 @@ pub fn eligible(root: &Path, executable: &Path) -> Result<()> {
         executable.canonicalize()?.parent() == Some(bin.as_path()),
         "此安装由客户端应用或开发环境管理，请更新对应应用。"
     );
-    for name in ["zork", "zork-gateway", "zork-agent", "zork-gh"] {
+    for name in ["zork", "zork-station", "zork-agent", "zork-gh"] {
         ensure!(bin.join(name).is_file(), "设备缺少完整版本包：{name}");
     }
     Ok(())

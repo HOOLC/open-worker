@@ -42,7 +42,7 @@ impl RuntimeConfig {
         let data_root = args.data_root;
         Ok(Self {
             bind_addr: zork_config::parse_bind(&file.bind.runtime)?,
-            service_name: "zork-gateway".into(),
+            service_name: "zork-station".into(),
             state_dir: data_root.join("state"),
             workspaces_root: data_root.join("workspaces"),
             repos_root: data_root.join("repos"),

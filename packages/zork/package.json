@@ -1,19 +1,19 @@
 {
   "name": "@agent-session-broker/zork",
   "version": "0.1.30",
-  "description": "Zork supervisor, Slack gateway, and durable coding agent.",
-  "homepage": "https://github.com/HOOLC/open-worker#readme",
+  "description": "Local-first AI workspace with durable agents, native clients, and mesh-connected stations.",
+  "homepage": "https://github.com/HOOLC/zork#readme",
   "bugs": {
-    "url": "https://github.com/HOOLC/open-worker/issues"
+    "url": "https://github.com/HOOLC/zork/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HOOLC/open-worker.git"
+    "url": "git+https://github.com/HOOLC/zork.git"
   },
   "bin": {
     "zork": "./bin/zork.mjs",
-    "zork-gateway": "./bin/zork-gateway.mjs"
+    "zork-station": "./bin/zork-station.mjs"
   },
   "files": [
     "bin/",

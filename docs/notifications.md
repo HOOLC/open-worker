@@ -10,7 +10,7 @@ a node continuing to work does not itself post notifications on another Mac.
 `zork-client-core::notifications` owns classification and a device-local SQLite
 ledger. The desktop adapter owns OS authorization, posting, sound and click
 handling. Existing committed catalog synchronization supplies the inputs; no
-additional notification polling requests are sent to a Gateway.
+additional notification polling requests are sent to a Station.
 
 - A new delivered assistant reply can notify. Worker assignment/rework inputs,
   user messages, tool activity and streaming fragments do not. Remote tasks notify

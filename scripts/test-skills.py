@@ -56,7 +56,7 @@ def main():
         session_id = None
         for restart in range(2):
             with log_path.open("ab") as log:
-                process = subprocess.Popen([str(fixture.TARGET / "zork-gateway"), "--data", str(node.root), "--fake-agent"], stdout=log, stderr=log)
+                process = subprocess.Popen([str(fixture.TARGET / "zork-station"), "--data", str(node.root), "--fake-agent"], stdout=log, stderr=log)
                 try:
                     fixture.wait(lambda: request(node.url, "GET", "/readyz"), "Gateway ready")
                     endpoint = "/v1/node/agents/leader/skills"

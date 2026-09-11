@@ -47,7 +47,7 @@ def main():
         node = root / 'node'
         bundle = node / 'bin'
         bundle.mkdir(parents=True)
-        for name in ['zork', 'zork-gateway', 'zork-agent']:
+        for name in ['zork', 'zork-station', 'zork-agent']:
             shutil.copy2(TARGET / name, bundle / name)
         (bundle / 'zork-gh').write_text('#!/bin/sh\nexit 0\n')
         (bundle / 'zork-gh').chmod(0o755)
@@ -64,7 +64,7 @@ def main():
         curl.write_text(f'''#!{sys.executable}
 import pathlib, shutil, sys, time
 args=sys.argv[1:]
-url=next(arg for arg in args if arg.startswith('https://github.com/HOOLC/open-worker/releases/'))
+url=next(arg for arg in args if arg.startswith('https://github.com/HOOLC/zork/releases/'))
 source=pathlib.Path({str(root / 'releases')!r}) / url.split('/releases/',1)[1]
 time.sleep(1)
 shutil.copyfile(source,args[args.index('-o')+1])
@@ -77,7 +77,7 @@ shutil.copyfile(source,args[args.index('-o')+1])
             assets.mkdir(parents=True)
             archive = assets / f'zork-{version}-{key}.tar.gz'
             with tarfile.open(archive, 'w:gz', compresslevel=1) as tar:
-                for name in ['zork', 'zork-gateway', 'zork-agent', 'zork-gh']:
+                for name in ['zork', 'zork-station', 'zork-agent', 'zork-gh']:
                     tar.add(bundle / name, arcname=name, recursive=False)
                 for name, content in [('VERSION', version), ('LICENSE', 'fixture'), ('Synchronicity.txt', 'fixture')]:
                     member = tarfile.TarInfo(name)

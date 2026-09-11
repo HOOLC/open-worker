@@ -69,7 +69,7 @@ class Node:
         # Gateway itself owns Synch. No supervisor or transport helper is
         # involved in identity initialization, network startup or shutdown.
         with (root / 'bootstrap.log').open('wb') as log:
-            bootstrap = subprocess.Popen([str(TARGET / 'zork-gateway'), '--data', str(root)],
+            bootstrap = subprocess.Popen([str(TARGET / 'zork-station'), '--data', str(root)],
                                          stdout=log, stderr=log)
             try:
                 def identity():

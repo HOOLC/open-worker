@@ -17,13 +17,13 @@ version_at_least() {
 main() {
     release_version=latest
     download_only=
-    base_url=${ZORK_RELEASE_BASE_URL:-https://github.com/HOOLC/open-worker/releases}
+    base_url=${ZORK_RELEASE_BASE_URL:-https://github.com/HOOLC/zork/releases}
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --download-only) [ "$#" -ge 2 ] || fail '--download-only requires a directory'; download_only=$2; shift 2 ;;
             --version) [ "$#" -ge 2 ] || fail '--version requires a value'; release_version=$2; shift 2 ;;
             --base-url) [ "$#" -ge 2 ] || fail '--base-url requires a value'; base_url=$2; shift 2 ;;
-            --help|-h) printf '%s\n' 'Usage: install.sh [--version VERSION] [--base-url RELEASES_URL] [-- NATIVE_ARGS...]' 'Default: install and start a persistent Gateway. Example: -- mesh join INVITATION --data DIR'; return ;;
+            --help|-h) printf '%s\n' 'Usage: install.sh [--version VERSION] [--base-url RELEASES_URL] [-- NATIVE_ARGS...]' 'Default: install and start a persistent Station. Example: -- mesh join INVITATION --data DIR'; return ;;
             --) shift; break ;;
             *) fail "Unknown installer option: $1 (put native arguments after --)" ;;
         esac
@@ -79,14 +79,14 @@ main() {
     [ "$actual_digest" = "$digest" ] || fail 'Package SHA-256 mismatch; nothing installed'
     # Exact flat member list; reject links and special files before extraction.
     tar -tzf "$scratch/package.tar.gz" > "$scratch/members"
-    awk 'BEGIN {split("zork zork-gateway zork-agent zork-gh VERSION LICENSE Synchronicity.txt",names," "); for(i in names) expected[names[i]]=1}
+    awk 'BEGIN {split("zork zork-station zork-agent zork-gh VERSION LICENSE Synchronicity.txt",names," "); for(i in names) expected[names[i]]=1}
          !($0 in expected) || seen[$0]++ {exit 1} END {if(NR!=7) exit 1}' "$scratch/members" || fail 'Unexpected package contents'
     tar -tvzf "$scratch/package.tar.gz" > "$scratch/types"
     awk 'substr($0,1,1)!="-" {exit 1}' "$scratch/types" || fail 'Package contains links or special files'
     mkdir "$scratch/bin"
     tar -xzf "$scratch/package.tar.gz" -C "$scratch/bin"
     [ "$(cat "$scratch/bin/VERSION")" = "$release_version" ] || fail 'Package version mismatch'
-    for component in zork zork-gateway zork-agent zork-gh; do
+    for component in zork zork-station zork-agent zork-gh; do
         [ -x "$scratch/bin/$component" ] || fail "Missing executable: $component"
     done
     if [ -n "$download_only" ]; then

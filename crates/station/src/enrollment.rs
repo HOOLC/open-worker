@@ -198,7 +198,8 @@ impl EnrollmentService {
         let package: Value = serde_json::from_str(include_str!("../../../package.json"))?;
         let version = package["version"].as_str().context("release version")?;
         let command = format!(
-            "curl -fsSL https://github.com/HOOLC/open-worker/releases/download/v{version}/install.sh | sh -s -- --version {version} -- mesh join '{}'",
+            "curl -fsSL {}/download/v{version}/install.sh | sh -s -- --version {version} -- mesh join '{}'",
+            zork_config::update::RELEASE_BASE,
             ticket
         );
         Ok(

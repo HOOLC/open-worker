@@ -57,7 +57,7 @@ Android's platform-specific geometry and behavior remain in
 
 ## Conversation behavior
 
-Messages carry durable Gateway IDs and stored timestamps. Known Agent authors use
+Messages carry durable Station IDs and stored timestamps. Known Agent authors use
 bound Agent identities; unknown metadata is omitted. Leader assignment/rework
 messages are displayed as Agent messages rather than human messages.
 
@@ -82,7 +82,7 @@ separate `history_changed` event.
 ## Device and model settings
 
 Device settings have Overview, Agents, and Model Connections entries. Overview
-uses actual Gateway version information from `/v1/node/info`. The update control
+uses actual Station version information from `/v1/node/info`. The update control
 reports unsupported full installation upgrades until a real updater exists.
 
 Create connections by choosing subscription/API mode, then provider. New OAuth

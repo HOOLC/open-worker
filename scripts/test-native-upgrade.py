@@ -67,7 +67,7 @@ class UpgradeTests(unittest.TestCase):
         else:
             shutil.copy2(BINARY, path / 'zork')
         (path / 'VERSION').write_text(version)
-        for name in ['zork-gateway', 'zork-agent', 'zork-gh']:
+        for name in ['zork-station', 'zork-agent', 'zork-gh']:
             child = path / name
             child.write_text(f'''#!{sys.executable}
 import json, os, pathlib, signal, sys

@@ -19,7 +19,7 @@ Visual QA is blocked; no visual fidelity pass is claimed. Real-device keyboard b
 - Spacing: 44px touch targets and 390px preview width specified; no rendered geometry evidence.
 - Colors: neutral warm surfaces and original charcoal palette in CSS; actual pixels not sampled.
 - Asset quality: original brand, avatar and icon SVG files reused and all served successfully.
-- Copy: core source semantics retained; local file attachment is an actual Markdown design note instead of a fictitious PDF. Device Gateway version is pending and update action explains the prototype limitation.
+- Copy: core source semantics retained; local file attachment is an actual Markdown design note instead of a fictitious PDF. Device Station version is pending and update action explains the prototype limitation.
 
 ## Functional evidence
 

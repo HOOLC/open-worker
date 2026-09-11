@@ -152,11 +152,11 @@ Agent。节点共享／设备默认来源仍由节点配置管理。没有归属
 python3 scripts/lib/build_env.py -- cargo test --locked -p zork-config --lib skill_tests
 python3 scripts/lib/build_env.py -- cargo test --locked -p zork-agent --test skill_bundles --test skills --test skills_management
 python3 scripts/lib/build_env.py -- cargo test --locked -p zork-agent-testkit --test skills
-python3 scripts/lib/build_env.py -- cargo test --locked -p zork-gateway --bin zork-gateway skill_
-python3 scripts/lib/build_env.py -- cargo build --locked -p zork-gateway
+python3 scripts/lib/build_env.py -- cargo test --locked -p zork-station --bin zork-station skill_
+python3 scripts/lib/build_env.py -- cargo build --locked -p zork-station
 python3 scripts/lib/build_env.py -- python3 scripts/test-skills.py
 ```
 
 测试覆盖配置兼容、同名候选保留、路径去重、设备来源范围、资源子树、符号链接、损坏／超限文件、
 通用文件分页读取、分发更新、回滚、停用、独立定制副本保留、来源撤销、动态清单、持久历史前缀和重启恢复。进程测试使用隔离数据目录、
-真实 Gateway 和假模型，不验证跨物理设备挂载或真实模型是否会正确遵循 skill。
+真实 Station 和假模型，不验证跨物理设备挂载或真实模型是否会正确遵循 skill。

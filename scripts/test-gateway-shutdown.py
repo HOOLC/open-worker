@@ -21,7 +21,7 @@ def main():
     root = Path(tempfile.mkdtemp(prefix='zork-sse-shutdown-', dir='/tmp'))
     node = fixture.Node(root / 'node')
     with (root / 'gateway.log').open('wb') as log:
-        gateway = subprocess.Popen([str(fixture.TARGET / 'zork-gateway'), '--data', str(node.root), '--fake-agent'], stdout=log, stderr=log)
+        gateway = subprocess.Popen([str(fixture.TARGET / 'zork-station'), '--data', str(node.root), '--fake-agent'], stdout=log, stderr=log)
         streams = []
         try:
             fixture.wait(lambda: node.get('/v1/mesh').get('origin') == node.origin, 'Gateway ready')

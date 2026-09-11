@@ -86,7 +86,7 @@ pub fn connect_with_timeout(
     timeout: Duration,
 ) -> Result<(std::os::unix::net::UnixStream, String)> {
     let mut stream = std::os::unix::net::UnixStream::connect(crate::zork_sock_path(root))
-        .context("Gateway supervisor is not running")?;
+        .context("Station supervisor is not running")?;
     stream.set_read_timeout(Some(timeout))?;
     stream.set_write_timeout(Some(timeout))?;
     writeln!(stream, "{command}")?;
@@ -228,7 +228,7 @@ fn install_platform(root: &Path, binary: &Path, start_at_login: bool) -> Result<
                 .replace('%', "%%")
         )
     };
-    fs::write(dir.join(&name),format!("[Unit]\nDescription=Zork Gateway\n[Service]\nExecStart={} service-run --data {}\nRestart=always\nRestartSec=3\nKillMode=process\nEnvironment=PATH=/usr/local/bin:/usr/bin:/bin\n[Install]\nWantedBy=default.target\n",quote(binary),quote(root)))?;
+    fs::write(dir.join(&name),format!("[Unit]\nDescription=Zork Station\n[Service]\nExecStart={} service-run --data {}\nRestart=always\nRestartSec=3\nKillMode=process\nEnvironment=PATH=/usr/local/bin:/usr/bin:/bin\n[Install]\nWantedBy=default.target\n",quote(binary),quote(root)))?;
     checked(Command::new("systemctl").args(["--user", "daemon-reload"]))?;
     checked(Command::new("systemctl").args([
         "--user",
@@ -240,10 +240,10 @@ fn install_platform(root: &Path, binary: &Path, start_at_login: bool) -> Result<
 
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn install_platform(_: &Path, _: &Path, _: bool) -> Result<()> {
-    anyhow::bail!("Background Gateway requires macOS launchd or Linux user systemd")
+    anyhow::bail!("Background Station requires macOS launchd or Linux user systemd")
 }
 
-/// Unregister only the watcher. The caller explicitly stops or leases the Gateway.
+/// Unregister only the watcher. The caller explicitly stops or leases the Station.
 pub fn uninstall(root: &Path) -> Result<()> {
     let previous = settings(root)?;
     save_settings(
@@ -352,7 +352,7 @@ pub fn exclusive_lock(path: &Path) -> Result<fs::File> {
         .write(true)
         .open(path)?;
     file.try_lock_exclusive()
-        .context("A Gateway supervisor already manages this data directory")?;
+        .context("A Station supervisor already manages this data directory")?;
     Ok(file)
 }
 

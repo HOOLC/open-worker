@@ -6,7 +6,7 @@
 {"model":"gpt-5.5","effort":"high"}
 ```
 
-省略或传空 `profile_id`，以及显式传 `"auto"`，都表示自动模式；保存和返回的选择统一为 `profile_id: "auto"`。其他 Profile ID 表示固定账号，调用失败不会自动改用另一个账号。原有固定账号会话保持其选择。Gateway 默认模型选择也保留自动模式，不再在入口把它转换成固定账号。
+省略或传空 `profile_id`，以及显式传 `"auto"`，都表示自动模式；保存和返回的选择统一为 `profile_id: "auto"`。其他 Profile ID 表示固定账号，调用失败不会自动改用另一个账号。原有固定账号会话保持其选择。Station 默认模型选择也保留自动模式，不再在入口把它转换成固定账号。
 
 桌面和 Android 的小伙伴创建、设置页面先选择模型，再选择思考深度，最后可选固定连接。模型和深度汇总各连接已启用的配置；可选连接只展示支持当前组合的账号。默认自动分配，已有固定连接和思考深度会回填。更换模型或深度导致原连接不兼容时回到自动分配；只更换连接不会清空模型和深度。
 
@@ -33,8 +33,8 @@
 
 ## 验证
 
-- `cargo test --locked -p zork-profile -p zork-agent -p zork-agent-api --lib`，以及 `cargo test --locked -p zork-gateway`
+- `cargo test --locked -p zork-profile -p zork-agent -p zork-agent-api --lib`，以及 `cargo test --locked -p zork-station`
 - `cargo test --locked -p zork-agent-testkit --test account_pool --test http_api --test responses_adapter --test codex_adapter`
-- 重建 `zork` 与 `zork-gateway` 后运行 `scripts/test-gui-contracts.py`，覆盖省略 profile 的本地会话、Agent 创建和模型切换，以及 Worker 的真实进程执行。
+- 重建 `zork` 与 `zork-station` 后运行 `scripts/test-gui-contracts.py`，覆盖省略 profile 的本地会话、Agent 创建和模型切换，以及 Worker 的真实进程执行。
 
 测试使用受控本地供应商与隔离节点，不消耗真实账号额度。

@@ -10,7 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 UI = ("zork-ui", "zork-gui", "zork-gui-web")
 SERVICES = {"reqwest", "rusqlite", "zork-config", "zork-mesh", "zork-browser",
-            "openidconnect", "zork-gateway", "zork-agent", "zork-profile"}
+            "openidconnect", "zork-station", "zork-agent", "zork-profile"}
 # Preserve offsets so diagnostics point to the real source line. String literals
 # remain available for route checks but cannot imitate a cfg(test) declaration.
 TOKENS = re.compile(r'r(?P<hashes>#{0,16})"[\s\S]*?"(?P=hashes)|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])\'|//[^\n]*|/\*[\s\S]*?\*/')

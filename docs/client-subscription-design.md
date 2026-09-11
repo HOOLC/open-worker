@@ -19,7 +19,7 @@ Session 执行概览由 SSE 的首个权威 snapshot 建立，再跟随后续提
 | Android 会话 | `crates/zork-client-core/src/session.rs::Session::poll/fields` | 等待变化最多 300 ms，变化后再批处理 8 ms；消息变化时重建全部消息 JSON，再比较得到 upsert，同时发完整 `message_order`；设备元数据也重新构造 |
 | Android 调度 | `crates/zork-android/src/lib.rs::call`、`NativeBridge.kt`、`ClientViewModel.kt::startLive/applyState` | 会话 poll 与其他非本地命令共用 Kotlin networkGate 和 Rust Client 锁；每次 poll 后固定 delay 100 ms；Kotlin 按完整 ID 顺序重建显示列表 |
 | Android 设置 | `ClientViewModel.kt::watchSettings`、`settings.rs::poll` | 每 250 ms 经本地通道读取副本/操作状态并比较版本串；没有接入事件唤醒。其业务同步来自 core，UI 轮询的是本地投影 |
-| Web 展台 | `crates/zork-gui-web/src/api.rs` | 通过 `#[path]` 编译 observable、Profiles、Agents 源码，提供内存 Gateway；不是完整的 Web 客户端，也尚未通过公开模块契约复用 |
+| Web 展台 | `crates/zork-gui-web/src/api.rs` | 通过 `#[path]` 编译 observable、Profiles、Agents 源码，提供内存 Station；不是完整的 Web 客户端，也尚未通过公开模块契约复用 |
 
 需要保留的已有设计：同一设备/会话复用控制器、只读快照、通知有界、消费者独立基线、领域版本、core 负责消息身份与归并、控制器与观察者分离的生命周期。`MessageActivity` 的累计 sequence 加最近 32 个 ID，也比逐条排队动画事件更适合慢 UI。
 

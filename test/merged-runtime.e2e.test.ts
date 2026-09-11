@@ -61,7 +61,7 @@ describe.sequential("Gateway and Agent mailbox integration", () => {
       },
     });
 
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -209,7 +209,7 @@ describe.sequential("Gateway and Agent mailbox integration", () => {
       },
     });
 
-    const firstGateway = spawnBinary("zork-gateway", {
+    const firstGateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -232,7 +232,7 @@ describe.sequential("Gateway and Agent mailbox integration", () => {
     firstGateway.kill("SIGKILL");
     await new Promise<void>((resolve) => firstGateway.once("exit", () => resolve()));
 
-    const secondGateway = spawnBinary("zork-gateway", {
+    const secondGateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });

@@ -14,11 +14,11 @@ WASM 实例只能访问自己的线性内存和显式链接的能力；越过内
 
 | 当前入口 | 源码中已有的基础 | 对插件系统的意义与缺口 |
 | --- | --- | --- |
-| [zork-ui](../crates/zork-ui/src/lib.rs)、[controls](../crates/zork-ui/src/controls.rs)、[navigation](../crates/zork-ui/src/navigation.rs) | 共享 GPUI 控件、设计 token、导航与交互组件；不承担 Gateway 和持久化 | 可实现插件 UI 节点到正式组件的映射；目前没有通用插件组件协议或动态渲染器 |
+| [zork-ui](../crates/zork-ui/src/lib.rs)、[controls](../crates/zork-ui/src/controls.rs)、[navigation](../crates/zork-ui/src/navigation.rs) | 共享 GPUI 控件、设计 token、导航与交互组件；不承担 Station 和持久化 | 可实现插件 UI 节点到正式组件的映射；目前没有通用插件组件协议或动态渲染器 |
 | [core 浏览器 worker](../crates/zork-client-core/src/desktop/browser_worker.rs)、[GUI worker](../crates/zork-gui/src/browser/worker.rs)、[GUI bridge](../crates/zork-gui/src/browser/bridge.rs) | worker 与授权桥接的实际实现已进入 core，GUI 包装平台生命周期 | 新插件生命周期与业务入口应沿 core 边界实现；不把插件控制器放进视图。边界文档的迁移清单可能落后于这批未提交代码 |
 | [CEF IPC](../crates/zork-browser/src/cdp.rs)、[Browser](../crates/zork-browser/src/service.rs) | 启动独立浏览器 runtime，私有 IPC、包大小检查、断连反馈、关闭与回收 | 已有进程外能力适配的参考；一个 Browser 管理同一 runtime 的多个 tab，不能把 tab 当作插件独立故障域 |
 | [CEF 输出](../crates/zork-browser-runtime/src/output.rs)、[GPUI 页面显示](../crates/zork-gui/src/browser/panel.rs) | 输出保留最新待显示帧；GPUI 将收到的像素转换为 RenderImage，并已有输入与 IME 转发 | 可复用画面嵌入经验。当前是像素 IPC 和内存复制，不是 GPU 共享纹理；控制消息 VecDeque 未见显式容量上限，不能原样充当第三方插件通道 |
-| [MCP runtime](../crates/gateway/src/mcp/runtime.rs)、[calls](../crates/gateway/src/mcp/calls.rs)、[MCP 说明](mesh-mcp.md) | stdio/HTTP 服务、进程组回收、调用账本、授权与结果未知处理 | 可供插件调用已授权的工具；当前 MCP 初始化不声明 Apps 能力，未实现 UI 资源与 Apps 桥接，不能把已接入 MCP 等同于已有 UI 插件系统 |
+| [MCP runtime](../crates/station/src/mcp/runtime.rs)、[calls](../crates/station/src/mcp/calls.rs)、[MCP 说明](mesh-mcp.md) | stdio/HTTP 服务、进程组回收、调用账本、授权与结果未知处理 | 可供插件调用已授权的工具；当前 MCP 初始化不声明 Apps 能力，未实现 UI 资源与 Apps 桥接，不能把已接入 MCP 等同于已有 UI 插件系统 |
 | [客户端订阅合同](client-state-subscriptions.md)、[订阅设计](client-subscription-design.md) | 已有共享业务控制器与订阅；统一版本及确认协议仍有提案、迁移和实现的区别 | 插件复用同样的业务权威与消费者基线原则，不新建 UI 业务副本，也不把设计稿中的接口说成全部已落地 |
 
 [Agent 架构](zork-agent-architecture.md)已经要求第三方工具使用 WASM 隔离，并明确没有已确认的第三方工具 ABI。本研究因此优先选择 WASM 插件实验；已有 MCP 外部服务继续使用自己的协议边界，不把它们改成 Agent 进程内的 native plugin。
@@ -146,7 +146,7 @@ UI 描述的传递采用带版本的快照/增量。至少区分 source/instance
 
 现有 CEF 值得复用，但建议为插件另建 runtime/资料与授权域，不把普通网页浏览器的登录资料及控制权限直接送给插件。一个浏览器 profile 或一个 tab 本身不是每插件进程隔离的证据；要分别注入 renderer、browser runtime 和控制连接故障，观察实际影响范围。
 
-MCP Apps 可以放在专用 CEF runtime 的受限 Web 宿主中：宿主加载 UI 资源，保留规定的 iframe/CSP/消息边界，CEF bridge 只适配消息，再由 core 执行获授权的操作。当前普通网页禁止原生业务 IPC 的约束继续适用；新增的是明确的 Apps 宿主能力，不是给任意网页开放 Gateway。无法遵守 Zork core 业务边界的网页应用应按普通外部页面处理，不能冒充已融合的原生插件。[MCP Apps 官方说明](https://modelcontextprotocol.io/extensions/apps/overview)
+MCP Apps 可以放在专用 CEF runtime 的受限 Web 宿主中：宿主加载 UI 资源，保留规定的 iframe/CSP/消息边界，CEF bridge 只适配消息，再由 core 执行获授权的操作。当前普通网页禁止原生业务 IPC 的约束继续适用；新增的是明确的 Apps 宿主能力，不是给任意网页开放 Station。无法遵守 Zork core 业务边界的网页应用应按普通外部页面处理，不能冒充已融合的原生插件。[MCP Apps 官方说明](https://modelcontextprotocol.io/extensions/apps/overview)
 
 同样使用 GPUI 在外进程绘制，也只能首先得到画面融合。若没有语义桥接，宿主仍然不知道画面里的按钮、文本选择和可访问性节点；拖拽、弹层、焦点、IME 与 DPI 变化仍要实现。共享 GPU 缓冲可以减少像素复制，但需要平台专属生命周期、同步和故障恢复，不等于共享组件树。
 

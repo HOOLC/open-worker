@@ -11,11 +11,11 @@
 
 ## 页面与交付契约
 
-`chat.post_page` 复用频道投递链路，要求显式 `chat_id`，并支持既有 `target` 与 `chat.recover`。Agent 身份、执行 Session 与去重 invocation 由运行时提供。链接消息、作者、接收通知和对话页面索引在同一个 Gateway 事务中提交，不能把页面交付到 Agent 的内部控制上下文。旧会话的 `/v1/pages` 交付接口及 Mesh 任务事件保留兼容路径。
+`chat.post_page` 复用频道投递链路，要求显式 `chat_id`，并支持既有 `target` 与 `chat.recover`。Agent 身份、执行 Session 与去重 invocation 由运行时提供。链接消息、作者、接收通知和对话页面索引在同一个 Station 事务中提交，不能把页面交付到 Agent 的内部控制上下文。旧会话的 `/v1/pages` 交付接口及 Mesh 任务事件保留兼容路径。
 
 `page.publish` 创建或更新全局应用；`page.unpublish` 撤下同一执行 Session 发布的应用。取消发布不停止服务、不删除已交付的对话引用；延迟重试旧的 publish 不会恢复已取消的应用。HTTP(S) 或有效 `zork://service` URL 经规范化后决定页面身份，不接受可执行协议或内嵌账号凭据。
 
-Gateway 保存页面引用、发布记录与操作回执。`GET /v1/node/pages` 及现有 catalog 同步 Resource 记录提供客户端投影。未绑定的旧 Mesh 会话先保存引用，在会话绑定后才发布客户端索引；事务失败不会留下半条引用。客户端持久副本保存应用和页面关系，重新启动时可恢复；运行设备离线不会删除已发布应用。
+Station 保存页面引用、发布记录与操作回执。`GET /v1/node/pages` 及现有 catalog 同步 Resource 记录提供客户端投影。未绑定的旧 Mesh 会话先保存引用，在会话绑定后才发布客户端索引；事务失败不会留下半条引用。客户端持久副本保存应用和页面关系，重新启动时可恢复；运行设备离线不会删除已发布应用。
 
 ## 详情与边界
 
@@ -38,9 +38,9 @@ Gateway 保存页面引用、发布记录与操作回执。`GET /v1/node/pages` 
 eval "$(python3 scripts/lib/build_env.py --shell)"
 cargo test --locked -p zork-client-core --features desktop --lib resources
 cargo test --locked -p zork-client-core --features desktop --lib pages
-cargo test --locked -p zork-gateway --bin zork-gateway pages
+cargo test --locked -p zork-station --bin zork-station pages
 cargo test --locked -p zork-gui --features headless-bench --test headless_resources
-cargo build --locked -p zork -p zork-gateway -p zork-gui
+cargo build --locked -p zork -p zork-station -p zork-gui
 python3 scripts/test-mesh-resources-ui.py
 ```
 

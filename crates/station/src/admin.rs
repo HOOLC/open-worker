@@ -98,7 +98,7 @@ async fn admin_readyz(State(state): State<RuntimeState>) -> impl IntoResponse {
             StatusCode::SERVICE_UNAVAILABLE
         },
         Json(
-            json!({"ok":ready,"service":"zork-gateway","pid":std::process::id(),"agent":{"mode":"embedded","pid":std::process::id()}}),
+            json!({"ok":ready,"service":"zork-station","pid":std::process::id(),"agent":{"mode":"embedded","pid":std::process::id()}}),
         ),
     )
 }
@@ -130,7 +130,7 @@ async fn merge_page(state: RuntimeState, include_sessions: bool) -> Response {
     Json(json!({
         "ok": true,
         "service": {
-            "name": "zork-gateway",
+            "name": "zork-station",
             "mode": "single",
             "startedAt": state.admin.started_at,
             "runtimeBaseUrl": format!("http://127.0.0.1:{}", state.config.bind_addr.port()),

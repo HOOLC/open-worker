@@ -36,7 +36,7 @@ description: 开发、重构或审查 zork 客户端功能及 Rust core/UI 分�
 
 ## 边界复查
 
-先运行 `python3 scripts/check-client-boundary.py`。它检查 UI 的生产依赖、视图中的 IO/Gateway 调用、Android 旧请求入口及 Web 对 core 私有源码的引用；修改检查器时同时运行 `--self-test`。CI 执行同一入口。该检查只证明已列出的机械约束，下面的业务调用链复查仍必需。
+先运行 `python3 scripts/check-client-boundary.py`。它检查 UI 的生产依赖、视图中的 IO/Station 调用、Android 旧请求入口及 Web 对 core 私有源码的引用；修改检查器时同时运行 `--self-test`。CI 执行同一入口。该检查只证明已列出的机械约束，下面的业务调用链复查仍必需。
 
 先确定本次文件与调用者，包括暂存、未暂存和新增文件。以下命令在仓库根目录执行，辅助定位当前入口；路径变化时先用 `rg --files` 找到新位置。
 

@@ -1,6 +1,6 @@
 # GUI migration status
 
-The default app entry is `DesktopRoot`; its device views use `RootView::new_desktop` with shared `DeviceNavigation`. The direct-Gateway compatibility entry and its UI have been removed. DesktopRoot is the only application entry.
+The default app entry is `DesktopRoot`; its device views use `RootView::new_desktop` with shared `DeviceNavigation`. The direct-Station compatibility entry and its UI have been removed. DesktopRoot is the only application entry.
 
 ## Current desktop entry
 

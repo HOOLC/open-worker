@@ -20,7 +20,7 @@ function addDeviceDialog(){
  modal('添加设备',`<div class="add-device-dialog"><p class="add-device-intro">在新设备上执行加入命令，连接后它会出现在设备列表中。</p><div class="add-device-leaders"><b>交给 Leader</b><p>点击头像，选择由谁协助添加设备。</p><div class="add-device-leader-row" role="group" aria-label="选择负责添加设备的 Leader">${Object.entries(people).filter(([,p])=>p.role==='Leader').map(([id,p])=>`<button class="add-device-leader" data-action="settings-talk" data-topic="add-device" data-leader="${id}" aria-label="交给${esc(p.name)}添加设备" title="${esc(p.name)} · ${p.node}">${av(p.avatar)}</button>`).join('')}</div></div><div class="add-device-manual"><h3>手动添加</h3><p>获取命令后，复制到新设备的终端执行。</p><button class="button primary" data-action="get-join-command">获取加入命令</button><div id="join-command-result" hidden></div></div></div>`);
 }
 function showJoinCommand(){
- const command="curl -fsSL https://github.com/HOOLC/open-worker/releases/download/v0.1.30/install.sh | sh -s -- --version 0.1.30 -- mesh join '<invitation>'";
+ const command="curl -fsSL https://github.com/HOOLC/zork/releases/download/v0.1.30/install.sh | sh -s -- --version 0.1.30 -- mesh join '<invitation>'";
  const el=$('join-command-result');if(!el)return;
  el.hidden=false;el.innerHTML=`<div class="join-command-header"><span>在新设备执行</span><button class="settings-text-button" data-action="copy-join-command">复制命令模板</button></div><textarea id="join-command" readonly aria-label="新设备加入命令模板" spellcheck="false"></textarea><p class="join-command-note" role="status">样稿显示命令模板；接入真实节点后，这里会生成包含有效邀请的命令。</p>`;
  $('join-command').value=command;

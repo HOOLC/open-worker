@@ -24,7 +24,7 @@ def main():
         [sys.executable, str(ROOT / 'scripts/test-native-installer.py')],
         [sys.executable, str(ROOT / 'scripts/test-macos-client-update.py')],
         ['cargo', 'build', '--locked', '-p', 'zork-gui', '-p', 'zork',
-         '-p', 'zork-gateway', '-p', 'zork-agent-server', '-p', 'zork-gh'],
+         '-p', 'zork-station', '-p', 'zork-agent-server', '-p', 'zork-gh'],
         [sys.executable, str(ROOT / 'scripts/test-gui-contracts.py')],
     ]
     for command in commands:

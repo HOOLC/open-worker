@@ -27,8 +27,8 @@ Usage:
   zork service install|uninstall|status [--data DIR] [--at-login]
   zork stop [--data DIR]
 
-start   runs zork-gateway with embedded Agent (Slack + mailbox delivery + admin)
-update  drains and restarts zork-gateway, including its embedded Agent
+start   runs zork-station with embedded Agent (Slack + mailbox delivery + admin)
+update  drains and restarts zork-station, including its embedded Agent
 "
 }
 
@@ -131,7 +131,7 @@ async fn run_supervisor(argv: Vec<String>) -> Result<()> {
     let sock_path = zork_config::zork_sock_path(&args.data_root);
     let _ = fs::remove_file(&sock_path);
 
-    let mut gateway = spawn_named("zork-gateway", &args)?;
+    let mut station = spawn_named("zork-station", &args)?;
 
     let (reload_tx, mut reload_rx) = mpsc::channel::<SupervisorCommand>(16);
     let sock_for_listen = sock_path.clone();
@@ -151,10 +151,10 @@ async fn run_supervisor(argv: Vec<String>) -> Result<()> {
         tokio::select! {
             biased;
             _ = &mut shutdown => break,
-            status = gateway.wait() => {
-                log_exit("gateway", status);
+            status = station.wait() => {
+                log_exit("station", status);
                 tokio::time::sleep(Duration::from_millis(500)).await;
-                gateway = spawn_named("zork-gateway", &args)?;
+                station = spawn_named("zork-station", &args)?;
             }
             req = reload_rx.recv() => {
                 let Some(command) = req else { break };
@@ -177,14 +177,14 @@ async fn run_supervisor(argv: Vec<String>) -> Result<()> {
                         }
                         let _ = ack.send("accepted".into());
                         tokio::time::sleep(Duration::from_millis(250)).await;
-                        terminate_child(&mut gateway);
-                        let stopped = wait_for_exit(&mut gateway,Duration::from_secs(30)).await;
+                        terminate_child(&mut station);
+                        let stopped = wait_for_exit(&mut station,Duration::from_secs(30)).await;
                         let result = match stopped {Ok(_)=>upgrade::activate(&args.data_root),Err(error)=>Err(error)};
                         if let Err(error) = result {
                             let version=zork_config::update::state(&args.data_root)["version"].as_str().unwrap_or_default().to_owned();
                             let _=zork_config::update::write_state(&args.data_root,"failed",&version,&error.to_string());
                         }
-                        if gateway.try_wait()?.is_some(){gateway=spawn_named("zork-gateway",&args)?;}
+                        if station.try_wait()?.is_some(){station=spawn_named("zork-station",&args)?;}
                         continue;
                     }
                     SupervisorCommand::Reload(ack,mesh_only)=>(ack,mesh_only),
@@ -192,7 +192,7 @@ async fn run_supervisor(argv: Vec<String>) -> Result<()> {
                 info!("zork update starting");
                 let result = controlled_restart(
                     &args,
-                    &mut gateway,
+                    &mut station,
                 )
                 .await;
                 match result {
@@ -215,7 +215,7 @@ async fn run_supervisor(argv: Vec<String>) -> Result<()> {
                 info!("zork update starting");
                 if let Err(error) = controlled_restart(
                     &args,
-                    &mut gateway,
+                    &mut station,
                 )
                 .await
                 {
@@ -227,8 +227,8 @@ async fn run_supervisor(argv: Vec<String>) -> Result<()> {
         }
     }
     info!("zork shutting down");
-    terminate_child(&mut gateway);
-    let _ = tokio::time::timeout(Duration::from_secs(8), gateway.wait()).await;
+    terminate_child(&mut station);
+    let _ = tokio::time::timeout(Duration::from_secs(8), station.wait()).await;
     let _ = fs::remove_file(&sock_path);
     let _ = fs::remove_file(&pid_path);
     Ok(())
@@ -297,8 +297,8 @@ async fn listen_reload(sock: &std::path::Path, tx: mpsc::Sender<SupervisorComman
     }
 }
 
-async fn controlled_restart(args: &zork_config::ProcessArgs, gateway: &mut Child) -> Result<()> {
-    restart_named("zork-gateway", gateway, args).await
+async fn controlled_restart(args: &zork_config::ProcessArgs, station: &mut Child) -> Result<()> {
+    restart_named("zork-station", station, args).await
 }
 
 /// Desktop-owned nodes receive a private stdin pipe. EOF also handles a killed

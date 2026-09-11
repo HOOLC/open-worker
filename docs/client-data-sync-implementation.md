@@ -5,7 +5,7 @@
 ## 已接入的读取链路
 
 ```text
-Gateway 业务表 / 配置协调器
+Station 业务表 / 配置协调器
   → 同事务公开投影、revision 与持久水位
   → 授权后的冻结分页 / 增量
   → ClientStore 暂存页
@@ -41,15 +41,15 @@ Profile 和设备配置仍由现有文件持有权威。独立协调器先订阅
 ## 后续迁移边界
 
 - 已验收的消息发送、LiveFeed 历史补齐和执行历史仍使用原有共享 core 路径。虽然协议和存储支持显式会话范围，本轮没有让进入会话默认复制全部历史。
-- 其他配置写入尚未全部迁移为通用命令回执；Profile/config 也尚未成为 Gateway SQLite 内的产品权威。文件与数据库之间不能宣称原子提交。
+- 其他配置写入尚未全部迁移为通用命令回执；Profile/config 也尚未成为 Station SQLite 内的产品权威。文件与数据库之间不能宣称原子提交。
 - 历史范围覆盖、固定保留、附件配额和完整资源回收仍需随后接入；当前日志与导出保留机制不等于完整客户端空间配额。
 - 存储性能、模拟器与真实用户设备是不同证据；具体结果以本次 验证记录（本地生成的验收记录） 为准。
 
 ## 回归入口
 
 ```sh
-cargo test --locked -p zork-client-types -p zork-client-core -p zork-gateway -p zork-android
-cargo build --locked -p zork -p zork-gateway -p zork-gh
+cargo test --locked -p zork-client-types -p zork-client-core -p zork-station -p zork-android
+cargo build --locked -p zork -p zork-station -p zork-gh
 python3 scripts/test-sync-idle.py
 python3 scripts/android/test_mesh.py --serial <任务模拟器> --apk <固定主包> --test-apk <固定测试包> --output <报告目录>
 cargo bench --locked -p zork-client-core --bench replica --no-run

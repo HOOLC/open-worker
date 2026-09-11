@@ -12,7 +12,7 @@ node.config['mesh']['bind']='0.0.0.0:'+str(node.udp)
 (node.root/'profiles/fixture.json').unlink()
 (node.root/'config.json').write_text(json.dumps(node.config))
 with (root/'gateway.log').open('wb') as log:
- process=subprocess.Popen([str(fixture.TARGET/'zork-gateway'),'--data',str(node.root)],stdout=log,stderr=log)
+ process=subprocess.Popen([str(fixture.TARGET/'zork-station'),'--data',str(node.root)],stdout=log,stderr=log)
  try:
   fixture.wait(lambda:node.get('/v1/mesh').get('origin'),'Gateway ready')
   env={**os.environ,'ZORK_ENROLLMENT_URL':node.url,'ZORK_ENROLLMENT_TOKEN':'isolated-phone-enrollment'}

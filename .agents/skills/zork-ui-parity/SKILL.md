@@ -7,7 +7,7 @@ description: 修改 zork 共享 GPUI 组件，维护原生与 WebAssembly 组件
 
 以下路径均相对仓库根目录。读取 `crates/zork-ui/README.md` 和 `crates/zork-gui-web/README.md`，修改应用视图时再读 `crates/zork-gui/README.md`。
 
-- 视觉基础组件及资源属于 `crates/zork-ui`；应用视图由 `crates/zork-gui` 组合。共享组件不引入 Gateway、数据库、Mesh 或 HTTP 依赖。
+- 视觉基础组件及资源属于 `crates/zork-ui`；应用视图由 `crates/zork-gui` 组合。共享组件不引入 Station、数据库、Mesh 或 HTTP 依赖。
 - 涉及应用视图的数据、操作或平台适配时，先应用 [zork-client-boundary](../zork-client-boundary/SKILL.md)。所有业务逻辑、校验、网络与持久化经 `zork-client-core`，UI 提交业务意图；通用 HTTP 转发不算完成分离。纯视觉调整继续按本 skill 验证。
 - UI 只持有 core 发布的只读投影及必要的瞬态呈现状态（焦点、悬停、动画进度及派生渲染缓存等）。按钮、拖放、粘贴等入口向 core 提交操作；通过同一订阅接收结果，不能再由各入口手工改一份 UI 业务列表。动画监听数据变化，以稳定 ID 对比前后快照并过渡；离场元素可暂留用于绘制，但不是另一份业务权威。
 - 动画通常固定速度，而不是固定时长：按位移、角度或展开距离推导时长，同类运动保持一致速度；中途改变目标从当前呈现状态接续。只有明确要求固定节奏、时长或物理弹簧模型时采用对应模型，不把默认毫秒数机械用于不同距离。

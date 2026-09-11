@@ -131,7 +131,7 @@
   "tasks_no_matches": "没有符合所选状态的任务。",
   "tasks_loading": "正在加载任务…",
   "tasks_unavailable": "暂时无法加载任务",
-  "tasks_reconnecting": "正在重新连接本地 Gateway…",
+  "tasks_reconnecting": "正在重新连接本地 Station…",
   "agent_connecting": "正在连接本地 小伙伴…",
   "task_list": "任务列表",
   "task_unavailable": "此任务暂时不可用",

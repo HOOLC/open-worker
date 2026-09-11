@@ -11,12 +11,12 @@ on:
       - "scripts/test-native-installer.py"
       - "scripts/test-native-upgrade.py"
       - "scripts/test-gateway-upgrade.py"
-      - "crates/gateway/src/node.rs"
+      - "crates/station/src/node.rs"
       - "scripts/test-mesh-installer.py"
       - "crates/zork/**"
       - "crates/zork-config/**"
       - "crates/zork-mesh/**"
-      - "crates/gateway/src/enrollment.rs"
+      - "crates/station/src/enrollment.rs"
       - "Cargo.toml"
       - "Cargo.lock"
       - "package.json"
@@ -55,7 +55,7 @@ jobs:
       - name: Test installer failures and offline downloads
         run: python3 scripts/test-native-installer.py
       - name: Build optimized native components
-        run: cargo build --locked --release -p zork -p zork-gateway -p zork-agent-server -p zork-gh
+        run: cargo build --locked --release -p zork -p zork-station -p zork-agent-server -p zork-gh
       - name: Test native installation dependencies
         run: cargo test --locked --release -p zork -p zork-config -p zork-mesh
       - name: Test complete native Gateway upgrade

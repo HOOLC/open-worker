@@ -12,7 +12,7 @@
 
 ## 实现边界
 
-- 页面和登录资料在展示网页的客户端上。执行节点可以在其他设备；浏览器请求沿现有的客户端 HTTP / Mesh 连接往返，无需让客户端运行 Gateway 或 Agent。
+- 页面和登录资料在展示网页的客户端上。执行节点可以在其他设备；浏览器请求沿现有的客户端 HTTP / Mesh 连接往返，无需让客户端运行 Station 或 Agent。
 - `zork-browser-runtime` 在独立进程承载 CEF。GPUI 显示 CEF 直接绘制的 BGRA 页面帧，支持显示缩放，并转发键鼠及输入法事件；不经过 Chrome 截屏流或 JPEG 压缩。输出只保留最新待显示画面，侧栏隐藏时停止绘制和画面传输。
 - CEF 使用固定的独立资料目录 `client/browser/cef`，下载位于该目录的 `downloads`；不读取或复制用户其他浏览器的 Cookie。桌面直接启动并持有浏览器子进程，macOS 继承桌面的图形安全会话，使用正常钥匙串加密并在退出前刷写 Cookie。浏览器启动不再调用 `open -a`，也不依赖子应用的 Launch Services 注册查询。
 - 控制请求通过私有本地 IPC 到 CEF API，不开启浏览器 TCP 调试端口。保留默认 User-Agent、浏览器属性、沙箱和网页安全检查；不使用属性伪装或 mock keychain。
@@ -37,7 +37,7 @@
 
 后续操作使用返回的 `tab_id`：`navigate`、`back`、`forward`、`reload`、`stop`、`close`、`read`、`click`、`type`、`key`、`scroll` 和 `screenshot`。选择器操作要求精确匹配一个元素。`type` 插入文字；覆盖已有输入时，可先发送 `key` 的 `Meta+A`（macOS）或 `Control+A`。截图由工具保存到执行会话的工作目录，返回 `file_path`，可以通过既有文件交付工具发送。
 
-同一操作重试必须复用原 `request_id` 和参数。Gateway 在 `state/browser.sqlite` 保存请求和回执，重复请求返回已知结果；重启时仍未取得回执的操作不会自动重发。客户端在当前授权连接内也保存执行回执，避免网络重投造成重复点击。超时是状态不确定，不能解释为未执行。
+同一操作重试必须复用原 `request_id` 和参数。Station 在 `state/browser.sqlite` 保存请求和回执，重复请求返回已知结果；重启时仍未取得回执的操作不会自动重发。客户端在当前授权连接内也保存执行回执，避免网络重投造成重复点击。超时是状态不确定，不能解释为未执行。
 
 指令通过 `/browser/events` 的 POST SSE 或同一 Mesh 订阅推送，结果通过 `/browser/receipts`
 提交。空闲连接只发送缓存心跳，不再每 5 秒重新领指令。连接有 generation，旧连接关闭不能
@@ -50,12 +50,12 @@
 先按 `docs/rust-build-cache.md` 加载构建环境。
 
 ```sh
-cargo build --locked -p zork-gui -p zork-browser-runtime -p zork-browser -p zork -p zork-gateway -p zork-agent-server -p zork-gh --bins --example probe
+cargo build --locked -p zork-gui -p zork-browser-runtime -p zork-browser -p zork -p zork-station -p zork-agent-server -p zork-gh --bins --example probe
 python3 scripts/package-macos-client.py
 export ZORK_BROWSER_RUNTIME="$PWD/.tmp/macos-app.noindex/Zork.app/Contents/Helpers/ZorkBrowser.app/Contents/MacOS/ZorkBrowser"
 python3 scripts/lib/gui-test-session.py -- python3 scripts/test-browser-runtime.py --runtime "$ZORK_BROWSER_RUNTIME" --output artifacts/browser/runtime-validation
 python3 scripts/lib/gui-test-session.py -- /usr/bin/env ZORK_BROWSER_RUNTIME="$ZORK_BROWSER_RUNTIME" "$CARGO_TARGET_DIR/debug/examples/probe"
-cargo test --locked -p zork-gateway browser::tests
+cargo test --locked -p zork-station browser::tests
 python3 scripts/lib/gui-test-session.py --timeout 600 -- /usr/bin/env ZORK_BROWSER_RUNTIME="$ZORK_BROWSER_RUNTIME" python3 crates/zork-gui/tests/test_browser_desktop.py
 python3 scripts/test-client-mesh.py
 ```
@@ -66,7 +66,7 @@ macOS 客户端在打开资料目录前检查 `SessionGetInfo` 的 `sessionHasGr
 
 macOS 打包优先使用本机可用的 Developer ID 或 Apple Development 签名，也可通过 `ZORK_CODESIGN_IDENTITY` 指定身份；未配置证书时使用临时签名；已有证书被吊销时会停止打包，需先更新有效证书。首次访问登录钥匙串时可能出现系统授权弹窗。开发时应保持签名身份稳定，临时签名随重建变化可能再次触发授权。密码仅在系统弹窗输入。桌面断开控制连接后，浏览器先正常关闭；若 CEF 退出卡住，则在十秒后终止自身。
 
-`probe` 使用独立资料目录和本地测试网页，验证浏览器标识、Cookie 重启保留、导航、输入、元素提取、截图及对话隔离。原生 UI 测试需要先重建 GUI、Gateway、zork 和 zork-gh；它使用独立节点与客户端数据。
+`probe` 使用独立资料目录和本地测试网页，验证浏览器标识、Cookie 重启保留、导航、输入、元素提取、截图及对话隔离。原生 UI 测试需要先重建 GUI、Station、zork 和 zork-gh；它使用独立节点与客户端数据。
 
 对已打包的应用，将 `--runtime` 指向 `Zork.app/Contents/Helpers/ZorkBrowser.app/Contents/MacOS/ZorkBrowser` 运行上述浏览器测试。`--startup-only` 可单独验证嵌套应用启动、renderer 执行、画面输出及控制管道关闭后的进程退出，不打开外部网站；它不代表 Cookie、网站登录或完整导航验收。
 

@@ -1,6 +1,6 @@
 # GUI migration status
 
-The default app entry is `DesktopRoot`; its device views use `RootView::new_desktop` with shared `DeviceNavigation`. The `--gateway-url` entry still creates the legacy direct-Gateway shell. It is executable compatibility code, not an archive.
+The default app entry is `DesktopRoot`; its device views use `RootView::new_desktop` with shared `DeviceNavigation`. The `--gateway-url` entry still creates the legacy direct-Station shell. It is executable compatibility code, not an archive.
 
 ## Current desktop entry
 

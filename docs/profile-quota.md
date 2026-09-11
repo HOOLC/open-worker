@@ -22,7 +22,7 @@ OpenAI/Codex 订阅读取 `/backend-api/wham/usage`，包括主窗口、次窗�
 
 - `cargo test --locked -p zork-profile -p zork-client-core --lib`
 - `cargo test --locked -p zork-agent --lib profiles::tests`
-- `cargo test --locked -p zork-gateway`
+- `cargo test --locked -p zork-station`
 - `cargo test --locked -p zork-gui --features headless-bench --test headless_profile_quota --test headless_modals`
 - `scripts/test-gui-contracts.py`：新构建的真实节点、认证、公开快照和凭据隔离。
 - `scripts/test-client-mesh.py`：已配对客户端通过实际 Mesh 传输刷新连接。

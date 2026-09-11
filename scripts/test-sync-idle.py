@@ -12,7 +12,7 @@ import time
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
-BINARY = Path(os.environ.get('ZORK_TEST_BIN_DIR', str(ROOT / 'target/debug'))) / 'zork-gateway'
+BINARY = Path(os.environ.get('ZORK_TEST_BIN_DIR', str(ROOT / 'target/debug'))) / 'zork-station'
 
 
 def main():

@@ -1178,6 +1178,7 @@ fn client_route(method: &str, path: &str) -> bool {
             | ["v1", "node", "sync", "receipt"]
             | ["v1", "node", "update"]
             | ["v1", "node", "agents", _, "open"]
+            | ["v1", "node", "chats", _, "messages", _, "respond"]
             | ["v1", "node", "auth"]
             | ["v1", "node", "profiles", _, "refresh"]
             | ["v1", "node", "profiles", _, "models", "refresh"]
@@ -2137,6 +2138,7 @@ mod native_routes_tests {
             ("PUT", "/v1/node/profiles/p/name"),
             ("POST", "/v1/node/profiles/p/refresh"),
             ("PATCH", "/v1/node/agents/a/model"),
+            ("POST", "/v1/node/chats/c/messages/m/respond"),
         ] {
             assert!(super::client_route(method, path), "{method} {path}");
         }
@@ -2154,6 +2156,9 @@ mod native_routes_tests {
             ("PUT", "/v1/node/profiles/../models"),
             ("POST", "/v1/node/profiles/p/name"),
             ("PUT", "/v1/node/profiles/../name"),
+            ("GET", "/v1/node/chats/c/messages/m/respond"),
+            ("POST", "/v1/node/chats/c/messages/m/respond/extra"),
+            ("POST", "/v1/node/chats/../messages/m/respond"),
         ] {
             assert!(!super::client_route(method, path), "{method} {path}");
         }

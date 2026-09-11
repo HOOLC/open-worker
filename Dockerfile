@@ -28,7 +28,7 @@ RUN --mount=type=secret,id=kache_s3_access_key \
         export RUSTC_WRAPPER=kache; \
         kache sync --pull --allow-partial || echo "kache pull failed, cold build" >&2; \
       fi; \
-      cargo build --locked --release -p zork -p zork-gateway -p zork-agent-server -p zork-gh; \
+      cargo build --locked --release -p zork -p zork-station -p zork-agent-server -p zork-gh; \
       if [ -n "${RUSTC_WRAPPER:-}" ]; then kache sync --push --allow-partial || echo "kache push failed" >&2; fi \
     '
 
@@ -38,7 +38,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl git gh python3 ripgrep \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=rust-build /src/target/release/zork /usr/local/bin/zork
-COPY --from=rust-build /src/target/release/zork-gateway /usr/local/bin/zork-gateway
+COPY --from=rust-build /src/target/release/zork-station /usr/local/bin/zork-station
 COPY --from=rust-build /src/target/release/zork-agent /usr/local/bin/zork-agent
 COPY --from=rust-build /src/target/release/zork-gh /usr/local/bin/zork-gh
 EXPOSE 18790 3000 3001

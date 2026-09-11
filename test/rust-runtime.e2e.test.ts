@@ -81,7 +81,7 @@ describe.sequential("rust runtime", () => {
 
     const ready = await fetch(`http://127.0.0.1:${runtimePort}/readyz`);
     expect(ready.status).toBe(200);
-    await expect(ready.json()).resolves.toMatchObject({ ok: true, service: "zork-gateway" });
+    await expect(ready.json()).resolves.toMatchObject({ ok: true, service: "zork-station" });
 
     const snapshot = await fetch(`http://127.0.0.1:${runtimePort}/internal/realtime/snapshot`);
     expect(snapshot.status).toBe(200);
@@ -119,9 +119,9 @@ describe.sequential("rust runtime", () => {
 });
 
 function spawnRuntime(options: { readonly cwd: string; readonly args: readonly string[]; readonly env: Record<string, string> }): ChildProcess {
-  const binary = path.join(process.env.ZORK_TEST_BIN_DIR ?? path.join(options.cwd, "target/debug"), "zork-gateway");
+  const binary = path.join(process.env.ZORK_TEST_BIN_DIR ?? path.join(options.cwd, "target/debug"), "zork-station");
   if (!existsSync(binary)) {
-    throw new Error(`zork-gateway missing at ${binary}; run pnpm build:rust first`);
+    throw new Error(`zork-station missing at ${binary}; run pnpm build:rust first`);
   }
   return spawn(binary, [...options.args], {
     cwd: options.cwd,

@@ -15,14 +15,14 @@ Agent 可以在 Chat 发出带完整参数的创建 Agent 消息。用户在卡�
 | 范围 | 当前实现 | 需要补齐 |
 | --- | --- | --- |
 | 消息合同 | [chat.rs](../crates/zork-client-types/src/chat.rs) 包含正文、附件、作者、提及和 reply_to | 带版本的交互请求及结果内容、结果的可信来源 |
-| 客户端协议 | [im_entry.rs](../crates/gateway/src/im_entry.rs) 已输出 reply_to 等字段；[api.rs](../crates/zork-client-core/src/api.rs) 的 MessageMetadata/TranscriptMessage 尚未保存这些关联字段 | 结构化内容和关联贯穿历史、实时事件、Mesh 与客户端解码，避免经过中间层后丢失 |
-| 消息提交 | [db/chats/messages.rs](../crates/gateway/src/db/chats/messages.rs) 将消息、附件、通知和发送回执一起提交 | 支持结构化消息；业务效果与结果消息可靠关联，结果写入不依赖窗口存活 |
-| 命令恢复 | [channels/api.rs](../crates/gateway/src/channels/api.rs) 与 [db/chats.rs](../crates/gateway/src/db/chats.rs) 已有参数指纹、稳定对象 ID、回执及恢复 | 将经过认证的用户确认接入；同一请求在多端确认也只接受一次有效提交 |
-| Agent 配置 | [channels/agents.rs](../crates/gateway/src/channels/agents.rs) 有 agent.create/update，但创建默认 Leader；[state/agent_catalog.rs](../crates/zork-client-core/src/state/agent_catalog.rs) 的表单入口仍要求角色，且编辑字段范围不同 | 卡片、设置页和工具复用相同的配置校验及写入；补齐创建队员、调用授权与预期配置版本 |
+| 客户端协议 | [im_entry.rs](../crates/station/src/im_entry.rs) 已输出 reply_to 等字段；[api.rs](../crates/zork-client-core/src/api.rs) 的 MessageMetadata/TranscriptMessage 尚未保存这些关联字段 | 结构化内容和关联贯穿历史、实时事件、Mesh 与客户端解码，避免经过中间层后丢失 |
+| 消息提交 | [db/chats/messages.rs](../crates/station/src/db/chats/messages.rs) 将消息、附件、通知和发送回执一起提交 | 支持结构化消息；业务效果与结果消息可靠关联，结果写入不依赖窗口存活 |
+| 命令恢复 | [channels/api.rs](../crates/station/src/channels/api.rs) 与 [db/chats.rs](../crates/station/src/db/chats.rs) 已有参数指纹、稳定对象 ID、回执及恢复 | 将经过认证的用户确认接入；同一请求在多端确认也只接受一次有效提交 |
+| Agent 配置 | [channels/agents.rs](../crates/station/src/channels/agents.rs) 有 agent.create/update，但创建默认 Leader；[state/agent_catalog.rs](../crates/zork-client-core/src/state/agent_catalog.rs) 的表单入口仍要求角色，且编辑字段范围不同 | 卡片、设置页和工具复用相同的配置校验及写入；补齐创建队员、调用授权与预期配置版本 |
 | 客户端操作 | [settings_actions.rs](../crates/zork-client-core/src/settings_actions.rs) 已表达业务意图；[delivery.rs](../crates/zork-client-core/src/delivery.rs) 和 [store.rs](../crates/zork-client-core/src/store.rs) 的 outbox 面向消息发送 | 增加有类型的交互提交及恢复，复用可靠投递机制，不能将它伪装成普通正文发送 |
 | 消息投影 | [transcript.rs](../crates/zork-client-core/src/transcript.rs) 当前基本是一条消息对应一行；[state/conversation/data.rs](../crates/zork-client-core/src/state/conversation/data.rs) 已有 ID 索引及增量编辑 | 跨消息的关联索引、结果折叠、当前可用操作和字段校验投影 |
 | 缓存与分页 | [store/messages.rs](../crates/zork-client-core/src/store/messages.rs) 保存已投递消息，按连续范围分页，目前不改写重复消息 | 原消息缓存可保存合并后的交互状态；结果先到时持久暂存，原请求到达后合并；旧页面不能覆盖已归并结果 |
-| 授权与登录 | [state/profiles.rs](../crates/zork-client-core/src/state/profiles.rs) 有授权开始、轮询、取消与代次检查，但客户端只有一个活动授权槽位；[node.rs](../crates/gateway/src/node.rs) 的 Provider 授权尝试保存在内存 | 按交互/尝试绑定状态，明确重启后的恢复或过期行为；凭据与公开消息分离 |
+| 授权与登录 | [state/profiles.rs](../crates/zork-client-core/src/state/profiles.rs) 有授权开始、轮询、取消与代次检查，但客户端只有一个活动授权槽位；[node.rs](../crates/station/src/node.rs) 的 Provider 授权尝试保存在内存 | 按交互/尝试绑定状态，明确重启后的恢复或过期行为；凭据与公开消息分离 |
 | 多端呈现 | [zork-ui/components/message.rs](../crates/zork-ui/src/components/message.rs) 渲染 Markdown；[subscriptions/conversation.rs](../crates/zork-client-core/src/subscriptions/conversation.rs) 发布窗口增量；Android 有自己的消息 DTO | 各端消费相同卡片投影、渲染控件和提交意图；业务归并仍只在 core |
 
 ## 最小公共模型
@@ -124,13 +124,13 @@ Provider 授权客户端目前是单活动槽位，接卡片时需要按交互/�
 
 ## 建议的改动分组
 
-1. **公共消息合同与透传。** 在 zork-client-types 定义结构化内容与关联；扩充 Gateway 消息存储、历史/SSE、Mesh、工具 schema 和客户端 TranscriptMessage。先让一条交互消息和它的结果能原样走完整条链路。
-2. **可靠业务提交。** Gateway 复用现有回执机制，增加用户响应入口、原子准入和结果回写；core 增加有类型的交互提交。Agent 配置入口抽取为共享写入，明确队员创建与授权参数。需要人工确认时发请求消息，不用先调用会实际写入的 agent.create。
+1. **公共消息合同与透传。** 在 zork-client-types 定义结构化内容与关联；扩充 Station 消息存储、历史/SSE、Mesh、工具 schema 和客户端 TranscriptMessage。先让一条交互消息和它的结果能原样走完整条链路。
+2. **可靠业务提交。** Station 复用现有回执机制，增加用户响应入口、原子准入和结果回写；core 增加有类型的交互提交。Agent 配置入口抽取为共享写入，明确队员创建与授权参数。需要人工确认时发请求消息，不用先调用会实际写入的 agent.create。
 3. **Core 缓存与投影。** 消息入库时更新原消息缓存，持久暂存先到的结果，重复原消息不覆盖归并状态；缓存与 outbox 补齐交互记录的身份/恢复语义。Conversation 沿现有观察协议发布稀疏变化。
 4. **多端控件。** 在 zork-ui 与 Android 加卡片呈现，JNI/WASM 传递同一只读模型和业务意图；Web fixtures 复用 core 的确定性实现。普通正文和不支持的交互都有可读回退。
 5. **第二种业务验证与后续适配。** 首批用“创建队员”和“普通输入/选择”两种不同效果验证公共能力；再接配置修改、权限授权与登录。登录接入时处理当前单槽位和内存尝试的具体限制。
 
-这些能力放进现有类型、Gateway 和 core 模块即可；初始可新增小型 interaction 模块组织代码，不以新增 crate、Workflow 引擎或另一套同步通道为前提。
+这些能力放进现有类型、Station 和 core 模块即可；初始可新增小型 interaction 模块组织代码，不以新增 crate、Workflow 引擎或另一套同步通道为前提。
 
 ## 实现时的验收重点
 

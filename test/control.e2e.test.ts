@@ -31,7 +31,7 @@ describe.sequential("admin plane (in-process)", () => {
         control: `127.0.0.1:${controlPort}`,
       },
     });
-    const child = spawnBinary("zork-gateway", {
+    const child = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", dataRoot, "--fake-agent"],
       env: { RUST_LOG: "info" },
@@ -42,7 +42,7 @@ describe.sequential("admin plane (in-process)", () => {
 
     const ready = await fetch(`http://127.0.0.1:${controlPort}/readyz`);
     expect(ready.status).toBe(200);
-    await expect(ready.json()).resolves.toMatchObject({ ok: true, service: "zork-gateway" });
+    await expect(ready.json()).resolves.toMatchObject({ ok: true, service: "zork-station" });
 
     for (const route of ["/", "/admin", "/admin/", "/admin/sessions/old-session", "/admin/assets/main.js", "/admin/api/missing"]) {
       const response = await fetch(`http://127.0.0.1:${controlPort}${route}`, { redirect: "manual" });
@@ -59,7 +59,7 @@ describe.sequential("admin plane (in-process)", () => {
     expect(overview.status).toBe(200);
     await expect(overview.json()).resolves.toMatchObject({
       ok: true,
-      service: { name: "zork-gateway", mode: "single" },
+      service: { name: "zork-station", mode: "single" },
     });
 
     // Connection creation persists one explicit IM instance and never returns credentials.
@@ -116,7 +116,7 @@ describe.sequential("admin plane (in-process)", () => {
         control: `127.0.0.1:${controlPort}`,
       },
     });
-    const child = spawnBinary("zork-gateway", {
+    const child = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent"],
     });

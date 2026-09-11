@@ -145,23 +145,6 @@ impl ImEntryGateway {
         self.local_gui.subscribe(session_key)
     }
 
-    pub fn subscribe_local_with_status(
-        &self,
-        session_key: &str,
-    ) -> (zork_notify::events::Events<EntryEvent>, Option<Value>) {
-        // Snapshot and subscription share the publication lock so reopening a
-        // conversation cannot miss or reorder a concurrent status update.
-        let statuses = self
-            .local_gui
-            .statuses
-            .lock()
-            .expect("local GUI statuses mutex");
-        (
-            self.local_gui.subscribe(session_key),
-            statuses.get(session_key).cloned(),
-        )
-    }
-
     pub fn subscribe_local_with_snapshot(
         &self,
         session: &SessionRow,
@@ -550,14 +533,14 @@ mod tests {
         entries
             .local_gui
             .publish_status(&local.key, json!({"state":"thinking"}));
-        let (mut current, snapshot) = entries.subscribe_local_with_status(&local.key);
-        assert_eq!(snapshot.unwrap()["state"], "thinking");
+        let (mut current, snapshot) = entries.subscribe_local_with_snapshot(&local);
+        assert_eq!(snapshot["status"]["state"], "thinking");
         entries
             .local_gui
             .publish_status(&local.key, json!({"state":"finished"}));
         assert_eq!(current.recv().await.unwrap().data["state"], "finished");
-        let (_, snapshot) = entries.subscribe_local_with_status(&local.key);
-        assert_eq!(snapshot.unwrap()["state"], "finished");
+        let (_, snapshot) = entries.subscribe_local_with_snapshot(&local);
+        assert_eq!(snapshot["status"]["state"], "finished");
         let mut events = entries.subscribe_local(&local.key);
 
         entries

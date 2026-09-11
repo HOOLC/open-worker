@@ -1,13 +1,13 @@
 # zork-gui
 
-A GPUI (Zed UI framework) desktop client for zork-gateway's built-in
+A GPUI (Zed UI framework) desktop client for zork-station's built-in
 `local_gui` IM entry, with a native light task shell grounded in the current
 approved Zork Fold v2 assets and layout. The gateway owns conversations and deliberate message
 delivery; `zork-agent` remains an internal execution service.
 
 The default native client follows the approved Zork design: **Device → Leader → Task** in a two-pane conversation workspace. The sidebar starts at 240 px, can be dragged from 200 to 420 px (also constrained by the available content width), and remembers its pixel width. Every navigation row uses the same 32 px geometry and full-width hover/active background; indentation changes only the content position.
 
-Device folds are local navigation state; tasks remain directly visible under each Leader. Device folds animate their measured child height, including row gaps, and move following devices with the aperture. Rapid toggles continue from the current height; reduced motion switches immediately. Hidden children leave keyboard traversal and are unmounted after closing. Unread conversation markers come from actual Gateway message IDs, are ordered first within their scope, and are marked read only for the visible device and conversation while following its tail. Device switches retain drafts, comments, history, sidebar scroll and the existing offline outbox.
+Device folds are local navigation state; tasks remain directly visible under each Leader. Device folds animate their measured child height, including row gaps, and move following devices with the aperture. Rapid toggles continue from the current height; reduced motion switches immediately. Hidden children leave keyboard traversal and are unmounted after closing. Unread conversation markers come from actual Station message IDs, are ordered first within their scope, and are marked read only for the visible device and conversation while following its tail. Device switches retain drafts, comments, history, sidebar scroll and the existing offline outbox.
 
 The right panel keeps its tabs, active page, open/expanded state, width and address draft per device/conversation during the client session. Switching chats restores that chat’s panel, including its history view and reading position; closing a tab does not affect other chats. Inactive history views suspend subscriptions and clocks until revisited.
 
@@ -20,19 +20,19 @@ member's own conversation feed while open. Navigation and floating surfaces use
 the shared distance-adaptive slide curve: near targets remain quick, long travel
 accelerates toward a roughly 240 ms settling limit, and reversals retain velocity.
 
-Selecting a passage in rendered Markdown opens a comment popover. Enter adds it to that conversation's structured draft queue; comments can be edited or removed. The main composer grows automatically and sends all comments plus optional prose in one explicit Gateway request. The compatibility payload retains exact selected text, author identity and source message IDs. The outbox and source-draft clearing commit atomically. Gateway-provided message metadata supplies sender identity and timestamps; the UI does not invent authors for legacy messages.
+Selecting a passage in rendered Markdown opens a comment popover. Enter adds it to that conversation's structured draft queue; comments can be edited or removed. The main composer grows automatically and sends all comments plus optional prose in one explicit Station request. The compatibility payload retains exact selected text, author identity and source message IDs. The outbox and source-draft clearing commit atomically. Station-provided message metadata supplies sender identity and timestamps; the UI does not invent authors for legacy messages.
 
-Settings use a separate navigation layout with separate Help and diagnostics and About tabs, plus each device's own Gateway, Agent and model-connection pages. Connection setup starts with Subscription/API access, then a compact icon-bearing provider selector. Authentication, model discovery (where the provider actually supports it), manual model configuration and Agent Profile/model assignment use the selected device's authenticated APIs. Creating a connection does not imply that template models are verified account capabilities. Gateway version information is real; in-client self-upgrade remains unsupported.
+Settings use a separate navigation layout with separate Help and diagnostics and About tabs, plus each device's own Station, Agent and model-connection pages. Connection setup starts with Subscription/API access, then a compact icon-bearing provider selector. Authentication, model discovery (where the provider actually supports it), manual model configuration and Agent Profile/model assignment use the selected device's authenticated APIs. Creating a connection does not imply that template models are verified account capabilities. Station version information is real; in-client self-upgrade remains unsupported.
 
 The sidebar and settings navigation also expose **Mesh resources**: a read-only, device-filtered inventory of managed skills, MCP servers and services. Search and type filters lead to binding, ownership, status and access details. Opening or refreshing fetches current records; stale and unavailable devices remain explicit. Wide windows retain a detail column, while compact windows show a returnable detail page. See [the resource contract](../../docs/mesh-resources.md).
 
-“Connect device” offers separate phone and other-device panes. Phone access uses a short QR invitation and explicit desktop approval; other devices use the Gateway join command. Delivered conversation artifacts remain available for native preview, cached offline viewing and saving. Local files, drops and clipboard images become immutable conversation-owned snapshots before delivery.
+“Connect device” offers separate phone and other-device panes. Phone access uses a short QR invitation and explicit desktop approval; other devices use the Station join command. Delivered conversation artifacts remain available for native preview, cached offline viewing and saving. Local files, drops and clipboard images become immutable conversation-owned snapshots before delivery.
 
 The native asset family now uses semantic `icons/*.svg` paths, all 12 Agent avatars and the current 136 × 44 Fold wordmark. Historical Cue files remain embedded only for compatibility; the actual Cue account login retains its external service identity. [`assets/usage-v2.json`](assets/usage-v2.json) records every mounted icon, scene and motion carrier, including assets with no native carrier.
 
 The sidebar and settings header place the Zork wordmark alongside the native traffic lights, without an extra title row. Hover scrubs the approved 2000 ms contour animation toward the icon; leaving reverses from the currently painted frame, and re-entering continues forward from that point. Other approved carriers retain their linked icon/letters (805 ms), wordmark (675 ms), icon (680 ms), and onboarding contour animation (2000 ms). GPUI timers are capped at 60 fps and stop at the endpoint. The upper half squashes, blinks and jumps down as one group with rounded separation; the lower half crawls left into Z, then the upper-left piece becomes o and the upper-right piece separates into rk with soft edges and a short settling overshoot. Every frame centres the visible body bounds. SVG and GPUI share sampled 128-point contours, with the notch retained on the lower contour. On macOS, the actual `NSWorkspace.accessibilityDisplayShouldReduceMotion` preference selects static endpoints without autoplay or loops.
 
-Run `python3 scripts/test-device-sidebar.py` for the isolated native regression; `CARGO_TARGET_DIR` selects the shared build directory and `ZORK_GUI_TEST_WINDOW_SIZE=900x600` exercises the minimum window. This test uses real isolated Gateways/Agents with a fake model runtime, never user devices or model credentials, and never generates an enrollment invitation. Run the same script with `--brand-only` to compare real first/intermediate/final GPU frames; add `ZORK_GUI_TEST_REDUCE_MOTION=1` to verify static endpoints in a debug build without modifying the system setting. Frame hashes and PNGs are saved under `artifacts/gui-approved-design/brand-motion` or `brand-reduced`.
+Run `python3 scripts/test-device-sidebar.py` for the isolated native regression; `CARGO_TARGET_DIR` selects the shared build directory and `ZORK_GUI_TEST_WINDOW_SIZE=900x600` exercises the minimum window. This test uses real isolated Stations/Agents with a fake model runtime, never user devices or model credentials, and never generates an enrollment invitation. Run the same script with `--brand-only` to compare real first/intermediate/final GPU frames; add `ZORK_GUI_TEST_REDUCE_MOTION=1` to verify static endpoints in a debug build without modifying the system setting. Frame hashes and PNGs are saved under `artifacts/gui-approved-design/brand-motion` or `brand-reduced`.
 
 
 ## Running
@@ -113,7 +113,7 @@ The real-process fixture starts a fake-model Agent plus the production gateway
 on isolated ports and verifies the explicit-message boundary:
 
 ```sh
-cargo build --locked -p zork-agent-server -p zork-gateway -p zork-gh
+cargo build --locked -p zork-agent-server -p zork-station -p zork-gh
 python3 crates/zork-gui/tests/test_gateway_entry.py
 ```
 
@@ -121,11 +121,11 @@ The fixture proves that ordinary assistant transcript text stays hidden, an
 explicit `chat.post_message` becomes one persistent assistant row,
 and two tasks sharing one workspace still resolve their exact gateway binding.
 
-## Gateway-owned conversation API
+## Station-owned conversation API
 
 | UI piece | Source |
 |---|---|
-| Device conversations and status | Shared client state, updated by Gateway events |
+| Device conversations and status | Shared client state, updated by Station events |
 | Delivered message history | `GET /v1/im/sessions/{id}/messages` (cursor pages of 100) |
 | Live delivery/activity | SSE `GET /v1/im/sessions/{id}/events` — `message` and `status` |
 | Composer send | Durable client outbox → `POST /v1/im/sessions/{id}/messages` |
@@ -180,7 +180,7 @@ The palette and geometry are defined in `src/design.rs`.
 ```sh
 cargo test --locked -p zork-gui
 cargo clippy --locked -p zork-gui --all-targets -- -D warnings
-cargo build --locked -p zork-agent-server -p zork-gateway -p zork-gh
+cargo build --locked -p zork-agent-server -p zork-station -p zork-gh
 python3 crates/zork-gui/tests/test_gateway_entry.py
 ```
 
@@ -188,7 +188,7 @@ python3 crates/zork-gui/tests/test_gateway_entry.py
 
 The current desktop uses Device → Leader → Task navigation, a conversation composer,
 member details with execution history, and conversation file previews. The old
-Home composer, global Inbox/task board/Drive, manual review controls, direct-Gateway
+Home composer, global Inbox/task board/Drive, manual review controls, direct-Station
 CLI mode and SSH app launcher have been retired.
 
 Sendable conversations stack idle member avatars immediately above the composer.

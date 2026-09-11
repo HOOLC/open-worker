@@ -1,10 +1,10 @@
 # Zork Mesh library integration
 
-The Gateway owns `managed::Runtime` and shares its `MeshNode` handle with
+The Station owns `managed::Runtime` and shares its `MeshNode` handle with
 product and enrollment services. `managed::start` acquires the Synch lifecycle
 lock, initializes existing-or-new node state, calls `synch_engine::Node::open`,
-and starts the engine loops on the caller's Tokio runtime. The Gateway awaits
-background failure and clean shutdown. Supervisor only manages the Gateway
+and starts the engine loops on the caller's Tokio runtime. The Station awaits
+background failure and clean shutdown. Supervisor only manages the Station
 and Agent processes; it does not open or supervise a Synch node.
 
 `MeshNode` calls typed Rust APIs for trust, delegation, source publication,
@@ -19,7 +19,7 @@ change; no transport helper is launched.
 
 The remote `sync/sock/1` protocol and fixed eBPF bridge remain compatible with
 existing peers. The bridge carries authenticated remote product requests to
-the Gateway ingress; local engine operations never travel through it.
+the Station ingress; local engine operations never travel through it.
 
 Synch is pinned to v0.1.8, Git revision
 `6d6283f09c32476dc77c09f76a2b2529a42a558d`, in Cargo.toml and Cargo.lock.

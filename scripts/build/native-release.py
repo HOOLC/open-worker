@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 import sys
 sys.path.insert(0, str(ROOT / "scripts/lib"))
 from build_env import build_environment
-COMPONENTS = ('zork', 'zork-gateway', 'zork-agent', 'zork-gh')
+COMPONENTS = ('zork', 'zork-station', 'zork-agent', 'zork-gh')
 PLATFORMS = {'darwin-arm64': '15.0', 'darwin-x64': '15.0',
              'linux-arm64': '2.39', 'linux-x64': '2.39'}
 MEMBERS = (*COMPONENTS, 'VERSION', 'LICENSE', 'Synchronicity.txt')
@@ -58,13 +58,13 @@ def verify_archive(archive, release_version):
 
 
 def smoke(sources):
-    commands = {'zork': ['capabilities'], 'zork-gateway': ['--help'],
+    commands = {'zork': ['capabilities'], 'zork-station': ['--help'],
                 'zork-agent': ['--help'], 'zork-gh': ['--help']}
     env = {k: v for k, v in os.environ.items() if k not in ('BROKER_API_BASE', 'BROKER_REAL_GH_PATH')}
     with tempfile.TemporaryDirectory(prefix='zork-release-smoke-') as directory:
         for name, args in commands.items():
             data = Path(directory) / name
-            if name in ('zork', 'zork-gateway', 'zork-agent'):
+            if name in ('zork', 'zork-station', 'zork-agent'):
                 args = [*args, '--data', str(data)]
             result = subprocess.run([str(sources[name].resolve()), *args], env=env,
                                     capture_output=True, text=True, timeout=15)

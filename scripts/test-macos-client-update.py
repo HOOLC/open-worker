@@ -42,11 +42,14 @@ class HelperBundleTests(unittest.TestCase):
                 self.assertEqual(info['CFBundleExecutable'], 'ZorkHelperLauncher')
                 self.assertEqual(info['ZorkRuntimeExecutable'], name)
                 self.assertEqual(info['CFBundleIdentifier'], 'surf.zork.desktop.' + role)
+                if name == 'zork-station':
+                    self.assertEqual(info['CFBundleDisplayName'], 'Zork-Station')
+                    self.assertEqual(info['CFBundleIdentifier'], 'surf.zork.desktop.gateway')
                 self.assertEqual((helper / 'Contents/Resources' / info['CFBundleIconFile']).read_bytes()[:4], b'icns')
                 executable = (mac / name).resolve(strict=True)
                 self.assertEqual(executable, (helper / 'Contents/MacOS/ZorkHelperLauncher').resolve())
                 for sibling in packager.COMPONENTS:
-                    expected = b'launcher' if sibling != name and sibling in {'zork', 'zork-gateway'} else sibling.encode()
+                    expected = b'launcher' if sibling != name and sibling in {'zork', 'zork-station'} else sibling.encode()
                     self.assertEqual((executable.parent / sibling).read_bytes(), expected)
 
     @unittest.skipUnless(sys.platform == 'darwin', 'AppKit helper launch is macOS-only')
@@ -73,7 +76,7 @@ class HelperBundleTests(unittest.TestCase):
                 for target in [helper / 'Contents/MacOS' / name, helper]:
                     subprocess.run(['codesign', '--force', '--sign', '-', str(target)],
                                    check=True, capture_output=True)
-            for name in ['zork', 'zork-gateway']:
+            for name in ['zork', 'zork-station']:
                 result = subprocess.run([str(mac / name), '--data', 'path with spaces', '--fake-agent'],
                                         capture_output=True, text=True, check=True, timeout=15)
                 self.assertEqual(result.stdout.strip(), '--data path with spaces --fake-agent')
@@ -82,7 +85,7 @@ class HelperBundleTests(unittest.TestCase):
         app = Path('/Applications/Zork.app')
         commands = '\n'.join([
             str(app / 'Contents/MacOS/zork-gui'),
-            str(app / 'Contents/Helpers/ZorkGateway.app/Contents/MacOS/zork-gateway') + ' --data example',
+            str(app / 'Contents/Helpers/ZorkStation.app/Contents/MacOS/zork-station') + ' --data example',
             '/Applications/Other.app/Contents/MacOS/zork',
         ])
         with patch.object(installer.subprocess, 'check_output', return_value=commands):

@@ -19,7 +19,7 @@ workspace 内直接依赖同一个第三方 crate 时，使用同一版本和同
 
 ## 验证
 
-`test/workspace-cargo-features.test.ts` 检查上述依赖只有一份 workspace 声明，并且 member 的直接使用全部继承该声明。
+用 `cargo metadata --locked --format-version 1` 检查 workspace 声明与 member 依赖；对实际构建的包运行 `cargo tree --locked -e features -p PACKAGE`，核对 feature 来源。当前没有独立的 workspace feature 一致性测试，不能将这项约束视为已由专用测试自动保证。
 
 ## 可选的本机存储配置
 

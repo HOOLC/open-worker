@@ -1,7 +1,7 @@
 # 原生客户端与 Agent 节点
 
-默认启动 `zork-gui` 进入独立客户端。首次启动不创建节点、不启动 Gateway、Agent 或 Synch。设置中开启本机节点后，可添加模型连接与 Agents。客户端管理的节点默认随客户端退出；在「节点」开启「退出客户端后保持 Gateway 运行」后，系统后台服务接管已有进程，任务不重启。登录后自动启动是独立设置。连接已有的独立 Gateway 不会取得它的退出控制权。工作目录沿用 Gateway 的 Session 分配机制。
-本机节点的 supervisor 只管理一个 Gateway 子进程，Agent 在 Gateway 内运行。客户端以 Gateway readiness 判断就绪；Gateway 重启时 Agent 同步重启，持久会话在新实例恢复。旧双进程版本首次切换需要完整重启 supervisor。
+默认启动 `zork-gui` 进入独立客户端。首次启动不创建节点、不启动 Station、Agent 或 Synch。设置中开启本机节点后，可添加模型连接与 Agents。客户端管理的节点默认随客户端退出；在「节点」开启「退出客户端后保持 Station 运行」后，系统后台服务接管已有进程，任务不重启。登录后自动启动是独立设置。连接已有的独立 Station 不会取得它的退出控制权。工作目录沿用 Station 的 Session 分配机制。
+本机节点的 supervisor 只管理一个 Station 子进程，Agent 在 Station 内运行。客户端以 Station readiness 判断就绪；Station 重启时 Agent 同步重启，持久会话在新实例恢复。旧双进程版本首次切换需要完整重启 supervisor。
 
 
 ## 使用
@@ -13,9 +13,9 @@
 
 设备切换保留各自的草稿和会话界面，设备与 Leader 的折叠状态在重启后恢复。任务始终列在发起它的 Leader 下，远端执行设备作为任务附加信息显示。已结束任务默认显示最近三条，可展开全部历史；正在查看的历史任务不会被自动隐藏。设备离线后保留已同步的 Leader、任务、消息和文件，待发送消息仍归属原设备，重连后投递。
 
-添加自己的设备时，在「设备连接」生成加入命令，并在目标设备执行。命令自动查找已有 Gateway；未安装时安装完整节点组件，未运行时启动后台服务，再调用 Gateway 兑换短时邀请。存在多个实例时要求用 `--data` 明确选择。重复执行不会生成第二套身份或重复启动服务。
+添加自己的设备时，在「设备连接」生成加入命令，并在目标设备执行。命令自动查找已有 Station；未安装时安装完整节点组件，未运行时启动后台服务，再调用 Station 兑换短时邀请。存在多个实例时要求用 `--data` 明确选择。重复执行不会生成第二套身份或重复启动服务。
 
-同一 mesh 的 Leader 默认可以使用本机和远端 Worker，不必逐个配置授权。客户端通过已有节点登记自己的访问身份后，会自动发现并直接连接新加入的设备；纯客户端只运行传输组件，不需要 Gateway 或 Agent。原有手动配对保留原授权，仍可在高级表单添加设备身份和可选 LAN 地址。完整接入、权限与后台服务说明见 [设备接入 mesh](mesh-onboarding.md)。
+同一 mesh 的 Leader 默认可以使用本机和远端 Worker，不必逐个配置授权。客户端通过已有节点登记自己的访问身份后，会自动发现并直接连接新加入的设备；纯客户端只运行传输组件，不需要 Station 或 Agent。原有手动配对保留原授权，仍可在高级表单添加设备身份和可选 LAN 地址。完整接入、权限与后台服务说明见 [设备接入 mesh](mesh-onboarding.md)。
 
 客户端保存已浏览的消息、任务、文件副本、草稿和阅读位置。离线消息进入持久 outbox；尚未尝试发送的消息可以撤回草稿，一旦尝试发送就显示等待回执，避免把不确定的送达误报为撤回。重连使用同一请求 ID，成功回执丢失时不会重复入队。断线显示最后确认时间，停止请求在收到任务结束状态前保持未确认。任务标题始终标明执行设备，切换客户端不会迁移任务或工作目录。
 
@@ -51,10 +51,10 @@ python3 scripts/package-macos-client.py \
 
 ```sh
 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4 \
-  cargo build --locked -p zork -p zork-gateway -p zork-agent-server -p zork-gh -p zork-gui
+  cargo build --locked -p zork -p zork-station -p zork-agent-server -p zork-gh -p zork-gui
 ```
 
-安装包包含上述二进制；Gateway 将 Synch 0.1.8 的 `Node` 作为自己 Tokio runtime 中的异步组件，不再携带或启动独立 synch 可执行文件；连接远端节点时，传输直接运行于 GUI 进程，不启动传输辅助进程，默认独立客户端模式；`--host` 是显式旧 SSH 模式。macOS launcher 使用 `ZorkLauncher`，避免大小写不敏感文件系统中覆盖 `zork` 主程序。`zork-call` 已移除，Gateway 能力注册为动态工具，`zork-gh` 独立保留。PTC 本轮不做。
+安装包包含上述二进制；Station 将 Synch 0.1.8 的 `Node` 作为自己 Tokio runtime 中的异步组件，不再携带或启动独立 synch 可执行文件；连接远端节点时，传输直接运行于 GUI 进程，不启动传输辅助进程，默认独立客户端模式；`--host` 是显式旧 SSH 模式。macOS launcher 使用 `ZorkLauncher`，避免大小写不敏感文件系统中覆盖 `zork` 主程序。`zork-call` 已移除，Station 能力注册为动态工具，`zork-gh` 独立保留。PTC 本轮不做。
 
 回归脚本：`test-desktop-node.py`（启动/退出/异常清理）、`test-node-management-ui.py`（原生表单与离线状态）、`test-leader-mesh-ui.py`（多 Leader 头像与三端原生流程）、`test-remote-workers.py`（重启/丢回执/返工/撤权）、`test-client-mesh.py`（纯客户端权限和文件）、`test-cue-account.py`（本地签名 OIDC 服务）。`test-local-relay.py` 使用本地 iroh-relay 1.0.3 和仅用于测试的内存 discovery 服务，验证真实 relay 流量。
 

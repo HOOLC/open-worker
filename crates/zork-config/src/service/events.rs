@@ -53,7 +53,7 @@ impl Events {
             root.join("service.json"),
             crate::zork_pid_path(root),
             socket.clone(),
-            crate::ready_pid_path(root, "zork-gateway"),
+            crate::ready_pid_path(root, "zork-station"),
             crate::ready_pid_path(root, "zork-mesh"),
             root.join("run/update.json"),
         ]);

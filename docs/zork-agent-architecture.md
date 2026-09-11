@@ -439,7 +439,7 @@ snapshot 不进入 history 查询结果。未知或非法 cursor 返回明确错
 
 ### 11.2 HTTP（`HTTP-01`、`HTTP-02`）
 
-zork-agent 只保留一套无版本业务路由，不提供 `/v1` alias。Agent 与 Gateway 共享同一份请求、响应、错误和 SSE schema，不使用宽松 JSON fallback 掩盖 malformed response。
+zork-agent 只保留一套无版本业务路由，不提供 `/v1` alias。Agent 与 Station 共享同一份请求、响应、错误和 SSE schema，不使用宽松 JSON fallback 掩盖 malformed response。
 
 session 只能由显式创建产生。只有持久化 `SessionCreated` 后 session 才存在；未知 session 的读取、提交、选择变化和取消返回 404，不能隐式创建空流。
 
@@ -493,17 +493,17 @@ async fn run(data_root: std::path::PathBuf) -> anyhow::Result<()> {
 }
 ```
 
-独立可执行程序改用 `cargo build --locked -p zork-agent-server` 构建；`cargo build --locked -p zork-agent` 只构建核心库。部署的二进制名、HTTP 路由与启动参数不变。Gateway 已通过库嵌入 Agent，独立二进制仅用于单独运行。
+独立可执行程序改用 `cargo build --locked -p zork-agent-server` 构建；`cargo build --locked -p zork-agent` 只构建核心库。部署的二进制名、HTTP 路由与启动参数不变。Station 已通过库嵌入 Agent，独立二进制仅用于单独运行。
 
-### 12.2 Gateway 嵌入（`EMBED-03`）
+### 12.2 Station 嵌入（`EMBED-03`）
 
-`zork` supervisor 只启动、监控和重启 `zork-gateway`。Gateway 同时持有 AgentRuntime 和 Synch；没有独立 Agent PID 文件。`AppState.agent` 是共享应用接口，会话、profile、mailbox、取消、删除、history 和后台 job 事件均直接调用库。状态投影直接订阅库的 snapshot 与后续事件流，不再解析进程间 SSE，也不为聚合初始化回放历史。
+`zork` supervisor 只启动、监控和重启 `zork-station`。Station 同时持有 AgentRuntime 和 Synch；没有独立 Agent PID 文件。`AppState.agent` 是共享应用接口，会话、profile、mailbox、取消、删除、history 和后台 job 事件均直接调用库。状态投影直接订阅库的 snapshot 与后续事件流，不再解析进程间 SSE，也不为聚合初始化回放历史。
 
-Gateway 在启动恢复前绑定监听器，让恢复中的工具回调可以等待监听器开始服务。原 Agent HTTP/SSE 路径和 `--agent-token` 鉴权由同一 gateway 进程提供，只用于外部客户端；Agent `/readyz` 返回 `embedded: true`，PID 与 Gateway 一致。Gateway readiness 包含 Agent 初始化，桌面端只需等待 Gateway ready。
+Station 在启动恢复前绑定监听器，让恢复中的工具回调可以等待监听器开始服务。原 Agent HTTP/SSE 路径和 `--agent-token` 鉴权由同一 gateway 进程提供，只用于外部客户端；Agent `/readyz` 返回 `embedded: true`，PID 与 Station 一致。Station readiness 包含 Agent 初始化，桌面端只需等待 Station ready。
 
-关闭顺序为：标记 draining、停止 IM 连接接收，等待 AgentRuntime 关闭，停止状态订阅，再排空并关闭 HTTP，最后关闭 Synch。HTTP 在 Agent 关闭期间保持可用，供工具回调完成。异常退出由 supervisor 重启整个 Gateway；`reload-mesh` 也会一起重启 Agent，不再提供 Agent 独立于 Gateway 的运行连续性。
+关闭顺序为：标记 draining、停止 IM 连接接收，等待 AgentRuntime 关闭，停止状态订阅，再排空并关闭 HTTP，最后关闭 Synch。HTTP 在 Agent 关闭期间保持可用，供工具回调完成。异常退出由 supervisor 重启整个 Station；`reload-mesh` 也会一起重启 Agent，不再提供 Agent 独立于 Station 的运行连续性。
 
-从旧双进程版本迁移时必须重启 supervisor 或执行完整原生版本升级。旧 supervisor 会继续启动独立 Agent，与嵌入实例争用监听端口和 data root 锁；新 CLI 的 `zork update` 先检查 supervisor 的 `agent_mode`，拒绝对旧进程模型执行热重载。迁移完成后普通 update 只重启一个 Gateway 子进程。
+从旧双进程版本迁移时必须重启 supervisor 或执行完整原生版本升级。旧 supervisor 会继续启动独立 Agent，与嵌入实例争用监听端口和 data root 锁；新 CLI 的 `zork update` 先检查 supervisor 的 `agent_mode`，拒绝对旧进程模型执行热重载。迁移完成后普通 update 只重启一个 Station 子进程。
 
 ### 12.3 会话域
 
@@ -530,7 +530,7 @@ service      supervisor、query 与 live observation 的薄门面
 
 只做逐字段复制的 provider adapter、第二套 ModelPort、静态 provider 工具表、工具执行旁路、正常 append 重放、无界 dispatcher 和全流 history 读取都不属于目标实现。
 
-HTTP wire contract 单独放在无运行时逻辑的 `zork-agent-api` crate 中；Agent handler 和 Gateway client 都直接使用这些请求、响应、错误、状态与 SSE envelope 类型，不各自复制领域结构。
+HTTP wire contract 单独放在无运行时逻辑的 `zork-agent-api` crate 中；Agent handler 和 Station client 都直接使用这些请求、响应、错误、状态与 SSE envelope 类型，不各自复制领域结构。
 
 ## 13. 验收与测试
 
@@ -552,7 +552,7 @@ zork-agent 的行为测试直接使用 Rust，不引入脚本语言、测试 DSL
 
 虚拟测试接管几乎全部副作用，但继续执行真实的 state、Decision、projection、runner、supervisor、ToolExecutor 和对应的工具编排。受控实现必须允许测试决定 provider、工具、mailbox 和 deadline 的发生顺序，允许在稳定的持久化边界检查后继续，并支持进程中断与恢复。虚拟环境不得进行真实等待、磁盘 I/O、网络 I/O 或子进程启动；其创建、重置和单步推进必须足够快，才能用于大量细粒度行为测试。
 
-真实组件综合测试只接管 provider 对端和 mailbox 输入。它在测试进程内装配 production `SessionService`、`ProfileStore`、`ProviderRouter` 和 HTTP router，使用真实 HTTP/SSE/WS adapter、时钟、data root、workspace、StreamStore 和 shell。进程边界由单独的真实二进制合同验证配置、监听、ready PID 和信号退出；Gateway 集成测试只启动真实 gateway 二进制，Agent 在其中执行；独立 Agent 二进制合同留在 server 包。接管 mailbox 只表示测试决定何时通过真实接口发送输入，不得绕过 mailbox 的持久化和 runner 路径。
+真实组件综合测试只接管 provider 对端和 mailbox 输入。它在测试进程内装配 production `SessionService`、`ProfileStore`、`ProviderRouter` 和 HTTP router，使用真实 HTTP/SSE/WS adapter、时钟、data root、workspace、StreamStore 和 shell。进程边界由单独的真实二进制合同验证配置、监听、ready PID 和信号退出；Station 集成测试只启动真实 gateway 二进制，Agent 在其中执行；独立 Agent 二进制合同留在 server 包。接管 mailbox 只表示测试决定何时通过真实接口发送输入，不得绕过 mailbox 的持久化和 runner 路径。
 
 真实组件测试数量保持很少。一次 production composition 生命周期使用多个相互独立的 session 和 workspace 覆盖尽量多的正向场景，并集中执行一次重启以验证恢复，避免为每个场景重复支付服务和 provider 对端的启动成本。只有进程边界或无法共享同一真实拓扑的行为才拆成另一项真实测试。
 
@@ -562,7 +562,7 @@ zork-agent 的行为测试直接使用 Rust，不引入脚本语言、测试 DSL
 
 性能验收分为两层。虚拟层用大量独立 session 执行完整的 mailbox -> provider request -> provider response -> durable finish 路径，测量总耗时、每秒完成数和最终 event 数；工作负载中不得出现真实 sleep、磁盘、网络或进程。真实层在一次 agent 生命周期中复用 provider 对端和服务，执行多 session、真实 HTTP、真实 workspace、真实 shell、持久化和一次重启，测量启动成本与整批场景耗时。两层都保留按需运行的 release benchmark；默认 CI 验证功能正确性，不重复执行依赖主机速度的 debug 跑分。性能变更和发布前使用下述完整门槛单独验收，不能用一次偶然跑分证明性能。
 
-event ID、event/segment 编解码、query 游标、ToolRegistry、ToolExecutor 和 provider 协议解析等局部合同直接保留在所属 Rust 模块。Gateway、Slack、Admin 和发布流程测试只消费 zork-agent 公共接口，不属于 zork-agent 测试框架。
+event ID、event/segment 编解码、query 游标、ToolRegistry、ToolExecutor 和 provider 协议解析等局部合同直接保留在所属 Rust 模块。Station、Slack、Admin 和发布流程测试只消费 zork-agent 公共接口，不属于 zork-agent 测试框架。
 
 ### 13.3 稳定性能门槛（`PERF-03`、`PERF-04`）
 

@@ -9,7 +9,7 @@ Running activity uses a native adaptation of Cue's blue sweep; explicit waiting
 is static. Long summaries truncate in the row and are available on hover. Errors
 use Cue's notice frame and wrap; finished, cleared, and interrupted states hide.
 
-Gateway derives operation targets from current native tools: file paths for
+Station derives operation targets from current native tools: file paths for
 `file.read`, `file.write`, and `file.edit`; commands for `shell.run`; upload paths,
 assignment targets, and other public operation objects where applicable. Targets
 are bounded to 512 characters. File/message bodies and arbitrary argument JSON
@@ -32,7 +32,7 @@ notification preserves the preceding concrete failure reason.
 
 Verification:
 
-- Rust Gateway/GUI unit tests and Cue UI contract tests.
+- Rust Station/GUI unit tests and Cue UI contract tests.
 - `scripts/test-desktop-headless.py`: current desktop message/activity rendering, history, selection and modal regressions.
 - `scripts/test-leader-worker.py`: local participant membership and Session IDs.
 - `scripts/test-remote-workers.py`: remote Worker identity and live command target.

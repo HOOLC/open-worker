@@ -27,7 +27,7 @@ Agent 可以向任意获准访问的频道发言，也可以只订阅阅读。Ag
 
 ID 按回执原样复制。当前节点的 Agent 引用是本地 Agent ID；跨节点作者、提及和偏好使用 `origin/agent_id`。消息中的 target 与 chat_id 可以直接用于回复。跨节点不传送本地文件路径来要求远端读取。
 
-Agent、Session 和 invocation 身份由 ToolContext 提供，Gateway 用绑定解析实际 Agent。偏好接口没有 `agent_id` 参数，不能替另一个 Agent 修改设置。Mesh RPC 的 Subject 必须与认证来源节点一致；业务消息及 instructions 不授予额外权限。
+Agent、Session 和 invocation 身份由 ToolContext 提供，Station 用绑定解析实际 Agent。偏好接口没有 `agent_id` 参数，不能替另一个 Agent 修改设置。Mesh RPC 的 Subject 必须与认证来源节点一致；业务消息及 instructions 不授予额外权限。
 
 当前节点策略沿用共享 `node_access`：远端频道访问和直接 Agent 消息需要有效 Mesh 配对及 collaborate 或 client 授权；远端配置管理需要 client 管理授权。公开频道不表示匿名互联网访问。
 
@@ -140,13 +140,13 @@ flowchart LR
   Commit --> Stream[按接收节点复用 Mesh Feed]
   Stream --> Inbox[消息页与接收游标同事务提交]
   Inbox --> Input[Agent 有序输入与来源水位]
-  Input --> Receipt[Gateway 记录投递完成]
+  Input --> Receipt[Station 记录投递完成]
   Input --> Turn[正常模型边界消费]
 ```
 
 - 发布节点按 recipient_node 维护通知日志。一个 AgentMessages 流承载这个节点上所有 Agent 的频道通知，避免每频道或每 Agent 一条连接。
 - Source 的 delivered 仅推进已进入传输队列的位置，不表示远端已持久保存。接收方在本地收件箱与游标一起提交后才调用 Feed.resume_with。
-- Agent 的输入来源水位随执行快照保存。Gateway 在 Agent 接受之后再记录投递完成；若中间崩溃，重试同一个来源与位置不会因为夹入了其他输入或重启而再执行一次。
+- Agent 的输入来源水位随执行快照保存。Station 在 Agent 接受之后再记录投递完成；若中间崩溃，重试同一个来源与位置不会因为夹入了其他输入或重启而再执行一次。
 - 同一 Agent、同一来源按先后顺序交付，早期失败不能被后续位置越过。不同 Agent 使用独立投递 worker，并限制并发和单次等待；慢 Agent 不占住整个节点的分发循环。
 - 精确主题包括频道、接收节点、来源目录和 Agent 收件。只在有效事务提交后通知；读取、回执、游标推进与无变化设置不触发业务 WORK 唤醒。
 - 重连复用认证、退避、心跳、背压和取消。健康空闲时没有业务轮询。来源 epoch 改变或游标超出当前日志会明确失败，不能静默把旧水位用于另一个来源。
@@ -162,7 +162,7 @@ UI 的 applied version 仍由 zork-observe 管理，与 Mesh 接收游标、Agen
 验证入口：
 
 - `crates/zork-client-types/src/chat.rs` 与 `files.rs`：偏好规则、身份参数边界和正文/附件区分。
-- `crates/gateway/src/db/chats/tests.rs`：原子消息、实际参与者、静默订阅、过滤、版本撤销、文件回执和接收游标恢复。
+- `crates/station/src/db/chats/tests.rs`：原子消息、实际参与者、静默订阅、过滤、版本撤销、文件回执和接收游标恢复。
 - `crates/agent-testkit/tests/channel_inputs.rs`：静默输入、跨来源交错和重启去重、按轮中断、配置边界。
 - `crates/zork-mesh/src/feed.rs`：来源范围、epoch 与单调重连水位。
 - `scripts/test-chat-channels.py`：两个隔离真实节点、假模型、真实工具和文件的进程合同；运行前重建并固定本次二进制。

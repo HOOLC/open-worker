@@ -1,4 +1,4 @@
-//! zork-gui: a GPUI desktop client for zork-gateway's local IM entry.
+//! zork-gui: a GPUI desktop client for zork-station's local IM entry.
 //!
 //! The transcript contains only gateway-delivered user/assistant messages.
 //! Agent tools, waits, deltas, and transcript text remain internal; activity

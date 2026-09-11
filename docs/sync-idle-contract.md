@@ -24,7 +24,7 @@ Profile、设备配置和升级状态由独立后台协调任务投影到 SQLite
 
 ## 回归
 
-- `cargo test --locked -p zork-gateway db::sync`：空读、重复协调、回滚、真实修改，以及客户端重复提示收敛。
-- 先构建 `zork-gateway`，再执行 `python3 scripts/test-sync-idle.py`：真实 HTTP/SSE 读取与改名闭环。可用 `ZORK_TEST_BIN_DIR` 指向本轮构建目录。
+- `cargo test --locked -p zork-station db::sync`：空读、重复协调、回滚、真实修改，以及客户端重复提示收敛。
+- 先构建 `zork-station`，再执行 `python3 scripts/test-sync-idle.py`：真实 HTTP/SSE 读取与改名闭环。可用 `ZORK_TEST_BIN_DIR` 指向本轮构建目录。
 
 合同是无新业务变化时同步链路停止业务查询；心跳不读取业务状态，失败退避和保留窗口维护各自独立。统一接入方式见 [Mesh 订阅与通知基建](mesh-notifications.md)。CPU 百分比需要在实际交付设备上单独复测。

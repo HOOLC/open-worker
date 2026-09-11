@@ -26,7 +26,7 @@
 - 1280×800、900×600 完整窗口流程通过：导航、评论、模型绑定、附件、离线投递、重连和重启恢复。
 - 四种动效的首/早/中/晚/末帧验证通过（变形增加收拢帧）；前三种回到静止起点，变形到达字标终点。
 - 减少动态效果使用 macOS NSWorkspace 偏好；隔离调试开关验证静态端点，未修改系统偏好。
-- 主目录 Agent / Gateway / GUI 编译检查与隔离 HTTP 业务回归通过。
+- 主目录 Agent / Station / GUI 编译检查与隔离 HTTP 业务回归通过。
 
 [正常动效帧哈希](native/brand-motion/frames.json) · [减少动态帧哈希](native/brand-reduced/frames.json)
 

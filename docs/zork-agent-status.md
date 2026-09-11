@@ -7,7 +7,7 @@
 
 - Session SSE 每次连接与重连先发送当前 snapshot，再传后续事件；广播落后重建 snapshot 基线，不回放历史。
 - 累计用量、运行次数、最近活动随既有状态快照保存并增量更新。统计和预览使用 core 内存概览，显式历史分页不再携带 runtime/snapshot。
-- Agent 相关 34 项、core 92 项、Gateway 93 项测试通过；桌面历史、统计与预览回归通过。范围、性能口径与复现命令见[验证记录](session-snapshot-validation.md)。
+- Agent 相关 34 项、core 92 项、Station 93 项测试通过；桌面历史、统计与预览回归通过。范围、性能口径与复现命令见[验证记录](session-snapshot-validation.md)。
 
 ## 2026-09-10 DeepSeek 运行通知续接
 
@@ -23,25 +23,25 @@
 - 等待结束不冻结结果：下一次模型请求冻结前允许合并；已发送未完成占位后的结果作为新通知。tool.help 的知识版本只在结果实际进入请求时更新；end 必须先披露 outstanding，才能接受对应的 acknowledge。
 - tool.cancel 使用独立有界取消名额，通过普通工具执行器进行版本与参数处理，由会话单写者持久化取消请求后发出信号。逻辑工具拥有参数解析，通用 schema 层不再静默删字段。标准 Responses 的完整但畸形调用参数进入工具错误反馈。
 - runner 退出会终止并等待模型任务；失败/取消状态在列表保留。Codex 请求取消时丢弃连接及续传状态；空闲缓存有 60 秒 TTL、32 条连接和 64 MiB 输入估算预算，15 秒周期回收，排除活动请求。
-- 本轮受影响 Agent 包 165 项 Rust 测试通过；真实 WebSocket 对端覆盖取消后的新连接。重建四个后端二进制后，embedded Gateway 进程回归通过，覆盖真实 shell 清理、重启恢复、不重复执行与目录排他。
+- 本轮受影响 Agent 包 165 项 Rust 测试通过；真实 WebSocket 对端覆盖取消后的新连接。重建四个后端二进制后，embedded Station 进程回归通过，覆盖真实 shell 清理、重启恢复、不重复执行与目录排他。
 - 证据在 `artifacts/agent-fixes-20260909/`。未运行真实模型长任务或独立性能基准；缓存预算测试不代表进程 RSS 实测。原设计中的第三方 WASM 工具执行仍是待实现能力，不纳入本轮缺陷修复完成声明。
 
-## 2026-09-07 Gateway 嵌入
+## 2026-09-07 Station 嵌入
 
-- Gateway 持有 `AgentRuntime`，所有内部 Agent 操作和状态观察直接调用库。Agent HTTP/SSE 作为同一进程的外部兼容接口保留，PID 与 Gateway 相同；supervisor 只管理一个 Gateway 子进程。
+- Station 持有 `AgentRuntime`，所有内部 Agent 操作和状态观察直接调用库。Agent HTTP/SSE 作为同一进程的外部兼容接口保留，PID 与 Station 相同；supervisor 只管理一个 Station 子进程。
 - readiness 覆盖 Agent 初始化；关闭时先排空 Agent 和状态订阅，再关闭 HTTP 与 Synch。恢复中的工具回调可以等待已绑定的监听器启动。
-- 首次从双进程版本迁移需完整重启 supervisor 或执行原生版本升级；新 `zork update` 检查运行中 supervisor 的 `agent_mode`，不向旧 supervisor 发送 reload。后续 update / reload-mesh 都重启 Gateway 与 Agent。
-- 179 项相关 Rust 测试通过，15 项 Gateway / mailbox / merged runtime / supervisor / admin JS 测试通过；改动 Rust 格式、JS 格式/lint 与 diff 空白检查通过。
-- 真实进程验证通过：Gateway 与 Agent PID 一致、无 sidecar、目录重复打开被拒绝、SIGTERM/SIGINT 清理真实 shell、会话重启恢复且不重跑工具。
-- 真实桌面入口、4 项 supervisor 原生切换合同、完整认证 HTTP 原生升级通过。真实 mesh 的跨节点执行/文件交付、执行中 Gateway 崩溃恢复、去重、离线恢复、取消和 owner-only CAS 接受均通过。
+- 首次从双进程版本迁移需完整重启 supervisor 或执行原生版本升级；新 `zork update` 检查运行中 supervisor 的 `agent_mode`，不向旧 supervisor 发送 reload。后续 update / reload-mesh 都重启 Station 与 Agent。
+- 179 项相关 Rust 测试通过，15 项 Station / mailbox / merged runtime / supervisor / admin JS 测试通过；改动 Rust 格式、JS 格式/lint 与 diff 空白检查通过。
+- 真实进程验证通过：Station 与 Agent PID 一致、无 sidecar、目录重复打开被拒绝、SIGTERM/SIGINT 清理真实 shell、会话重启恢复且不重跑工具。
+- 真实桌面入口、4 项 supervisor 原生切换合同、完整认证 HTTP 原生升级通过。真实 mesh 的跨节点执行/文件交付、执行中 Station 崩溃恢复、去重、离线恢复、取消和 owner-only CAS 接受均通过。
 - 验证使用 mini1 的隔离 data root、假模型或本地受控 provider，没有切换用户运行中的部署。
 
 复现本轮验证：
 
 ```sh
 export CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 CARGO_BUILD_JOBS=4
-cargo build --locked -p zork -p zork-gateway -p zork-gh -p zork-agent-server
-cargo test --locked -p zork -p zork-gateway -p zork-agent -p zork-agent-http -p zork-agent-server -p zork-agent-gateway-tools -p zork-agent-testkit
+cargo build --locked -p zork -p zork-station -p zork-gh -p zork-agent-server
+cargo test --locked -p zork -p zork-station -p zork-agent -p zork-agent-http -p zork-agent-server -p zork-agent-gateway-tools -p zork-agent-testkit
 npx --yes pnpm@10.33.0 exec vp test --run test/gateway-mailbox.e2e.test.ts test/merged-runtime.e2e.test.ts test/zork-update.e2e.test.ts test/rust-runtime.e2e.test.ts test/control.e2e.test.ts
 python3 crates/zork-gui/tests/test_gateway_entry.py
 python3 scripts/test-embedded-gateway.py
@@ -55,8 +55,8 @@ python3 scripts/test-mesh.py
 - `zork-agent` 只提供核心库；HTTP/SSE 适配、独立进程宿主和 gateway 专属工具分别移到 `zork-agent-http`、`zork-agent-server`、`zork-agent-gateway-tools`。
 - 新增 `Agent` 共享应用接口和 `AgentRuntime` 组装/关闭接口。业务校验及事件历史重放、去重、落后补读由核心提供；profile 刷新、deadline 调度和消费任务在关闭时终止并等待结束。
 - 核心包普通依赖树不包含 Axum、HTTP 适配或 server 包。库不监听端口，也不初始化全局日志或信号。
-- Agent / HTTP / server / gateway-tools / testkit 共 141 项 Rust 测试通过，包含新增无 HTTP 的执行与重启、事件补读和 scheduler 关闭回归；真实 Gateway 桌面入口的 1 项 Python 合同通过。改动文件 rustfmt 与 diff 空白检查通过。
-- 二进制仍叫 `zork-agent`，构建选择改为 `-p zork-agent-server`；发布、Docker 和桌面构建脚本已更新。这一阶段保留独立 Agent 进程，后续 Gateway 嵌入见上节。
+- Agent / HTTP / server / gateway-tools / testkit 共 141 项 Rust 测试通过，包含新增无 HTTP 的执行与重启、事件补读和 scheduler 关闭回归；真实 Station 桌面入口的 1 项 Python 合同通过。改动文件 rustfmt 与 diff 空白检查通过。
+- 二进制仍叫 `zork-agent`，构建选择改为 `-p zork-agent-server`；发布、Docker 和桌面构建脚本已更新。这一阶段保留独立 Agent 进程，后续 Station 嵌入见上节。
 
 复现本轮验证：
 
@@ -69,9 +69,9 @@ python3 crates/zork-gui/tests/test_gateway_entry.py
 ## 2026-09-05 已完成
 
 - 持久上下文策略：默认 compaction，支持 handoff；策略变化只影响下一次上下文整理，恢复保留进行中的计划。
-- Agent HTTP、Gateway、Admin 和桌面端共用 Agent 持久化的上下文配置。Admin 支持自定义保留 token 数，桌面支持常用值及当前自定义值；Gateway 不保存策略副本。
+- Agent HTTP、Station、Admin 和桌面端共用 Agent 持久化的上下文配置。Admin 支持自定义保留 token 数，桌面支持常用值及当前自定义值；Station 不保存策略副本。
 - 工具结果摘录先保留调用参数、实际 offset、退出码等元数据，再截取大正文；摘要指令区分事实、检查结果与计划，并要求纠正旧摘要中的错误。file.read/file.edit 的初始说明包含正确参数。
-- Gateway 测试替身和断言已跟随新增 context 字段更新；target-linux 已从 Git 和格式/lint 扫描中排除。
+- Station 测试替身和断言已跟随新增 context 字段更新；target-linux 已从 Git 和格式/lint 扫描中排除。
 - 启动目录发现最多使用四个元数据读取线程，最终排序和恢复优先级保持不变。
 - 向前查询先定位返回范围，再只解码需要返回的事件；解码借用原始 JSON。两次扫描复用同一文件句柄，避免日志轮转替换路径造成读取竞态。
 - 所有独立 benchmark 入口接受 Cargo 自动传入的 --bench 参数；启动和查询压测失败也输出指标。
@@ -81,7 +81,7 @@ python3 crates/zork-gui/tests/test_gateway_entry.py
 - Rust 全工作区 231 项通过（后端 200 项、原生 GUI 31 项）；Agent / testkit 其中 128 项通过，含 compaction、handoff、恢复、取消、迟到工具结果、HTTP/SSE、provider 对端和真实 shell/文件系统合同。
 - JS / Admin UI：26 项行为与集成测试通过。DeepSWE adapter 的 66 项单元测试在独立、按路径触发的工作流运行。
 - Admin TypeScript、构建、lint 和格式检查通过；会话列表的返回类型显式标注为 SessionRecord。
-- 真实 Agent + Gateway 桌面入口测试通过，包括上下文读写、非法值拒绝和显式消息边界。
+- 真实 Agent + Station 桌面入口测试通过，包括上下文读写、非法值拒绝和显式消息边界。
 - 界面实测：Admin 保存 12345 tokens，切换 handoff 并刷新；桌面读取这个自定义值，改为 compaction/8000，Admin 刷新显示一致。
 
 mini1 release 基准（fixture 构造不计入测量）：

@@ -131,7 +131,7 @@
   "tasks_no_matches": "No tasks match the selected status.",
   "tasks_loading": "Loading tasks…",
   "tasks_unavailable": "Tasks are temporarily unavailable",
-  "tasks_reconnecting": "Reconnecting to the local gateway…",
+  "tasks_reconnecting": "Reconnecting to the local Station…",
   "agent_connecting": "Connecting to the local agent…",
   "task_list": "Task list",
   "task_unavailable": "This task is temporarily unavailable",

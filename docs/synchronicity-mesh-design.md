@@ -4,7 +4,7 @@
 
 ## 结论
 
-采用 Synchronicity 作为节点身份、P2P 连接、对象发现和文件传输底座。Zork Gateway 管理任务、消息、委派、验收、权限和持久重试。首版使用独立 daemon，经本机 gRPC 控制；不把整个 Gateway 数据库同步成一个文件，也不让 GUI 持有 Mesh 生命周期。
+采用 Synchronicity 作为节点身份、P2P 连接、对象发现和文件传输底座。Zork Station 管理任务、消息、委派、验收、权限和持久重试。首版使用独立 daemon，经本机 gRPC 控制；不把整个 Station 数据库同步成一个文件，也不让 GUI 持有 Mesh 生命周期。
 
 关键发现是它已经提供 `OpenSocket`：文件同步之外，能通过同一个 Iroh endpoint 访问远端激活的服务。可以先用这个入口验证 Agent 通信，暂不另建一套 P2P 网络。这里是同一 endpoint 上的不同 ALPN，并非所有业务强制共用一条 QUIC 连接。
 
@@ -28,28 +28,28 @@ Cue 的云端 enrollment 会把节点纳入 Workspace 对应的网络与域；�
 ```mermaid
 flowchart LR
   subgraph A[设备 A]
-    U[GPUI] <--> G[Gateway：任务 / SQLite / outbox]
+    U[GPUI] <--> G[Station：任务 / SQLite / outbox]
     G <--> S[Synchronicity daemon]
     G <--> R[本地 Agent runtime]
   end
   subgraph B[设备 B]
-    T[Synchronicity daemon] <--> H[Gateway：Mesh ingress / SQLite]
+    T[Synchronicity daemon] <--> H[Station：Mesh ingress / SQLite]
     H <--> W[本地 Agent runtime]
   end
   S <-->|元数据与文件 / OpenSocket| T
 ```
 
-`zork start` 的 Supervisor 管理 Gateway 和 Agent。Gateway 直接持有 `synch-engine::Node`，在自己的 Tokio runtime 中运行和回收同步任务；不再启动 daemon 或本地 gRPC 控制服务。每个数据目录由库的生命周期锁保证只有一个持有者；不同测试实例使用不同数据目录和身份。
+`zork start` 的 Supervisor 管理 Station 和 Agent。Station 直接持有 `synch-engine::Node`，在自己的 Tokio runtime 中运行和回收同步任务；不再启动 daemon 或本地 gRPC 控制服务。每个数据目录由库的生命周期锁保证只有一个持有者；不同测试实例使用不同数据目录和身份。
 
 建议添加 `zork-mesh` 模块/库，封装控制连接、节点状态、对象发布/获取和远端流，不把 Synchronicity proto 类型传入 GUI 或产品数据库。daemon 与控制 proto、wire version 成套固定升级；沿用 Cue 的校验、超时和重启后 token 更新经验。可变操作由持久命令 ID 去重，不能沿用读请求的盲重试。
 
-直接嵌入 `synch-engine` 也是可行路线，但会把其存储、Iroh 和 socket runtime 生命周期纳入 Gateway。首版 sidecar 更接近 Cue 已有接法，也便于独立定位问题；完成通信实验后再决定是否值得嵌入。
+直接嵌入 `synch-engine` 也是可行路线，但会把其存储、Iroh 和 socket runtime 生命周期纳入 Station。首版 sidecar 更接近 Cue 已有接法，也便于独立定位问题；完成通信实验后再决定是否值得嵌入。
 
 ## OpenSocket 桥接
 
 远端 `OpenSocket` 定位到明确 origin 的 `zork-control/mesh.sock`，不能使用默认 newest 路径选择服务。该路径只由 Zork 部署流程写入和本机激活；普通文件提交、远端 adopt 和工作区扫描均不能修改它。上游激活的是路径，未来写入会部署新代码，因此仅记录内容 hash 不能代替部署权限控制。
 
-桥接程序只允许连接一个明确的 loopback TCP 地址和端口。上游已支持 TCP egress；本提案不假设它已有 Unix socket egress helper。这个端口提供有边界的 Mesh 协议，不转发完整 Gateway 管理 HTTP API。
+桥接程序只允许连接一个明确的 loopback TCP 地址和端口。上游已支持 TCP egress；本提案不假设它已有 Unix socket egress helper。这个端口提供有边界的 Mesh 协议，不转发完整 Station 管理 HTTP API。
 
 桥接先从 `sy_peer_info` 取 origin/device key，再向本机 ingress 写一个有长度边界的认证前导，之后才转发请求帧。前导使用独立本机桥接凭据鉴别来源，凭据来自本机 activation config，不能写进同步的 ELF、公开 manifest 或日志。Ingress 每条连接只接受一次前导，绑定所有后续请求的 peer，拒绝载荷改写身份。对同一 OS 用户拥有读取这些本地秘密权限的进程，不宣称实现额外隔离。
 
@@ -72,7 +72,7 @@ flowchart LR
 
 ## 持久投递与复制
 
-产品事件在 Gateway SQLite 事务里落盘，与投影、outbox 一起提交。Synchronicity 发布的是这些记录的不可变导出，另一端导入后构建本地投影。RPC 和同步文件传递同一个事件 ID、内容 digest 和业务载荷，只有一个去重/校验入口，不形成两套可独立修改的任务真相。
+产品事件在 Station SQLite 事务里落盘，与投影、outbox 一起提交。Synchronicity 发布的是这些记录的不可变导出，另一端导入后构建本地投影。RPC 和同步文件传递同一个事件 ID、内容 digest 和业务载荷，只有一个去重/校验入口，不形成两套可独立修改的任务真相。
 
 建议记录字段：`schema_version / event_id / issuer_node / issuer_seq / task_id / command_id / assignment_id / run_id / expected_revision / payload / payload_digest`，按消息类型取必需字段。远端记录必须匹配认证 origin；转发和导入必须保持原 origin 来源，不能由 relay 把任意复制文件重新发布成原作者。首版不支持跨 origin 的冒名转发。
 
@@ -124,6 +124,6 @@ Synchronicity v0.1.8 的 gRPC `Read` 按 space/path/policy 读取，不能假设
 - Cue Drive 映射与 enrollment：[driveSynchronicityBackend.ts](../../cue/clients/packages/app/src/components/drive/driveSynchronicityBackend.ts)、[driveBackend.ts](../../cue/clients/packages/app/src/components/drive/driveBackend.ts)。这些是本机相邻 checkout 的研究引用。
 - 上游固定版本：[DESIGN.md](https://github.com/AFK-surf/synchronicity/blob/v0.1.8/DESIGN.md)、[SOCKETS.md](https://github.com/AFK-surf/synchronicity/blob/v0.1.8/docs/SOCKETS.md)、[control.proto](https://github.com/AFK-surf/synchronicity/blob/v0.1.8/crates/synch-cli/proto/control.proto)。tag 对应 `6d6283f09c32476dc77c09f76a2b2529a42a558d`。
 - 本次也比对 main `c2f49afcd926d7a6ee9716f64a8414800f7c71da`：SOCKETS 文档、socket engine 和 control proto 与 tag 无差异；其他模块有变化。示例 C 文件头的旧 CLI 命令不作为可执行接入步骤。
-- Zork 现有基础：[产品任务](local-product-tasks.md)、[Drive](local-drive.md)、[整体差距分析](local-first-cue.md)；进程入口 `crates/zork/src/main.rs`，产品数据位于 `crates/gateway/src/db/`。
+- Zork 现有基础：[产品任务](local-product-tasks.md)、[Drive](local-drive.md)、[整体差距分析](local-first-cue.md)；进程入口 `crates/zork/src/main.rs`，产品数据位于 `crates/station/src/db/`。
 
 2026-09-05 实施更新：已完成底座实验及第一条远端任务闭环，在 mini1 双隔离节点上验证了真实传输、恢复、取消、Inbox / Drive 与人工验收。当前范围、安装步骤和未完成项见 [实现说明](local-mesh.md)。本文中通用复制、多轮工作流、按需下载及跨物理设备验收仍属于后续目标。

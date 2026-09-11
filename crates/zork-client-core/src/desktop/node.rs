@@ -122,7 +122,7 @@ impl LocalNode {
         let previous_gateway = if already_running {
             None
         } else {
-            zork_config::read_ready_pid(&self.root, "zork-gateway")?
+            zork_config::read_ready_pid(&self.root, "zork-station")?
         };
         let mut events = manager::Events::new(&self.root)?;
         let mut changes = events.subscribe().merge(self.wake.subscribe());
@@ -229,7 +229,7 @@ impl LocalNode {
                     bail!("本机设备启动失败（{status}），请查看设备日志");
                 }
             }
-            let ready_pid = zork_config::read_ready_pid(&self.root, "zork-gateway")?;
+            let ready_pid = zork_config::read_ready_pid(&self.root, "zork-station")?;
             let announced =
                 ready_pid.is_some() && (already_running || ready_pid != previous_gateway);
             if announced

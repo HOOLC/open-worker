@@ -14,9 +14,9 @@ await copyFile(path.join(repoRoot, "README.md"), path.join(destination, "README.
 await copyFile(path.join(repoRoot, "LICENSE"), path.join(destination, "LICENSE"));
 await copyFile(path.join(repoRoot, "crates", "zork-mesh", "LICENSE.synchronicity"), path.join(destination, "licenses", "Synchronicity.txt"));
 await copyFile(path.join(repoRoot, "bin", "zork.mjs"), path.join(destination, "bin", "zork.mjs"));
-await copyFile(path.join(repoRoot, "bin", "zork-gateway.mjs"), path.join(destination, "bin", "zork-gateway.mjs"));
+await copyFile(path.join(repoRoot, "bin", "zork-station.mjs"), path.join(destination, "bin", "zork-station.mjs"));
 await stageNativeBinary("zork", path.join(destination, "bin", "native"));
-await stageNativeBinary("zork-gateway", path.join(destination, "bin", "native"));
+await stageNativeBinary("zork-station", path.join(destination, "bin", "native"));
 await stageNativeBinary("zork-agent", path.join(destination, "bin", "native"));
 await stageNativeBinary("zork-gh", path.join(destination, "bin", "native"));
 
@@ -34,7 +34,7 @@ async function stageNativeBinary(name, nativeDir) {
     await fs.chmod(path.join(nativeDir, platformName), 0o755);
     return;
   }
-  throw new Error(`Cannot package incomplete Gateway installation: missing ${name}`);
+  throw new Error(`Cannot package incomplete Station installation: missing ${name}`);
 }
 
 async function copyFile(source, destinationPath) {

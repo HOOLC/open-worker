@@ -5,7 +5,7 @@ description: 修改或审查 zork 的客户端同步、持久化投影、游标�
 
 # 同步开发
 
-先读[同步空闲合同](../../../docs/sync-idle-contract.md)。协议与存储实现分别在 `crates/zork-client-types/src/sync.rs`、`crates/gateway/src/db/sync*.rs`、`crates/zork-client-core/src/sync.rs` 和 `crates/zork-client-core/src/store/replica.rs`；不要把架构建议文档中的目标当成已实现的行为。
+先读[同步空闲合同](../../../docs/sync-idle-contract.md)。协议与存储实现分别在 `crates/zork-client-types/src/sync.rs`、`crates/station/src/db/sync*.rs`、`crates/zork-client-core/src/sync.rs` 和 `crates/zork-client-core/src/store/replica.rs`；不要把架构建议文档中的目标当成已实现的行为。
 
 ## 修改时保持的边界
 
@@ -25,9 +25,9 @@ description: 修改或审查 zork 的客户端同步、持久化投影、游标�
 
 按 `zork-validation` 选择当前检查入口，进程测试前重建涉及的二进制。同步改动至少验证相关边界：空读/重复协调安静、真实修改最终收敛后停止、重复或突发通知合并、断线恢复不丢更新。变更影响分页、回执或权限时补充对应用例。
 
-- `cargo test --locked -p zork-gateway db::sync` 覆盖投影、游标、分页和客户端收敛。
+- `cargo test --locked -p zork-station db::sync` 覆盖投影、游标、分页和客户端收敛。
 - `cargo test --locked -p zork-client-core` 覆盖共享客户端状态与持久副本。
-- 重建 `zork-gateway` 后运行 `python3 scripts/test-sync-idle.py`，验证真实 HTTP/SSE 的读取与修改闭环；隔离产物通过 `ZORK_TEST_BIN_DIR` 指定。
+- 重建 `zork-station` 后运行 `python3 scripts/test-sync-idle.py`，验证真实 HTTP/SSE 的读取与修改闭环；隔离产物通过 `ZORK_TEST_BIN_DIR` 指定。
 
 排查高 CPU 时同时记录进程 CPU、采样调用栈、单位时间请求/通知数量和版本是否实际推进。区分业务写入、内部缓存写入、网络重连与重复失效；不要仅凭错误日志数量归因。限流和退避可以提供保护，但不能代替切断错误的变更来源。
 

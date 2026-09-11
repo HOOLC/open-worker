@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real-process contract for zork-gateway's built-in desktop IM entry."""
+"""Real-process contract for zork-station's built-in desktop IM entry."""
 
 from __future__ import annotations
 
@@ -33,15 +33,15 @@ class GatewayEntryContractTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        required = [TARGET / "zork-gateway", TARGET / "zork-gh"]
+        required = [TARGET / "zork-station", TARGET / "zork-gh"]
         missing = [str(path) for path in required if not path.is_file()]
         if missing:
             raise RuntimeError(
-                "build the real-process fixtures first: cargo build -p zork-gateway -p zork-gh; missing "
+                "build the real-process fixtures first: cargo build -p zork-station -p zork-gh; missing "
                 + ", ".join(missing)
             )
 
-        cls.temp = tempfile.TemporaryDirectory(prefix="zork-gateway-entry-")
+        cls.temp = tempfile.TemporaryDirectory(prefix="zork-station-entry-")
         data_root = Path(cls.temp.name)
         cls.workspace = data_root / "shared-project"
         cls.workspace.mkdir()
@@ -96,7 +96,7 @@ class GatewayEntryContractTest(unittest.TestCase):
         cls.agent_url = f"http://127.0.0.1:{agent_port}"
         cls.gateway_url = f"http://127.0.0.1:{runtime_port}"
         cls.gateway = subprocess.Popen(
-            [str(TARGET / "zork-gateway"), "--data", str(data_root), "--fake-agent", "--no-streaming"],
+            [str(TARGET / "zork-station"), "--data", str(data_root), "--fake-agent", "--no-streaming"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

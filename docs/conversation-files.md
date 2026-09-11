@@ -70,7 +70,7 @@
 先按本地构建规则重建相关产物，再运行进程测试：
 
 ```sh
-cargo test --locked -p zork-gateway
+cargo test --locked -p zork-station
 cargo test --locked -p zork-client-core -p zork-client-types
 cargo test --locked -p zork-gui --features headless-bench --test headless_conversation_files
 python3 scripts/test-client-mesh.py

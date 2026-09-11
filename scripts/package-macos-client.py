@@ -27,8 +27,9 @@ exec "$base/zork-gui" "$@" >>"$state/logs/client.log" 2>&1
 '''
 
 
-HELPERS = [('zork', 'ZorkSupervisor', 'supervisor'), ('zork-gateway', 'ZorkGateway', 'gateway')]
-COMPONENTS = ['zork-gui', 'zork', 'zork-gateway', 'zork-agent', 'zork-gh']
+# Keep the installed helper's bundle identifier stable across the product rename.
+HELPERS = [('zork', 'ZorkSupervisor', 'supervisor'), ('zork-station', 'ZorkStation', 'gateway')]
+COMPONENTS = ['zork-gui', 'zork', 'zork-station', 'zork-agent', 'zork-gh']
 
 
 def stage_binaries(app, binaries, assets, version, launcher):
@@ -38,6 +39,7 @@ def stage_binaries(app, binaries, assets, version, launcher):
         if name not in {item[0] for item in HELPERS}:
             shutil.copy2(binaries / name, mac / name)
     for name, bundle_name, role in HELPERS:
+        display_name = bundle_name.replace('Zork', 'Zork-', 1)
         bundle = app / 'Contents/Helpers' / (bundle_name + '.app')
         executable_dir = bundle / 'Contents/MacOS'
         resources = bundle / 'Contents/Resources'
@@ -48,8 +50,8 @@ def stage_binaries(app, binaries, assets, version, launcher):
         shutil.copy2(assets / (bundle_name + '.icns'), resources / (bundle_name + '.icns'))
         with (bundle / 'Contents/Info.plist').open('wb') as output:
             plistlib.dump({'CFBundleIdentifier': 'surf.zork.desktop.' + role,
-                          'CFBundleName': 'Zork-' + role.title(),
-                          'CFBundleDisplayName': 'Zork-' + role.title(),
+                          'CFBundleName': display_name,
+                          'CFBundleDisplayName': display_name,
                           'CFBundleExecutable': 'ZorkHelperLauncher', 'ZorkRuntimeExecutable': name,
                           'CFBundlePackageType': 'APPL',
                           'CFBundleIconFile': bundle_name + '.icns',

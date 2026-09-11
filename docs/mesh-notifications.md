@@ -2,7 +2,7 @@
 
 `zork-notify` 提供业务共用的变化通知、事件分发和订阅生命周期；
 `zork-mesh::feed` 把同一套订阅接到已认证的 Mesh stream。
-Gateway 的 HTTP/SSE、Mesh 和进程内读取共用业务 source。
+Station 的 HTTP/SSE、Mesh 和进程内读取共用业务 source。
 客户端继续由 `zork-client-core` 协调持久副本、合并状态并发布只读变化，UI 不管理业务连接或刷新时钟。
 
 ## 业务接入
@@ -36,7 +36,7 @@ let stream = zork_notify::stream::spawn(
 
 `AssignmentSource` 和 `encode_frame` 是业务适配器。实际接入可参考
 `gateway::mesh::MeshWatch`、`gateway::desktop_events::CatalogSource` 和
-`gateway::tool_stream::ToolSource`。新增 Mesh 主题加入 `zork-mesh::feed::Watch`（Gateway 的 `WatchTopic`）
+`gateway::tool_stream::ToolSource`。新增 Mesh 主题加入 `zork-mesh::feed::Watch`（Station 的 `WatchTopic`）
 允许列表，复用 `{"v":1,"request":{"kind":"watch","topic":...}}`；
 主题名称不授予访问权限。既有 `watch_peer`、`watch_assignment` 和客户端
 `subscribe` 请求继续适配到共用 source。
@@ -72,7 +72,7 @@ let stream = zork_notify::stream::spawn(
 
 这里有三个独立确认：发送 source 的入队位置、接收节点已经与收件箱一起提交的持久游标，
 以及 Agent 已持久接受的输入来源水位。只有第二步完成后才更新 Feed 的重连请求；
-第三步完成后 Gateway 才写入投递完成回执。Agent 水位在快照中保留，因此回执丢失、
+第三步完成后 Station 才写入投递完成回执。Agent 水位在快照中保留，因此回执丢失、
 夹入其他来源的输入或重启不会造成相同输入再执行一次。
 
 频道偏好另有代次。接收端丢弃已被较新设置撤销的晚到通知，并在投递 Agent 前再次检查。
@@ -86,10 +86,10 @@ let stream = zork_notify::stream::spawn(
 
 | 业务/来源 | 公共机制与行为 |
 | --- | --- |
-| Gateway SQLite 提交 | `Realtime` 的事务 hook 接入主题 Hub；保留旧 revision 接口供兼容调用者使用 |
+| Station SQLite 提交 | `Realtime` 的事务 hook 接入主题 Hub；保留旧 revision 接口供兼容调用者使用 |
 | 配置、Profile、升级状态文件 | 内核文件通知；相同指纹不发布，目录替换通过父目录重新注册 |
 | 客户端 catalog 与会话 | 同一 source 供 SSE 与 Mesh；快照和会话瞬态事件通过公共合并流输出 |
-| Agent 会话事件、Gateway 本地消息 | 共享 `EventHub`，按会话隔离，无订阅者时不保留事件 |
+| Agent 会话事件、Station 本地消息 | 共享 `EventHub`，按会话隔离，无订阅者时不保留事件 |
 | Mesh peer、成员目录、任务事件 | 共用 `Source` 与 `Feed`；恢复时读取成员快照或已提交任务游标 |
 | Chat 频道与 Agent 收件 | 按接收节点复用 `AgentMessages`；消息与通知、收件与游标分别同事务提交，Agent 接受使用持久来源水位 |
 | 邀请管理 | 管理节点的邀请变化即使不改变成员 revision，也通过管理 token 传到其他节点；core 观察共享 Device 更新 |
@@ -120,7 +120,7 @@ Linux/Android，其他目标没有通过本轮进程验证。
 
 健康订阅没有业务查询定时器。Mesh 每 10 秒可发送缓存的心跳，心跳不调用业务 source；
 连续 35 秒没有帧则断开并恢复。连接失败、权威读取失败和文件 watcher 注册失败使用退避。
-临时权限拒绝停止数据传输；Gateway 的控制连接可以重试认证，客户端被确认撤权后仍沿原有隔离流程处理。
+临时权限拒绝停止数据传输；Station 的控制连接可以重试认证，客户端被确认撤权后仍沿原有隔离流程处理。
 
 操作截止时间、邀请到期、显示中的倒计时、后台保留窗口回收，以及外部身份提供方明确要求的
 device-code polling，以及 Synch 既有的发现、反熵维护都有各自语义。配置账号后，外部 Profile
@@ -131,13 +131,13 @@ device-code polling，以及 Synch 既有的发现、反熵维护都有各自语
 `claim_watch`；不支持时 core 返回升级节点的提示，不恢复成功状态的定时查询。
 浏览器需要两端支持新协议：`/browser/events` 只注册订阅，`/browser/receipts` 只提交结果或
 撤销；旧 `/browser/poll` 仅保留回执别名，空注册返回 `browser_stream_required`。
-命令接收与回执身份持久化；Gateway 重启后的迟到回执可补全结果，未知结果不会自动重发操作。
+命令接收与回执身份持久化；Station 重启后的迟到回执可补全结果，未知结果不会自动重发操作。
 接管持久撤销当前 grant，重新授权必须产生新的客户端 ID 与凭据。
 
 ## 验证
 
 - `cargo test --locked -p zork-notify`：主题隔离、突发合并、读取竞态、背压撤权、取消、日志追赶和瞬态事件溢出。
-- `cargo test --locked -p zork-gateway -p zork-client-core`：提交边界、文件替换、失败恢复、重复提示及真实空闲超过 30 秒不再拉取。
+- `cargo test --locked -p zork-station -p zork-client-core`：提交边界、文件替换、失败恢复、重复提示及真实空闲超过 30 秒不再拉取。
 - `crates/agent-testkit/tests/channel_inputs.rs` 与 `scripts/test-chat-channels.py`：静默输入、按轮中断、配置边界、两个隔离节点的频道收件和重启回执。
 - 重建二进制后运行 `scripts/test-sync-idle.py`、`scripts/test-mesh-enrollment.py`、
   `scripts/test-node-tools.py`、`scripts/test-mcp.py`、`scripts/test-shared-services.py`。

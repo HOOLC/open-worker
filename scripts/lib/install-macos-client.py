@@ -109,7 +109,11 @@ def main():
     app = Path.home() / 'Applications/Zork.app'
     app.parent.mkdir(parents=True, exist_ok=True)
     running = processes(app)
-    expect_node = any('/zork-gateway ' in line for line in running)
+    expect_node = any(
+        executable in line
+        for line in running
+        for executable in ('/zork-station ', '/zork-gateway ')
+    )
     database = Path.home() / 'Library/Application Support/Zork/client/client.db'
     expect_node = local_node_enabled(database, expect_node)
     quit_app(app)

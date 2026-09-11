@@ -177,7 +177,7 @@ per-host invalidations; GPUI uses `FrameDelivery` before preparing presentation.
 These small latest-state sources do not claim incremental large-list complexity.
 
 The WASM gallery imports the public core Profiles/Agents contracts through its
-in-memory Gateway adapter. It uses the same observation engine and compiles
+in-memory Station adapter. It uses the same observation engine and compiles
 without the native core dependencies. It remains a gallery, not a complete Web
 conversation client or a separate WASM wire bridge.
 

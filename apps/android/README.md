@@ -2,7 +2,7 @@
 
 第一版移动访问端，Android 10 / API 29 以上，arm64-v8a。Kotlin / Compose
 界面通过 JNI 调用 Rust 客户端核心；Synch 0.1.8 直接嵌入应用进程，不依赖
-CLI、后台子进程或本地 gRPC 服务。共享服务页面按需建立 loopback HTTP 入口。任务继续在原 Gateway / Agent
+CLI、后台子进程或本地 gRPC 服务。共享服务页面按需建立 loopback HTTP 入口。任务继续在原 Station / Agent
 设备上执行。
 
 ## 设计真值
@@ -37,11 +37,11 @@ CLI、后台子进程或本地 gRPC 服务。共享服务页面按需建立 loop
   进程后，已提交的草稿与队列仍可恢复。关闭应用不停止远端任务。
 
 初次接入推荐「桌面连接设备 → 连接手机 → 手机扫一扫 → 桌面允许连接」。
-邀请和授权由现有 Gateway 管理，无需新增云控制面。手机会自动保存获准
+邀请和授权由现有 Station 管理，无需新增云控制面。手机会自动保存获准
 的设备；无需手工交换身份或填写 IP。详见 [手机接入协议](../../docs/phone-connection.md)。
 
 已在 Android 16 模拟器和 OPPO Find N6 上验证二维码图片解码、授权、读取
-Gateway 与重连。镜头光学扫码、蜂窝/Wi-Fi 切换和公网 relay 强制中继的
+Station 与重连。镜头光学扫码、蜂窝/Wi-Fi 切换和公网 relay 强制中继的
 验证边界见协议文档。后台推送、任务验收界面、二进制文件
 上传及手机执行 Agent 不在此版。
 默认中文，沿用仓库的 Zork 标志、Inter 字体和色板。
@@ -124,21 +124,21 @@ python3 scripts/android/test_mesh.py --serial emulator-5554
 ```
 
 后者安装 debug APK 和测试 APK，用应用私有的 `integration-client` 目录创建
-测试身份，启动临时 Gateway 和 fake-model Agent。它验证真实 JNI/QUIC 请求、
+测试身份，启动临时 Station 和 fake-model Agent。它验证真实 JNI/QUIC 请求、
 订阅、去重、离线缓存、跨 Android 进程恢复、慢连接期间即时保存草稿，以及
 撤销客户端授权，以及只消费 Rust 状态时的单次投递与手动重发、消息投影和缓存。测试不会访问实际节点、模型凭据或用户工作区；每次 bootstrap
 仅清理自己的测试目录。手机常规 `client` 数据目录保持独立。
 
-运行该脚本前需已有匹配当前源码的 `target/debug/zork`、`zork-gateway` 和
+运行该脚本前需已有匹配当前源码的 `target/debug/zork`、`zork-station` 和
 `zork-agent`。`--keep-node` 供开发者继续做真实 UI 验证，会在结果文件记录临时
 节点路径和 supervisor PID，验证结束后应停止该临时节点。
 
 输出日志和验证记录在 `artifacts/android`。界面截图使用隔离测试对话，部分
-可读文案由测试夹具通过真实 Gateway 显式投递，不是实际用户任务结果。
+可读文案由测试夹具通过真实 Station 显式投递，不是实际用户任务结果。
 
 ## 代码边界
 
-- `crates/zork-client-core`：桌面与 Android 共用 Gateway HTTP/Mesh API、DTO、
+- `crates/zork-client-core`：桌面与 Android 共用 Station HTTP/Mesh API、DTO、
   SSE 解析、订阅重连与断线补齐、持久投递调度器、消息身份去重、分页投影、
   活动状态归并、任务修订合并和发送权限判断。桌面 `api`、`transcript`、
   `desktop::store` 重新导出同一实现，数据库格式保持兼容。
@@ -149,7 +149,7 @@ python3 scripts/android/test_mesh.py --serial emulator-5554
 - `crates/zork-android`：JNI、TLS 初始化和应用进程持有的 Rust runtime；网络
   命令与本地操作不共用等待锁。
 - `crates/zork-mesh`：`start_client` 关闭 socket 执行池和本地工作区后台循环；
-  默认 `server` feature 保留 Gateway 行为，Android 不启用桥接编译器依赖。
+  默认 `server` feature 保留 Station 行为，Android 不启用桥接编译器依赖。
 - `apps/android/app`：界面、生命周期、输入、导航和安全的显式链接打开。
 
 设备身份和会话数据放在 Android `noBackupFilesDir`，不随普通备份复制到其他

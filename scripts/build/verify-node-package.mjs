@@ -5,7 +5,7 @@ import path from "node:path";
 const root = process.argv[2];
 if (!root) throw new Error("Usage: verify-node-package.mjs PACKAGE_DIRECTORY");
 const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64"];
-const names = ["zork", "zork-gateway", "zork-agent", "zork-gh"];
+const names = ["zork", "zork-station", "zork-agent", "zork-gh"];
 for (const platform of platforms) {
   for (const name of names) {
     const file = path.join(root, "bin", "native", `${name}-${platform}`);

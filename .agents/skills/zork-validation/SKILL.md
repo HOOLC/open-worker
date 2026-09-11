@@ -10,8 +10,8 @@ description: 为 zork 代码改动选择并执行回归验证，或诊断构建�
 - 使用 `package.json` 的 pnpm 版本和冻结锁文件，Cargo 使用 `--locked`。工作区依赖 feature 调整另读 `docs/rust-build-cache.md`，避免无意引入编译变体。
 - Rust 逻辑先验证受影响 package；后端集成使用 `pnpm test:rust`。JS 行为用对应测试或 `pnpm test`。需要完整 CI 验收时按 `.github/workflows/ci.yml` 执行格式、lint、build 和测试，不声称未运行的项目通过。
 - 客户端功能或 core/UI 边界改动先运行 `python3 scripts/check-client-boundary.py`，并按 [zork-client-boundary](../zork-client-boundary/SKILL.md) 复查入口、业务操作、状态发布和 UI 订阅的完整链路，再选择相关 core 行为与平台映射验证。共享组件依赖检查或界面测试通过，不能证明应用层没有业务逻辑、网络请求或第二份业务状态；纯视觉调整不因此扩大为全套业务测试。
-- 进程测试使用构建产物。运行前先重建涉及的二进制，通常为 `cargo build --locked -p zork -p zork-gateway -p zork-agent-server -p zork-gh`。不要用旧产物验证新源码。
-- Gateway/Agent 嵌入、生命周期、更新或消息边界改动：读取 `docs/zork-agent-status.md` 最新对应段落，再选择 `test/merged-runtime.e2e.test.ts`、`test/gateway-mailbox.e2e.test.ts`、`crates/zork-gui/tests/test_gateway_entry.py`、`scripts/test-embedded-gateway.py`、`scripts/test-native-upgrade.py`、`scripts/test-gateway-upgrade.py` 中相关回归。Gateway 内嵌 Agent；独立 Agent binary 的存在不表示生产 supervisor 有第二个 Agent 子进程。
+- 进程测试使用构建产物。运行前先重建涉及的二进制，通常为 `cargo build --locked -p zork -p zork-station -p zork-agent-server -p zork-gh`。不要用旧产物验证新源码。
+- Station/Agent 嵌入、生命周期、更新或消息边界改动：读取 `docs/zork-agent-status.md` 最新对应段落，再选择 `test/merged-runtime.e2e.test.ts`、`test/gateway-mailbox.e2e.test.ts`、`crates/zork-gui/tests/test_gateway_entry.py`、`scripts/test-embedded-gateway.py`、`scripts/test-native-upgrade.py`、`scripts/test-gateway-upgrade.py` 中相关回归。Station 内嵌 Agent；独立 Agent binary 的存在不表示生产 supervisor 有第二个 Agent 子进程。
 - 桌面普通逻辑使用 `pnpm test:desktop`；用户明确要求桌面完整验证或正式发布验证时，复用 `python3 scripts/test-desktop-headless.py`。个人测试设备的安装不自动触发该流程，遵循本地环境 skill。它包含共享组件、渲染、选择与模态框、安装器及进程合同测试，并在打包前重建不带 benchmark feature 的产物。先检查脚本，避免重复跑它已覆盖的全部测试。
 - 原生显示性能任务才使用 `scripts/test-desktop-performance.py`，需要可用的解锁桌面。headless 确定性回放、硬件 CPU 耗时、显示器 FPS 是不同证据，不能互相替代。
 - 存储、查询、运行时性能修改及发布前的性能验收：从 `docs/zork-agent-status.md` 的复现命令选择 release benchmark，单独运行，避免与编译或负载测试竞争资源。

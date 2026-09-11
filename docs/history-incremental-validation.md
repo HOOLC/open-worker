@@ -42,7 +42,7 @@ Session 执行历史存储在执行节点。这里的索引、已加载记录和
 - core 从中间页开始，交替加载两侧并注入重复页，验证排序、列表 edits 和完整投影一致；慢消费者取消 prepared 后可重放，积压 600 次提交后 Reset 与快消费者收敛。
 - 10,000 条历史的两个远距离更新只传递两个 edits，未修改条目保持共享；撤权使在途批次失效并清除记录与索引。仅 runtime 改动不修改历史行。
 - 持久列表的小 splice 与独立 `Vec` 模型比较，覆盖十万条、600 次首部/尾部/中间操作及块边界；旧快照保持不变。
-- `cargo test --locked -p zork-client-types -p zork-client-core -p zork-observe` 通过：core 78 单测、16 集成测试；types 24 单测；observe 6 单测、10 协议测试。需独立 Gateway 的 enrollment 用例按原配置忽略。
+- `cargo test --locked -p zork-client-types -p zork-client-core -p zork-observe` 通过：core 78 单测、16 集成测试；types 24 单测；observe 6 单测、10 协议测试。需独立 Station 的 enrollment 用例按原配置忽略。
 - 桌面 `headless_history` 在 1280×800、900×600 通过，涵盖条目、折叠、时间轴、实时来源、时钟和静止指针下的滚轮交互；`zork-ui` 的 7 个相关历史回归通过。
 - 修改后的 `zork-client-types` 与 `zork-observe` 编译到 `wasm32-unknown-unknown` 通过；此项验证公共库的目标平台兼容性，没有重建完整 Web 展台。
 - 客户端边界、Rust 文件格式、diff 空白和文档链接检查通过。全部测量结束后核对源码摘要仍一致。

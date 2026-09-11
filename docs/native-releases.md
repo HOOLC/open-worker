@@ -6,8 +6,8 @@ Each version contains one complete archive per platform, `install.sh`, `VERSION`
 it is not an installation prerequisite. The old npm launchers remain available
 for compatibility work, but CI no longer publishes npm packages.
 
-This pipeline distributes the supervisor, Gateway, Agent and GitHub helper.
-Gateway calls the pinned Synch 0.1.8 engine library on its own Tokio runtime.
+This pipeline distributes the supervisor, Station, Agent and GitHub helper.
+Station calls the pinned Synch 0.1.8 engine library on its own Tokio runtime.
 No Synch executable, CLI daemon or local control service is bundled. Desktop `.app` distribution remains separate in
 `scripts/package-macos-client.py`; it requires its own release signing and
 notarization setup before public desktop distribution.
@@ -35,10 +35,10 @@ These public URLs become usable when the corresponding native release exists:
 
 ```sh
 # Latest stable release: install/start an independent background node.
-curl -fsSL https://github.com/HOOLC/open-worker/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/HOOLC/zork/releases/latest/download/install.sh | sh
 
 # Pin the bootstrap and package version; forward native arguments after --.
-curl -fsSL https://github.com/HOOLC/open-worker/releases/download/v0.1.30/install.sh \
+curl -fsSL https://github.com/HOOLC/zork/releases/download/v0.1.30/install.sh \
   | sh -s -- --version 0.1.30 -- install --data "$HOME/.zork" --name mini2
 ```
 
@@ -88,7 +88,7 @@ use the Git revision pinned in `crates/zork-mesh/Cargo.toml` and `Cargo.lock`.
 
 ```sh
 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4 \
-  cargo build --locked --release -p zork -p zork-gateway -p zork-agent-server -p zork-gh
+  cargo build --locked --release -p zork -p zork-station -p zork-agent-server -p zork-gh
 python3 scripts/build/native-release.py stage
 python3 scripts/test-native-installer.py
 python3 scripts/test-mesh-installer.py  # real user service test on macOS
@@ -112,7 +112,7 @@ no npm token or additional storage service is needed.
 
 Installation and mesh joining do not perform in-place upgrades. For complete
 installed background nodes, open the desktop device settings, choose **检查更新**,
-then **升级并重启**. The Gateway administrator credential is required. The client
+then **升级并重启**. The Station administrator credential is required. The client
 shows the download, restart, and completion state; the node continues the upgrade
 if the client disconnects. App-bundled and development nodes must be updated through
 their application or development deployment instead.
@@ -120,8 +120,8 @@ their application or development deployment instead.
 The node downloads the selected stable release from the fixed GitHub Releases
 source, using the bundled bootstrap's manifest, SHA-256, platform and archive
 validation. All components are staged together before any running process changes.
-The target supervisor must advertise `native_update: 1`. The supervisor asks both
-children to stop, waits up to 30 seconds, renames the complete `bin` directory,
+The target supervisor must advertise `native_update: 1`. The supervisor asks the
+Station and its embedded Agent to stop, waits up to 30 seconds, renames the complete `bin` directory,
 and executes the new supervisor with the original arguments and PID. Upgrading
 interrupts running tasks; choose a suitable time. No forced kill is used if a child
 cannot stop within the deadline.

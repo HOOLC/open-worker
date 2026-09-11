@@ -2,7 +2,7 @@
 
 2026-09-09：领队会话上传、扇形附件预览、委派携带文件和 `chat.post_file` 的新消息行为见 [Conversation 附件](conversation-files.md)。以下保留原任务产物 API 的兼容性说明。
 
-2026-09-05：任务文件从占位入口接入本机 Gateway 和 GPUI。
+2026-09-05：任务文件从占位入口接入本机 Station 和 GPUI。
 
 ## 使用方式
 
@@ -38,19 +38,19 @@ Drive 左侧按任务筛选，右侧列出全部文件版本。点击文件预�
 | `GET /v1/tasks/{task_id}` | 现有任务详情增加 `artifacts` |
 | `POST /chat/post-file` | 对本地 GUI 会话复用现有 filePath / initialComment 参数，返回注册的 artifact |
 
-任务、文件元数据和内容均可在 Agent 离线时读取。注册文件只要求 Gateway 与工作区可读，不要求 Agent 在线。Gateway 离线时 GUI 保留上次列表和已加载的预览，并显示重试提示。
+任务、文件元数据和内容均可在 Agent 离线时读取。注册文件只要求 Station 与工作区可读，不要求 Agent 在线。Station 离线时 GUI 保留上次列表和已加载的预览，并显示重试提示。
 
 ## 当前边界
 
 这是任务产物库，不是整个工作目录的文件管理器。不会自动扫描目录、跟踪未提交文件或执行文件。已通过 [Mesh](local-mesh.md) 支持配对节点的任务输出传输与接收端离线快照；尚未实现共享链接、通用文件同步与冲突、删除/回收站、分页、压缩去重、磁盘配额及 PDF/Office 内嵌预览。每个版本都保留完整字节；大量大文件会增大 SQLite 数据库。
 
-当前安全文件读取实现面向 Unix，覆盖 macOS/Linux；Windows 注册暂不支持。文件选择器所在机器需与 Gateway 能访问同一工作区，不能将本版理解成跨设备上传协议。
+当前安全文件读取实现面向 Unix，覆盖 macOS/Linux；Windows 注册暂不支持。文件选择器所在机器需与 Station 能访问同一工作区，不能将本版理解成跨设备上传协议。
 
 ## 验证
 
 数据库测试验证版本、字节幂等、重启、原文件删除后读取、关闭任务拒绝变更、旧验收版本冲突、路径越界、符号链接与大小限制。GUI 单元测试验证另存时替换目标文件及失败时清理临时文件。
 
-`test_drive_artifacts.py` 使用真实 Agent、Gateway 和动态工具，验证文件提交、会话目标校验、版本、服务重启和 Agent 离线读取原始字节。原生 GUI 回归覆盖文件列表、版本预览、中英文、重启和任务文件双向跳转。
+`test_drive_artifacts.py` 使用真实 Agent、Station 和动态工具，验证文件提交、会话目标校验、版本、服务重启和 Agent 离线读取原始字节。原生 GUI 回归覆盖文件列表、版本预览、中英文、重启和任务文件双向跳转。
 
 ```sh
 python3 crates/zork-gui/tests/test_drive_artifacts.py

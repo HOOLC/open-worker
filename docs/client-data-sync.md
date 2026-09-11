@@ -21,10 +21,10 @@
 | --- | --- | --- |
 | `state::Device`、`state::Conversation`、只读订阅、按业务域通知 | 桌面已接入较多；Android 仍使用 `Client/Session` JSON 快照和 Kotlin 状态映射，部分设置绕过这些状态 | 扩展现有 state 模块；JNI 成为同一状态系统的适配器 |
 | `ClientStore` 的 SQLite、草稿/outbox 事务、消息缓存 | 存储中同时存在 `agents` / `http:/v1/node/agents`、`messages:<id>` / `http:.../messages` 等表示；部分数据仅内存存在 | 统一实体身份、读模型和迁移规则 |
-| Gateway 提交驱动的 Realtime 通知 | revision 是进程内计数；按域发 changed 通知，不是可持久续传的完整变更记录 | 持久 Change Journal；现有推送继续用于唤醒同步 |
+| Station 提交驱动的 Realtime 通知 | revision 是进程内计数；按域发 changed 通知，不是可持久续传的完整变更记录 | 持久 Change Journal；现有推送继续用于唤醒同步 |
 | LiveFeed 先订阅再沿分页寻找消息锚点 | 很适合现有消息补齐，但消息 ID 锚点不能覆盖所有实体修改、删除、权限和数据库恢复 | 快照、水位、版本和删除记录组成统一恢复协议 |
 | 单次发送、原 ID 手动重发、持久 outbox | 主要覆盖聊天；其他配置/任务写入的回执、冲突和恢复方式不统一 | 统一命令记录和确认机制，保留不同命令的发送策略 |
-| Profile/config 文件及文件监听 | 文件替换与 Gateway SQLite 事务不是一个提交边界 | 明确文件写入恢复流程及可同步的公开投影 |
+| Profile/config 文件及文件监听 | 文件替换与 Station SQLite 事务不是一个提交边界 | 明确文件写入恢复流程及可同步的公开投影 |
 
 Android 的具体症状是：设备设置页新建一个空状态，然后连续读取设备信息、队员、Profile 和 Provider；这些 GET 走 `Request`，不经过通用 HTTP 快照缓存。桌面的 `Device::refresh(PROFILES)` 当前也只发布内存状态。因此这不是仅限 Android 的一个漏缓存点。
 
@@ -35,7 +35,7 @@ Android 的具体症状是：设备设置页新建一个空状态，然后连续
 - [共享状态](../crates/zork-client-core/src/state/mod.rs)、[Device](../crates/zork-client-core/src/state/device.rs)、[Conversation](../crates/zork-client-core/src/state/conversation.rs)。
 - [Client/命令](../crates/zork-client-core/src/lib.rs)、[移动端 Session](../crates/zork-client-core/src/session.rs)、[本地存储](../crates/zork-client-core/src/store.rs)。
 - [LiveFeed](../crates/zork-client-core/src/live.rs)、[投递](../crates/zork-client-core/src/delivery.rs)。
-- [Gateway 通知](../crates/gateway/src/realtime.rs)、[SSE/Mesh 推送](../crates/gateway/src/desktop_events.rs)。
+- [Station 通知](../crates/station/src/realtime.rs)、[SSE/Mesh 推送](../crates/station/src/desktop_events.rs)。
 - [Android ViewModel](../apps/android/app/src/main/java/surf/zork/android/ClientViewModel.kt)、[JNI](../crates/zork-android/src/lib.rs)、[桌面导航](../crates/zork-gui/src/desktop/navigation.rs)。
 
 ## 3. 数据分类与所有权
@@ -44,7 +44,7 @@ Android 的具体症状是：设备设置页新建一个空状态，然后连续
 
 | 数据 | 写入权威与冲突规则 | 客户端保存与同步 |
 | --- | --- | --- |
-| 设备名称、Agent 配置、Profile 公开配置、会话、Task | 所属 Gateway；带版本的命令，冲突由 owner 裁决 | 持久实体和增量同步 |
+| 设备名称、Agent 配置、Profile 公开配置、会话、Task | 所属 Station；带版本的命令，冲突由 owner 裁决 | 持久实体和增量同步 |
 | Run 的执行事实 | 指定 executor；Task 的验收、取消等产品决定仍归 Task owner | 保留来源、运行代次及 Task/Run 关系；复用现有委派边界 |
 | 可见消息、批注、结果、文件清单 | 相应会话/产品对象的权威节点接纳；稳定 ID 和修订号 | 持久保存已同步的范围；显式编辑/删除也可传播 |
 | 草稿、编辑中的附件、滚动位置、展开状态 | 草稿和 UI 状态默认归当前客户端 | 必须本地持久；跨端草稿续写另设产品规则，不让两台设备静默覆盖彼此输入 |
@@ -54,7 +54,7 @@ Android 的具体症状是：设备设置页新建一个空状态，然后连续
 | 文件内容 | 来源节点发布的确切内容版本 | 元数据先到，字节按需下载、校验、固定保留或淘汰 |
 | 模型密钥、OAuth refresh token、节点私钥 | 所属节点的凭据存储 | 不进入通用复制投影；客户端自身的认证材料由客户端安全存储管理 |
 
-实体键至少包含授权空间、owner、类型和稳定 ID；授权空间可先对应现有 Mesh group/授权边界，不引入必需的中心账户服务。IP、端口、显示名不参与身份。桌面本机连接的别名应在认证后映射到 Gateway origin，避免同一个节点通过本机地址与 Mesh 地址出现两份数据。
+实体键至少包含授权空间、owner、类型和稳定 ID；授权空间可先对应现有 Mesh group/授权边界，不引入必需的中心账户服务。IP、端口、显示名不参与身份。桌面本机连接的别名应在认证后映射到 Station origin，避免同一个节点通过本机地址与 Mesh 地址出现两份数据。
 
 不同版本不能依靠客户端墙钟比较。Task revision、同步日志位置、UI 通知 revision、运行 generation 各有用途，不混用。
 
@@ -69,7 +69,7 @@ flowchart LR
     C -->|只读投影与局部变化| U
     S[每个 owner 的同步协调器] -->|统一应用入口| D
     C -->|同步需求与操作记录| S
-    S <-->|Mesh / HTTP：快照、增量、命令| G[Owner Gateway]
+    S <-->|Mesh / HTTP：快照、增量、命令| G[Owner Station]
     G --> A[(业务数据与持久变更日志)]
 ```
 
@@ -115,9 +115,9 @@ pending_operations = ...
 
 ### 6.1 写入与变更日志
 
-Gateway 保留现有业务表。对需要复制的持久对象，在同一个 SQLite 事务里提交：业务变化、公开同步投影、Change Journal，以及适用的命令回执。提交成功后再唤醒订阅者。
+Station 保留现有业务表。对需要复制的持久对象，在同一个 SQLite 事务里提交：业务变化、公开同步投影、Change Journal，以及适用的命令回执。提交成功后再唤醒订阅者。
 
-这是一份可截断、可通过快照恢复的同步日志，不要求把全部业务改为事件溯源，也不要求保留所有历史事件才能启动 Gateway。
+这是一份可截断、可通过快照恢复的同步日志，不要求把全部业务改为事件溯源，也不要求保留所有历史事件才能启动 Station。
 
 变更至少携带 owner、数据集 epoch、日志位置、对象类型/ID、对象 revision、upsert/delete 和安全投影。一个业务事务涉及的关联变化按完整批次应用，避免用户看到引用已经更新、被引用对象却还没出现的半个状态。
 
@@ -172,9 +172,9 @@ owner 的“持久接收”“业务提交”和 executor 的“执行完成”�
 
 Profile/config 当前保存在文件中，Agent runtime 也有自己的持久事件。不能把 SQLite commit hook 当成覆盖所有来源的原子同步方案。
 
-SQLite 内的产品数据直接同事务写日志。外部存储采用可恢复流程：先持久记录操作 → 幂等写入或核对外部结果 → 将安全公开投影及其变更日志提交到 Gateway SQLite → 完成相应回执。进程重启恢复未完成步骤。既有配置文件的外部编辑，由文件监听加启动/周期核对导入公开投影；监听是发现手段，不承担唯一持久性保证。
+SQLite 内的产品数据直接同事务写日志。外部存储采用可恢复流程：先持久记录操作 → 幂等写入或核对外部结果 → 将安全公开投影及其变更日志提交到 Station SQLite → 完成相应回执。进程重启恢复未完成步骤。既有配置文件的外部编辑，由文件监听加启动/周期核对导入公开投影；监听是发现手段，不承担唯一持久性保证。
 
-目标状态中，设备、Agent、Profile 的可同步公开配置由 Gateway 产品事务存储持有，密钥由专用凭据存储管理，运行时通过引用读取。原有可编辑配置文件逐步成为版本化的导入/导出接口；修改通过命令及版本校验进入产品状态。过渡期仍由文件持有的数据只能按上述恢复流程提供一致投影，不能宣称已经获得跨文件/数据库的原子提交。
+目标状态中，设备、Agent、Profile 的可同步公开配置由 Station 产品事务存储持有，密钥由专用凭据存储管理，运行时通过引用读取。原有可编辑配置文件逐步成为版本化的导入/导出接口；修改通过命令及版本校验进入产品状态。过渡期仍由文件持有的数据只能按上述恢复流程提供一致投影，不能宣称已经获得跨文件/数据库的原子提交。
 
 凭据或文件版本可以先以不可变版本持久暂存，随后提交数据库引用、公开投影和日志；失败留下的未引用版本由恢复/回收流程处理。仍被运行引用的版本保留到释放。这样无需把模型密钥加入同步数据库，也无需把两个存储系统假设成一个事务。
 
@@ -189,7 +189,7 @@ Agent 内部 token/tool 活动按需要做轻量瞬时推送；最终消息、Ru
 | 阶段 | 具体交付 | 完成标准 |
 | --- | --- | --- |
 | 1. 统一客户端读写入口 | 在现有 state 模块补全设备公开详情/Profile/Provider 等类型和持久性；Android 改为订阅同一状态；迁移旧缓存键；移走页面网络编排 | 重开页面/重启应用/断网都能读取已有数据；各端只有一套业务状态；写盘失败不被标成已同步 |
-| 2. 持久同步协议 | Gateway journal、版本化快照/增量、epoch、删除记录、范围与游标原子提交；旧协议能力协商回退 | 漏推送、重连、旧分页响应、删除及长离线均可确定恢复 |
+| 2. 持久同步协议 | Station journal、版本化快照/增量、epoch、删除记录、范围与游标原子提交；旧协议能力协商回退 | 漏推送、重连、旧分页响应、删除及长离线均可确定恢复 |
 | 3. 通用命令确认 | 扩展现有 outbox/去重机制到配置与任务命令；版本冲突、回执核对、持久待确认层 | ACK 丢失与双方重启不重复业务决定；保留现有聊天重试策略 |
 | 4. 范围和资源治理 | 元数据常驻、历史/附件按需、配额和固定保留、权限变更与日志 GC | 大数据不要求整库进内存；旧客户端超出保留期可重建；未解决意图不被淘汰 |
 

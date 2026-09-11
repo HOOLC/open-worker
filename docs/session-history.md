@@ -45,7 +45,7 @@ relative labels every 30 seconds without issuing polling requests.
 - Agent: `GET /sessions/{session_id}/history` accepts `limit` (default 100, max 200),
   `before`, or `after`. It returns durable events, server time, and page cursors.
   Combining before and after is invalid. Snapshot events are excluded.
-- Gateway: `GET /v1/im/sessions/{session_id}/history` checks the desktop IM session
+- Station: `GET /v1/im/sessions/{session_id}/history` checks the desktop IM session
   binding, then uses its authenticated Agent client. Mesh permits this GET only
   for a peer with a client grant; revocation also blocks history reads.
 - Rust core joins model steps and tool results only by their exact IDs. Tool labels,
@@ -86,7 +86,7 @@ checks use isolated fixtures and no account credentials or production data.
 The history endpoint currently reads the connected node's own Agent store. It
 does not forward a task's history to a separate Worker execution node, so that
 case currently reports a load failure. This backend limitation is independent
-of the retired direct-Gateway UI.
+of the retired direct-Station UI.
 
 Side-by-side screenshot assessments and captures are generated locally under
 `artifacts/session-history/`. Reproducible fixture data belongs to the GUI test

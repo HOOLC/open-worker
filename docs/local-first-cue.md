@@ -10,7 +10,7 @@
 
 ## 1. 结论
 
-zork 已经有可以保留的本地执行基础：Gateway 的 SQLite 可见消息与入口映射、Agent 的持久 mailbox 和事件日志、恢复与取消、模型 Profile、工作目录和 shell/file 工具。GUI 目前主要服务“打开一个工作目录，创建任务，与执行中的 Agent 对话”。
+zork 已经有可以保留的本地执行基础：Station 的 SQLite 可见消息与入口映射、Agent 的持久 mailbox 和事件日志、恢复与取消、模型 Profile、工作目录和 shell/file 工具。GUI 目前主要服务“打开一个工作目录，创建任务，与执行中的 Agent 对话”。
 
 Cue 已经形成更完整的工作台：长期 Assistant Chat、Router/Worker、独立 Task 生命周期、Inbox、Drive、Plugins、浏览器侧栏、原生设备能力和设置。差距最大的部分是产品对象与协作机制，而非单纯页面数量。
 
@@ -25,21 +25,21 @@ Cue 已经形成更完整的工作台：长期 Assistant Chat、Router/Worker、
 | 能力 | Cue 当前实现 | zork 当前基础 | 面向目标的差距与处理 |
 | --- | --- | --- | --- |
 | 桌面工作台 | 75px 图标栏、Home/Inbox/Drive/Tasks/Plugins、独立内容面板 [C1] | GPUI 原生首页、任务栏、对话、输入器 [Z1] | 本次调整布局和样式；更多入口随真实功能加入 |
-| 长期助手与独立任务 | Router 的长期 Chat 与 Worker Task 分离，Conversation 与 runtime Session 不是同一对象 [C2] | 新增独立产品 Task ID、目标、验收状态；Gateway 会话绑定到 runtime，多轮运行记录与 Task 分开 [Z2][Z3][Z8] | 本地 Task / Run 已分开；长期 Assistant、多个 Worker 和节点身份仍待实现 |
+| 长期助手与独立任务 | Router 的长期 Chat 与 Worker Task 分离，Conversation 与 runtime Session 不是同一对象 [C2] | 新增独立产品 Task ID、目标、验收状态；Station 会话绑定到 runtime，多轮运行记录与 Task 分开 [Z2][Z3][Z8] | 本地 Task / Run 已分开；长期 Assistant、多个 Worker 和节点身份仍待实现 |
 | 任务生命周期 | 列表/看板、归档、人工接受结果；自动成功与人类验收分开 [C2][C3] | 已有持久目标、候选结果、人工验收/取消/重开及运行记录；看板按产品状态与运行状态组合显示 [Z1][Z8] | 本地验收闭环已实现；跨节点状态权威、工作流、归档与协作授权仍待建设 |
 | 多 Agent 协作 | Router/Worker、Participant 定向投递、可选有界 Workflow [C2] | 多 session；未见一等 Agent 委派、团队角色或 Workflow 模型 [Z2][Z5] | 先实现单个任务跨节点委派和结果回传，再扩展依赖图与并行审阅 |
 | 可见对话 | 显式 Message、sender/recipient、附件；与内部 runtime transcript 分开 [C2][C4] | 显式 `chat.post_message` 边界已存在；GUI 是 user/assistant 文本 [Z1][Z3] | 保留显式投递；增加具体 Agent/节点身份、消息 ID、附件、引用和回执 |
 | Inbox 与搜索 | 跨平台 Inbox projection、会话搜索与归档路由 [C1][C5] | 已有本地待验收/需要处理收件箱；无跨节点未读通知与全文搜索 | 本地索引消息、任务和结果；显示未读、待验收、阻塞和来源节点 |
 | Drive 与产物 | 文件列表/预览/版本/同步、按设备版本采用、离线保留 [C6] | 已有持久任务文件、版本、文本/图片预览与另存副本；无跨节点同步 [Z5] | 分开本地 Workspace 和可分享 Artifact；先做预览、结果关联与按需传输 |
 | Workspace | Cue Workspace 同时承担账户授权与 Agent 工作范围 [C2] | workspace 主要是本机 canonical path [Z2] | 创建稳定 Workspace 身份和每个节点的本地路径映射；不通过绝对路径识别远端资源 |
-| Plugins、Skills、MCP | 插件目录、安装/卸载、授权与连接状态；输入器可提及 Skill 等对象 [C4][C7] | 本地版本化工具 registry；Gateway 尚无 MCP 接入 [Z5][Z6] | 插件包与安装生命周期、工具能力声明、节点范围授权、实际 MCP 客户端均待补 |
+| Plugins、Skills、MCP | 插件目录、安装/卸载、授权与连接状态；输入器可提及 Skill 等对象 [C4][C7] | 本地版本化工具 registry；Station 尚无 MCP 接入 [Z5][Z6] | 插件包与安装生命周期、工具能力声明、节点范围授权、实际 MCP 客户端均待补 |
 | 定时与主动工作 | Recommendation 有定时设置与刷新接口；Task Workflow 是独立机制 [C2][C11] | 后台脚本 job、重启恢复和 mailbox 通知 [Z7] | 不能把 job 等同于日历调度；补触发时间、时区、漏跑策略和明确执行节点 |
 | 浏览器与桌面能力 | Electron 原生桥、浏览器侧栏、Computer Use/本地文件等模块 [C4][C11] | 原生文字输入、剪贴板、GUI 测试 API；后者不是 Agent 桌面操作能力 [Z1] | 浏览器/桌面工具与用户权限 UI 待建设；预览面板可以先于自动操作能力 |
 | 模型与账户设置 | 产品设置、权限、设备 Compute 等完整设置面 [C11] | Profile、model、thinking、context 已有；Profile 管理主要在 Admin [Z1][Z2] | 将本地 Profile/节点配置引入桌面设置；凭据留在拥有它的节点 |
-| 本地运行与离线使用 | 本地缓存/daemon 存在，但产品访问仍由 session lease 和服务端授权约束 [C8][C10] | Agent/Gateway 数据在本地；GUI 依赖指定 Gateway；草稿和待发送不构成持久 outbox [Z1][Z2] | 补草稿、离线读模型、待发送队列及可恢复确认；本地运行不等于全部产品数据可离线编辑 |
+| 本地运行与离线使用 | 本地缓存/daemon 存在，但产品访问仍由 session lease 和服务端授权约束 [C8][C10] | Agent/Station 数据在本地；GUI 依赖指定 Station；草稿和待发送不构成持久 outbox [Z1][Z2] | 补草稿、离线读模型、待发送队列及可恢复确认；本地运行不等于全部产品数据可离线编辑 |
 | 设备身份与成员关系 | Personal Mesh 签名、成员、撤销、endpoint、revision；中心 Registry [C9] | 未发现节点身份、设备配对、成员撤销模型 | 本地生成身份，显式配对，持久化信任与授权；定义设备丢失、密钥恢复和离线撤销边界 |
 | P2P 传输与同步 | Iroh Relay/Personal Mesh 组件，Drive 另有 Synchronicity 集成 [C6][C9] | 未发现 P2P transport、发现、gossip 或复制协议 | 需要 peer 连接、重连、按对象同步、背压、消息去重与附件传输 |
-| 计算节点与任务放置 | Compute Node、Environment、Allocation/Grant 与中心 Compute 写入者 [C2][C11] | Supervisor 管理本机 Gateway/Agent，session 使用本机工作目录 [Z2] | 节点发布能力，任务显式选择节点；执行节点验证权限、资源与 Workspace 映射 |
+| 计算节点与任务放置 | Compute Node、Environment、Allocation/Grant 与中心 Compute 写入者 [C2][C11] | Supervisor 管理本机 Station/Agent，session 使用本机工作目录 [Z2] | 节点发布能力，任务显式选择节点；执行节点验证权限、资源与 Workspace 映射 |
 | 协作授权与隔离 | Workspace/Membership、运行授权和原生能力边界 [C2][C11] | 本机 runtime、可选 Agent bearer；shell 使用本机进程执行 [Z2][Z5] | P2P 信任不等于任意远程执行权限；补按 workspace/tool/任务的授权与必要的执行隔离 |
 
 ## 3. 建议的产品与节点模型
@@ -62,13 +62,13 @@ Cue 已经形成更完整的工作台：长期 Assistant Chat、Router/Worker、
 ```mermaid
 flowchart LR
   subgraph A[设备 A]
-    UA[GUI] <--> GA[本地 Gateway / 产品服务]
+    UA[GUI] <--> GA[本地 Station / 产品服务]
     GA <--> DA[本地消息、任务、草稿与产物索引]
     GA <--> AA[本地 Agent runtime]
     GA <--> MA[Mesh 接口]
   end
   subgraph B[设备 B / 常在线节点]
-    MB[Mesh 接口] <--> GB[本地 Gateway / 产品服务]
+    MB[Mesh 接口] <--> GB[本地 Station / 产品服务]
     GB <--> DB[本地消息、任务与产物索引]
     GB <--> AB[本地 Agent runtime]
   end
@@ -77,7 +77,7 @@ flowchart LR
   MB -.-> R
 ```
 
-本机仍可以有 Gateway 作为产品边界；“每台设备都有自己的 Gateway”和“所有设备依赖唯一中心 Gateway”是两种部署。现有显式消息入口可以保留。同步面只传递已授权的产品事件、任务命令和选定产物，默认不复制模型凭据和完整内部 transcript。
+本机仍可以有 Station 作为产品边界；“每台设备都有自己的 Station”和“所有设备依赖唯一中心 Station”是两种部署。现有显式消息入口可以保留。同步面只传递已授权的产品事件、任务命令和选定产物，默认不复制模型凭据和完整内部 transcript。
 
 ## 4. Mesh 必须补齐的语义
 
@@ -106,7 +106,7 @@ flowchart LR
 
 ## 6. 本次样式实现与仍有的视觉差异
 
-早期使用 Cue Storybook、Web 核对资源；最终以真实 Electron 客户端、源码尺寸及同尺寸截图进行对照。zork 保留 GPUI 渲染器及现有本地 Gateway/Agent，不依赖 Cue 后端运行。
+早期使用 Cue Storybook、Web 核对资源；最终以真实 Electron 客户端、源码尺寸及同尺寸截图进行对照。zork 保留 GPUI 渲染器及现有本地 Station/Agent，不依赖 Cue 后端运行。
 
 - **直接使用 Cue 资源**：Inter Variable 正体/斜体、Central Icons 原始路径与对应变体；1.5px 光学笔画遵循 Cue CSS。字体嵌入应用，离线可用。来源和重生成方法见 [资源说明](../crates/zork-gui/assets/cue/README.md)。
 - **窗口结构**：75px 图标导航、42px 顶栏、8px 外边距、12px 白色面板圆角、`#f5f5f5` 窗口底色。使用 Cue 的 Home/Tasks 图标和图标上、标签下的选中态。
@@ -135,11 +135,11 @@ flowchart LR
 
 - [Z1] [GUI API、状态与消息类型](../crates/zork-gui/src/api.rs)，[GUI 能力说明](../crates/zork-gui/README.md)。
 - [Z2] [部署、持久存储、模型与工作目录边界](../README.md)，[Agent 架构](zork-agent-architecture.md)。
-- [Z3] [Gateway 显式消息入口](../crates/gateway/src/im_entry.rs)，[SQLite 表](../crates/gateway/src/db.rs)。
+- [Z3] [Station 显式消息入口](../crates/station/src/im_entry.rs)，[SQLite 表](../crates/station/src/db.rs)。
 - [Z5] [工具 registry 与本地执行](../crates/agent/src/session/tools.rs)，[进程执行接口](../crates/agent/src/session/ports/process.rs)。
-- [Z6] [Gateway 当前路由](../crates/gateway/src/http.rs)。
-- [Z7] [后台 JobSupervisor](../crates/gateway/src/jobs.rs)。
-- [Z8] [本地产品任务](local-product-tasks.md)，[任务存储与迁移](../crates/gateway/src/db/tasks.rs)。
+- [Z6] [Station 当前路由](../crates/station/src/http.rs)。
+- [Z7] [后台 JobSupervisor](../crates/station/src/jobs.rs)。
+- [Z8] [本地产品任务](local-product-tasks.md)，[任务存储与迁移](../crates/station/src/db/tasks.rs)。
 
 ### Cue（旁边的只读参考 checkout）
 

@@ -79,7 +79,7 @@ def main():
         assert current_pids() == pids
         assert json.loads(run(['install', '--data', str(fresh), '--json']).stdout)['installed']
         assert current_pids() == pids
-        assert all((fresh / 'bin' / name).is_file() for name in ['zork', 'zork-gateway', 'zork-agent', 'zork-gh'])
+        assert all((fresh / 'bin' / name).is_file() for name in ['zork', 'zork-station', 'zork-agent', 'zork-gh'])
         settings = json.loads((fresh / 'service.json').read_text())
         assert settings == {'enabled': True, 'start_at_login': True}
         config = json.loads((fresh / 'config.json').read_text())

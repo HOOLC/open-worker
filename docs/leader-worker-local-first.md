@@ -1,40 +1,40 @@
 # Local-first Agent Mesh：客户端、节点与 Leader / Worker
 
-2026-09-05。已确认的产品方向，依据用户反馈、Cue 当前产品模型及 Zork 现有实现。原始设计与阶段拆分见本文；当前使用方式和已实现范围见 [原生客户端与节点](desktop-node.md)。用户补充确认：真正退出客户端时关闭其管理的本机 Gateway；最小化继续运行；复用现有 Session 工作目录，后续增加自动归档。
+2026-09-05。已确认的产品方向，依据用户反馈、Cue 当前产品模型及 Zork 现有实现。原始设计与阶段拆分见本文；当前使用方式和已实现范围见 [原生客户端与节点](desktop-node.md)。用户补充确认：真正退出客户端时关闭其管理的本机 Station；最小化继续运行；复用现有 Session 工作目录，后续增加自动归档。
 
 ## 1. 产品主线
 
-客户端首次打开时没有已连接节点，也不自动启动本机 Gateway。用户可以启用本机节点，或者连接已有节点。节点托管 Profile 与 Agent；首页呈现已获授权的 Leader，用户与 Leader 进行长期对话。Leader 按需要创建持久任务，指派给本机或远端 Worker。每个 Worker Task 使用独立 Session，结果回到 Task、Leader 对话、Inbox 与 Drive。
+客户端首次打开时没有已连接节点，也不自动启动本机 Station。用户可以启用本机节点，或者连接已有节点。节点托管 Profile 与 Agent；首页呈现已获授权的 Leader，用户与 Leader 进行长期对话。Leader 按需要创建持久任务，指派给本机或远端 Worker。每个 Worker Task 使用独立 Session，结果回到 Task、Leader 对话、Inbox 与 Drive。
 
-用户已明确的方向：本机节点默认关闭；客户端可控制它；节点启动 daemon / Gateway；客户端可配置 Profile 和 OAuth；Agent 有 Leader 和 Worker 两种角色；Leader 固定单 Session；Worker 按 Task 创建 Session；首页直接对话 Leader；任务由 Leader 指派。
+用户已明确的方向：本机节点默认关闭；客户端可控制它；节点启动 daemon / Station；客户端可配置 Profile 和 OAuth；Agent 有 Leader 和 Worker 两种角色；Leader 固定单 Session；Worker 按 Task 创建 Session；首页直接对话 Leader；任务由 Leader 指派。
 
-本文对“Worker 只会被 Leader 看到”的建议解释：Worker 不出现在首页的独立聊天入口；用户仍能在节点设置中创建和管理 Worker，在任务详情中查看其状态、结果及停止操作。Worker 的发现与调用权限由 Gateway 检查，不能仅通过隐藏 UI 或提示词约束。
+本文对“Worker 只会被 Leader 看到”的建议解释：Worker 不出现在首页的独立聊天入口；用户仍能在节点设置中创建和管理 Worker，在任务详情中查看其状态、结果及停止操作。Worker 的发现与调用权限由 Station 检查，不能仅通过隐藏 UI 或提示词约束。
 
 ## 2. 客户端和节点必须是两个对象
 
 | 对象 | 职责 | 生命周期 |
 | --- | --- | --- |
-| Client | 原生 UI、设备连接、用户身份凭据、本地历史副本、草稿与命令 outbox | 打开应用即可使用，不要求启动 Gateway |
+| Client | 原生 UI、设备连接、用户身份凭据、本地历史副本、草稿与命令 outbox | 打开应用即可使用，不要求启动 Station |
 | Node | 托管 Profile、Agent、产品数据、工作区及执行权限 | 用户显式启用；与管理它的本机客户端共同退出 |
-| Gateway | 节点的产品服务边界；认证、IM、Task、调度、复制与管理 API | 节点 daemon 的入口 |
+| Station | 节点的产品服务边界；认证、IM、Task、调度、复制与管理 API | 节点 daemon 的入口 |
 | Agent runtime | 执行持久 Session、模型与工具 | 由节点管理，按工作需要启用 |
 | Mesh transport | 已认证连接、消息与对象传输 | 不决定 Agent 权限或任务归属 |
 
-产品上只展示“本机节点”一个开关。`zork` Supervisor 管理 Gateway 和 Agent；Synchronicity 通过库 API 成为 Gateway 自身 runtime 的异步组件。GUI 不各自拉起一套后台服务，多窗口复用同一个已登记节点。
+产品上只展示“本机节点”一个开关。`zork` Supervisor 管理 Station 和 Agent；Synchronicity 通过库 API 成为 Station 自身 runtime 的异步组件。GUI 不各自拉起一套后台服务，多窗口复用同一个已登记节点。
 
-**首次冷启动：** 0 个已连接节点、0 个 Agent、没有 Gateway / runtime / Synch 后台进程。首页仅有“启用本机节点”和“连接已有节点”。本机节点可以作为未启用的设置项显示，不冒充已注册在线节点。
+**首次冷启动：** 0 个已连接节点、0 个 Agent、没有 Station / runtime / Synch 后台进程。首页仅有“启用本机节点”和“连接已有节点”。本机节点可以作为未启用的设置项显示，不冒充已注册在线节点。
 
 **启用本机节点：** 初始化稳定节点身份和私有数据目录 → 启动 daemon → 等待实际 readiness → 显示“运行中，尚未配置 Agent”。失败显示原因与重试，不因开关已点击就显示在线。启动不自动添加模型账户、不创建默认 Leader、不授予远端执行权限。
 
-**最小化与退出客户端分别处理。** macOS 保留原生 Dock 最小化能力；最小化时客户端和本机节点继续运行。真正退出客户端时，停止其管理的本机 Gateway 及 runtime / transport 子进程，不留下独立常驻 daemon，也不安装节点登录自启服务。退出先关闭任务入口、请求停止在途运行并持久化中断事实，再有界等待退出；不能为了等待整个任务完成而一直无法退出。异常关闭也要通过父进程生命周期绑定清理子进程。退出 MBA 不停止其他设备客户端管理的节点。停止不删除身份、Profile 或历史；停用与删除节点是不同操作。持久记录用户停用意图，监督器不把主动停止误判为崩溃而自动拉起。
+**最小化与退出客户端分别处理。** macOS 保留原生 Dock 最小化能力；最小化时客户端和本机节点继续运行。真正退出客户端时，停止其管理的本机 Station 及 runtime / transport 子进程，不留下独立常驻 daemon，也不安装节点登录自启服务。退出先关闭任务入口、请求停止在途运行并持久化中断事实，再有界等待退出；不能为了等待整个任务完成而一直无法退出。异常关闭也要通过父进程生命周期绑定清理子进程。退出 MBA 不停止其他设备客户端管理的节点。停止不删除身份、Profile 或历史；停用与删除节点是不同操作。持久记录用户停用意图，监督器不把主动停止误判为崩溃而自动拉起。
 
 节点状态拆成：进程可达、执行就绪、是否接新任务、当前活动。模型凭据过期应显示“节点在线，模型需重新登录”，不能把整个节点标成离线。
 
 ### 客户端不开节点时如何连接 Mesh
 
-客户端仍需要网络和本地数据库，不能只剩远端 Gateway 的临时 UI 缓存。已同步历史、草稿和待发送消息保存在客户端自己的数据库中；关闭应用后重开仍存在。离线修改先成为本地命令，不冒充远端已接受；任务验收/取消等受权威端校验的操作显示待确认。
+客户端仍需要网络和本地数据库，不能只剩远端 Station 的临时 UI 缓存。已同步历史、草稿和待发送消息保存在客户端自己的数据库中；关闭应用后重开仍存在。离线修改先成为本地命令，不冒充远端已接受；任务验收/取消等受权威端校验的操作显示待确认。
 
-当前 `zork-mesh::Control` 依赖本机 Synch daemon，不能直接承诺已经具备“无本机节点的原生 Mesh 客户端”。实施时要补一个明确的客户端传输适配层：优先复用 Synch 的客户端能力；若必须启动 helper，则它只在用户连接远端且客户端运行期间存在，负责出站传输，不启动 Gateway/runtime、不接受执行任务。内嵌 transport 与 helper 的具体选择先做小型兼容性实验。
+当前 `zork-mesh::Control` 依赖本机 Synch daemon，不能直接承诺已经具备“无本机节点的原生 Mesh 客户端”。实施时要补一个明确的客户端传输适配层：优先复用 Synch 的客户端能力；若必须启动 helper，则它只在用户连接远端且客户端运行期间存在，负责出站传输，不启动 Station/runtime、不接受执行任务。内嵌 transport 与 helper 的具体选择先做小型兼容性实验。
 
 首次未连接时不启动 helper；GUI 退出后 helper 退出。纯客户端身份与可托管 Agent 的 Node 身份分开登记。SSH 连接可保留为过渡或高级连接方式，不能把它描述为完成了 P2P 端到端验收。
 
@@ -107,7 +107,7 @@ Participant 是接收目标，sender 是消息作者：Task 可同时有 Leader 
 
 ```mermaid
 flowchart LR
-  C["MBA 客户端\n本机节点可关闭"] -->|"可见消息／持久命令"| G["mini1 Gateway\nLeader 与任务权威"]
+  C["MBA 客户端\n本机节点可关闭"] -->|"可见消息／持久命令"| G["mini1 Station\nLeader 与任务权威"]
   G --> L["Leader\n固定 Session"]
   L -->|"创建并指派 Task"| T["Task Conversation"]
   T -->|"授权的 assignment"| W["其他节点 Worker\n每 Task 独立 Session"]
@@ -124,7 +124,7 @@ Worker 的 Agent 目录只向获授权的 Leader 暴露；不向全网广播全�
 
 一个普通 Task 的流程：
 
-1. Leader 提交目标、验收要求、输入产物引用及 Worker；Gateway 在一个事务里保存 Task、Participant、assignment 和 outbox。
+1. Leader 提交目标、验收要求、输入产物引用及 Worker；Station 在一个事务里保存 Task、Participant、assignment 和 outbox。
 2. 执行节点检查 Worker、授权、工作区和容量，持久接收后才返回 ACK；以 assignment 绑定同一 Session。
 3. Worker 显式提交进度、结果和文件。源节点保留快照；接收方按 origin/path/full hash 验证文件后建立本地副本。
 4. Task 权威节点记录结果并定向通知 Leader；Leader 可要求返工，也可整理用户可见回复。
@@ -140,7 +140,7 @@ Worker V1 无自行创建/转派其他 Worker 的权限；需要拆分时向 Lea
 
 初次从未同步的数据无法凭空离线出现。远端停止时仍可本地写草稿、排队发消息；创建 Agent、修改授权和验收结果等命令要等待权威节点确认。关闭 GUI 后，纯客户端不承诺继续收取新事件，重开后按游标补齐。
 
-对话与 Task 使用明确的 owner 及 revision；草稿可以先按设备保存；不把整份 Gateway SQLite 做多写同步。Profile 凭据、内部 transcript 和整个执行目录不在默认复制范围中。完整备份应区分产品副本、运行恢复数据和节点密钥，导出历史本身不等于可以恢复正在运行的 Leader。
+对话与 Task 使用明确的 owner 及 revision；草稿可以先按设备保存；不把整份 Station SQLite 做多写同步。Profile 凭据、内部 transcript 和整个执行目录不在默认复制范围中。完整备份应区分产品副本、运行恢复数据和节点密钥，导出历史本身不等于可以恢复正在运行的 Leader。
 
 此处遵循 local-first 的离线数据与用户所有权原则，同时明确协调执行需要单一有效写者的边界。[Local-first software](https://www.inkandswitch.com/essay/local-first/)
 
@@ -160,7 +160,7 @@ Worker V1 无自行创建/转派其他 Worker 的权限；需要拆分时向 Lea
 
 ### A. 独立客户端与可选本机节点
 
-去掉 GUI 启动必须连某个 Gateway 的前提，增加 client.db、零节点首页、本机节点管理、连接目录和状态；停止把 SSH 固定 mini1 作为产品默认入口。使用独立数据目录试验，保留既有安装、历史和回退方式。
+去掉 GUI 启动必须连某个 Station 的前提，增加 client.db、零节点首页、本机节点管理、连接目录和状态；停止把 SSH 固定 mini1 作为产品默认入口。使用独立数据目录试验，保留既有安装、历史和回退方式。
 
 验收：冷启动无后台节点进程；启用/停止可见且真实；最小化继续运行，真正退出和异常关闭均清理本机节点子进程；不开节点也能查看已同步历史。
 
@@ -190,6 +190,6 @@ Worker V1 无自行创建/转派其他 Worker 的权限；需要拆分时向 Lea
 - Cue [RouterConversationInput](../../cue/systems/apps/salix_im/lib/salix_im/router_conversation_input.ex)：固定 Group Router Conversation 与定向用户消息。
 - Cue [AgentDeliveryPayload](../../cue/systems/apps/salix_im/lib/salix_im/agent_delivery_payload.ex)：Router canonical Session 与 Worker Participant 的独立 Session 选择。
 - Zork [Profile Provider 接口](../crates/profile/src/providers/mod.rs)、[浏览器授权实现](../crates/profile/src/providers/anthropic.rs)、[device flow 示例](../crates/profile/src/providers/github_copilot.rs)：可复用基础，需重整公开认证协议。
-- Zork [产品任务](../crates/gateway/src/db/tasks.rs)、[当前 Mesh 范围](local-mesh.md)：Task 与 session 的强绑定、一次 Mesh 委派限制需要演进。
+- Zork [产品任务](../crates/station/src/db/tasks.rs)、[当前 Mesh 范围](local-mesh.md)：Task 与 session 的强绑定、一次 Mesh 委派限制需要演进。
 
 Cue 的中心 Workspace/enrollment/compute 控制面不直接搬入此设计。我们保留其产品语义，把权威分配到用户明确控制的节点；没有运营方账户也能建立本机 Leader 和 Worker。

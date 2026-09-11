@@ -1,10 +1,10 @@
 # 本地产品任务与结果验收
 
-2026-09-05，在现有 Gateway / GPUI 工作台上实现的第一版产品任务闭环。
+2026-09-05，在现有 Station / GPUI 工作台上实现的第一版产品任务闭环。
 
 ## 已实现的行为
 
-创建桌面会话时，Gateway 同时建立独立 `task_id`。第一条用户消息保存为任务目标，并生成持久标题。继续对话不替换原目标。任务标题不再依赖 GUI 是否恰好加载到了历史第一页。
+创建桌面会话时，Station 同时建立独立 `task_id`。第一条用户消息保存为任务目标，并生成持久标题。继续对话不替换原目标。任务标题不再依赖 GUI 是否恰好加载到了历史第一页。
 
 Agent 的一轮执行结束只增加一条运行记录。显式 `chat.post_message(kind="final")` 投递的消息成为候选结果，将任务置为待验收；普通进度消息不会触发验收。用户通过 GUI 的“验收完成”确认当前结果，之后任务才进入已完成。
 
@@ -21,7 +21,7 @@ stateDiagram-v2
     Cancelled --> Open: 重新打开
 ```
 
-已完成、已取消的任务仍可阅读目标、结果与消息，但发送新消息会返回 `409 task_closed_reopen_required`；GUI 隐藏输入器并提供重新打开按钮。任务可以跨多轮运行，也会在 Gateway 绑定更换底层 Agent session 时保留任务 ID 和先前运行记录。
+已完成、已取消的任务仍可阅读目标、结果与消息，但发送新消息会返回 `409 task_closed_reopen_required`；GUI 隐藏输入器并提供重新打开按钮。任务可以跨多轮运行，也会在 Station 绑定更换底层 Agent session 时保留任务 ID 和先前运行记录。
 
 看板和列表显示六类状态：待处理、执行中、需要处理、待验收、已完成、已取消。“执行中 / 需要处理”由运行状态组合得出，数据库的产品决策状态只有 `open / review / completed / cancelled`。`wait` 或 `finished` 不等于已验收。
 
@@ -31,7 +31,7 @@ stateDiagram-v2
 
 Inbox 汇总尚未关闭的待验收结果，以及运行失败、中断或已断开 runtime 绑定的任务。当前轮仍在运行时暂不进入队列；验收、取消任务或重新执行后随轮询更新。它不是所有对话的镜像，也不把一次查看当作验收。
 
-左侧采用 Cue 的 320px 列表栏，提供全部、待验收、需要处理筛选；右侧按需读取完整目标和候选结果。点击“打开任务”进入同一任务的对话与验收控制。列表状态来自本机 SQLite，不额外保存通知副本；重启后重新构建，Agent 离线仍可读取。Gateway 断开时显示上次读取内容及重试提示。完整列表目前未分页。
+左侧采用 Cue 的 320px 列表栏，提供全部、待验收、需要处理筛选；右侧按需读取完整目标和候选结果。点击“打开任务”进入同一任务的对话与验收控制。列表状态来自本机 SQLite，不额外保存通知副本；重启后重新构建，Agent 离线仍可读取。Station 断开时显示上次读取内容及重试提示。完整列表目前未分页。
 
 这版尚无已读标记、通知归档、系统推送或跨节点同步。截图见 收件箱验证记录（本地生成的验收记录）。
 
@@ -41,7 +41,7 @@ Inbox 汇总尚未关闭的待验收结果，以及运行失败、中断或已�
 
 | 表 | 用途 |
 | --- | --- |
-| `product_tasks` | 独立任务 ID、Gateway 会话绑定、原始目标、持久标题、产品状态、版本和候选结果消息引用 |
+| `product_tasks` | 独立任务 ID、Station 会话绑定、原始目标、持久标题、产品状态、版本和候选结果消息引用 |
 | `task_runs` | 独立运行 ID，关联真实 Agent session / turn，记录开始、结束及运行结果 |
 | `task_event_cursors` | 每个任务和 Agent session 的持久事件游标，用于断线与重启后的重放去重 |
 | `task_decisions` | 验收、重新打开、取消的版本记录，以及该决定对应的结果消息 ID |
@@ -54,7 +54,7 @@ Inbox 汇总尚未关闭的待验收结果，以及运行失败、中断或已�
 
 ## API
 
-这些接口与现有本地 GUI API 使用同一个 Gateway runtime 地址：
+这些接口与现有本地 GUI API 使用同一个 Station runtime 地址：
 
 | 接口 | 返回 / 行为 |
 | --- | --- |
@@ -76,17 +76,17 @@ Inbox 汇总尚未关闭的待验收结果，以及运行失败、中断或已�
 
 ## 验证
 
-- Gateway + GUI：65 项 Rust 测试，包含迁移、运行替换、重放、摘要、冲突和消息事务回滚。
-- Gateway + GUI 全目标 Clippy `-D warnings`。
+- Station + GUI：65 项 Rust 测试，包含迁移、运行替换、重放、摘要、冲突和消息事务回滚。
+- Station + GUI 全目标 Clippy `-D warnings`。
 - 任务与 Drive 两组真实进程 API 测试（各 2 项）：覆盖原消息投递边界、验收版本冲突、重启、同一任务多轮运行、运行中的取消拒绝、真实停止及 Agent 离线读取；文件 CLI 提交、版本和原始字节恢复。
 - 1280×800、900×600 各 7 项原生 UI 测试：覆盖创建、结果详情、验收、重启、重新打开、取消、过滤和看板横向滚动，并保留此前语言、菜单、草稿与消息投递回归。
 
 ```sh
-CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4 cargo test --locked -p zork-gateway -p zork-gui
-CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4 cargo clippy --locked -p zork-gateway -p zork-gui --all-targets -- -D warnings
-CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4 cargo build --locked -p zork-gateway -p zork-gui
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4 cargo test --locked -p zork-station -p zork-gui
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4 cargo clippy --locked -p zork-station -p zork-gui --all-targets -- -D warnings
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=4 cargo build --locked -p zork-station -p zork-gui
 python3 crates/zork-gui/tests/test_product_tasks.py
 python3 scripts/test-desktop-headless.py
 ```
 
-原生截图（本地生成的验收记录）。界面测试使用隔离 Gateway / Agent 和测试工作目录。
+原生截图（本地生成的验收记录）。界面测试使用隔离 Station / Agent 和测试工作目录。

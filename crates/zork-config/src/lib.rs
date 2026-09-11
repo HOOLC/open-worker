@@ -422,6 +422,13 @@ pub fn zork_pid_path(data_root: &Path) -> PathBuf {
 }
 
 pub fn ready_pid_path(data_root: &Path, name: &str) -> PathBuf {
+    // Preserve the readiness contract with already installed supervisors and
+    // clients when the executable is renamed from Gateway to Station.
+    let name = if name == "zork-station" {
+        "zork-gateway"
+    } else {
+        name
+    };
     data_root.join("run").join(format!("{name}.pid"))
 }
 
@@ -754,6 +761,25 @@ mod tests {
         );
         clear_ready_pid(dir.path(), "zork-agent");
         assert_eq!(read_ready_pid(dir.path(), "zork-agent").unwrap(), None);
+    }
+
+    #[test]
+    fn station_readiness_remains_visible_to_existing_clients() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir(dir.path().join("run")).unwrap();
+        let legacy = dir.path().join("run/zork-gateway.pid");
+        fs::write(&legacy, std::process::id().to_string()).unwrap();
+        assert_eq!(
+            read_ready_pid(dir.path(), "zork-station").unwrap(),
+            Some(std::process::id())
+        );
+        clear_ready_pid(dir.path(), "zork-station");
+        assert!(!legacy.exists());
+        write_ready_pid(dir.path(), "zork-station").unwrap();
+        assert_eq!(
+            read_ready_pid(dir.path(), "zork-gateway").unwrap(),
+            Some(std::process::id())
+        );
     }
 
     #[test]

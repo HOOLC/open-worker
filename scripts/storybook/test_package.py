@@ -5,7 +5,7 @@ import re
 import tomllib
 ROOT=Path(__file__).resolve().parents[2]
 ui=tomllib.loads((ROOT/'crates/zork-ui/Cargo.toml').read_text())
-assert not {'reqwest','rusqlite','zork-config','zork-mesh','zork-gateway','axum'} & ui['dependencies'].keys()
+assert not {'reqwest','rusqlite','zork-config','zork-mesh','zork-station','axum'} & ui['dependencies'].keys()
 native=tomllib.loads((ROOT/'crates/zork-gui/Cargo.toml').read_text())
 web=tomllib.loads((ROOT/'crates/zork-gui-web/Cargo.toml').read_text())
 assert native['dependencies']['zork-ui']['path']=='../zork-ui'

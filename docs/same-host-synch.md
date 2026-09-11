@@ -1,6 +1,6 @@
 # Same-host Synch connections
 
-Desktop Gateway and client transport have separate Synch identities. They keep
+Desktop Station and client transport have separate Synch identities. They keep
 Synch's membership checks, QUIC peer authentication, recovery, publication, and
 replication. Same-host discovery only supplies an address to the existing iroh
 address lookup interface; it does not add trust or implement a second protocol.
@@ -14,9 +14,9 @@ files from stopped processes remain useful as restart hints, but their addresses
 are not returned without the live file lease. Only loopback addresses are accepted.
 
 The endpoint registers before Synch's startup readoption. Previously paired
-desktop clients resume alongside the local Gateway, using the Gateway identity
-saved from its authenticated snapshot. This avoids waiting for a Gateway snapshot
-before starting the very client that Gateway recovery is trying to contact.
+desktop clients resume alongside the local Station, using the Station identity
+saved from its authenticated snapshot. This avoids waiting for a Station snapshot
+before starting the very client that Station recovery is trying to contact.
 Ephemeral ports are not copied into durable Mesh membership or peer configuration.
 
 Normal Synch connections are reused by Synch. Public discovery and relay remain
@@ -29,7 +29,7 @@ is still draining. It waits for that lock rather than spawning a doomed duplicat
 A live desktop-owned supervisor can transfer its lease; independently started
 or background supervisors retain their existing lifecycle.
 
-Gateway closes its enrollment endpoint and Synch runtime concurrently. Closing
+Station closes its enrollment endpoint and Synch runtime concurrently. Closing
 enrollment first can spend a second draining public address probes before Synch
 even starts closing, outliving GPUI's quit callback window. Both endpoint closes
 are still awaited; no transport drain or storage lifecycle lock is skipped.

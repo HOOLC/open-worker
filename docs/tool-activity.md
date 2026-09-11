@@ -25,7 +25,7 @@ ToolInstance::new(contract, implementation, compatibility)?
 
 运行时在 `StepCompleted` 的 invocation 中保存 `activity`，因此工具注册变化或重连不会重新解释已保存的动作。该字段是可选的，旧事件仍能回放；没有元数据的旧事件使用通用文案。注册回调和回退文案不进入模型的工具 schema；模型只填写 `call` 的 `action` 参数。
 
-Gateway 解析伙伴名称和任务标题，将 `labels` 和 `detail` 放入 status 的每条 call。未知引用省略目标，不把内部 ID 当名称显示。客户端选择语言并展示，不维护工具名匹配表。旧客户端仍可忽略新增字段。
+Station 解析伙伴名称和任务标题，将 `labels` 和 `detail` 放入 status 的每条 call。未知引用省略目标，不把内部 ID 当名称显示。客户端选择语言并展示，不维护工具名匹配表。旧客户端仍可忽略新增字段。
 
 未完成工具按 invocation ID 保留，新步骤添加工具，结果仅移除对应调用。思考与工具执行可以并存，`tools_started.thinking` 表示此时模型也在运行；显式等待不会因为其他后台工具完成而消失。正常结束、取消和失败仍使用现有终态规则。
 
@@ -36,6 +36,6 @@ Gateway 解析伙伴名称和任务标题，将 `labels` 和 `detail` 放入 sta
 文字使用实际字体排版测量，右侧 padding 固定为 12 个逻辑像素，截断时仍保留。桌面只在文案变化时重新测量；Android 复用文字测量缓存。每帧只采样动画位置，静止后停止刷新。
 
 
-显示状态机位于 `crates/zork-client-core/src/activity.rs`。Gateway 适配 durable 步骤事件与 transient 输出统计，调用同一个 Rust reducer，并以 `state: live` 发出完整 `presentation`。桌面直接使用 core 文案，Android 使用 core 序列化的本地化文案；两个客户端不实现计时或速度算法。新版 Gateway 的 `live` 状态需要配套客户端。
+显示状态机位于 `crates/zork-client-core/src/activity.rs`。Station 适配 durable 步骤事件与 transient 输出统计，调用同一个 Rust reducer，并以 `state: live` 发出完整 `presentation`。桌面直接使用 core 文案，Android 使用 core 序列化的本地化文案；两个客户端不实现计时或速度算法。新版 Station 的 `live` 状态需要配套客户端。
 
 输出统计涵盖正文、推理片段与工具参数，但只传递字节计数，不泄露推理正文。供应商目前仅在结束时给出 token usage，实时速度按 UTF-8 字节数除以 4 粗估，并始终显示 `≈`，不是精确 tokenizer 计数；无输出能力的供应商不会伪造流速。速度采用 2 秒窗口，停顿降为 0；首个输出立即通知，后续输出统计每 250 毫秒合并。core 提供下一次显示期限，旧动作到期无需新事件；无变化时停止计时与状态推送。步骤 ID 防止迟到输出污染下一次请求，采样桶数量固定有界。

@@ -18,7 +18,7 @@ UI 可以保存未提交的输入缓冲区、字段焦点、选中的记录 ID �
 
 按钮提交 `SaveModel`、`RemoveModel`、`ConnectDevice`、`SendMessage` 等业务操作及输入值。网络方法、路径、协议字段与重试策略留在 core 内部。操作结果通过共享订阅发布；平台只应用 core 给出的快照或变化，不从 outbox 的消失推断送达，不从点击回调增删另一份业务列表。
 
-平台能力适配不构成绕过边界的通道。系统 API 的具体调用可以由宿主实现，业务策略、授权范围与请求生命周期由 core 决定；浏览器引擎及系统对话框不能成为 UI 任意请求 Gateway 的入口。
+平台能力适配不构成绕过边界的通道。系统 API 的具体调用可以由宿主实现，业务策略、授权范围与请求生命周期由 core 决定；浏览器引擎及系统对话框不能成为 UI 任意请求 Station 的入口。
 
 以下做法不算完成分离：
 
@@ -37,7 +37,7 @@ UI 可以保存未提交的输入缓冲区、字段焦点、选中的记录 ID �
 | 模型设置         | `model_edit` 提供表单默认值、复制、校验、增删规则；`Profiles` 发布完整详情并协调提交                                          | 桌面与 JNI 使用同一模型输入契约；服务端 `update_models_checked` 在存储锁内比较预期配置，拒绝覆盖并发改动 |
 | Profile 授权     | `Profiles` 管理开始、轮询、回调、超时、取消及操作代次；迟到的创建结果会撤销自身                                               | UI 展示授权状态、打开链接、采集回调；视图释放不自动取消其他订阅者的授权                                  |
 | 桌面账号         | `desktop::Directory` 与 `AccountFlow` 管理 OIDC、取消、身份验证和持久化                                                       | UI 只打开 core 发布的 URL、呈现忙碌状态并提交登录/取消/退出意图                                          |
-| Agent 设置       | `agent_edit` 与 `Agents::save` 提供候选模型、兼容 Profile、思考深度修复、校验与提交                                           | 桌面和 Android 不再各自修复选择或构造 Gateway 请求                                                       |
+| Agent 设置       | `agent_edit` 与 `Agents::save` 提供候选模型、兼容 Profile、思考深度修复、校验与提交                                           | 桌面和 Android 不再各自修复选择或构造 Station 请求                                                       |
 | Mesh 设置与邀请  | `MeshAdmin` 管理配置修改、成员操作、邀请与审批生命周期；手机加入由 core enrollment 管理                                       | UI 订阅配置、邀请和状态，并提交 `MeshAction`                                                             |
 | 设备目录         | `desktop::Directory` 管理成员版本、节点持久化、连接绑定和状态发布                                                             | `DesktopRoot` 按 core 绑定版本复用视图；连接更换或设备移除后，旧请求不能写回目录                         |
 | 节点运行时       | `desktop::node`、`desktop::transport` 管理宿主进程、配置、启动、关闭及后台接管                                                | UI 提交开关意图；系统窗口和 app 退出只提供宿主生命周期信号                                               |

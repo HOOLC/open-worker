@@ -72,7 +72,7 @@ async fn perform(root: &Path, version: &str) -> Result<()> {
         version,
         "正在切换版本并重启设备，连接将暂时中断",
     )?;
-    let previous_gateway = zork_config::read_ready_pid(root, "zork-gateway")?;
+    let previous_station = zork_config::read_ready_pid(root, "zork-station")?;
     let mut socket = tokio::net::UnixStream::connect(zork_config::zork_sock_path(root)).await?;
     socket.write_all(b"activate-update\n").await?;
     let mut reply = String::new();
@@ -103,7 +103,7 @@ async fn perform(root: &Path, version: &str) -> Result<()> {
             ensure!(operation["phase"] != "failed", "{}",
                 operation["message"].as_str().unwrap_or("版本切换失败"));
             let mut failed = false;
-            if zork_config::read_ready_pid(root, "zork-gateway")?.is_some_and(|pid| Some(pid) != previous_gateway) {
+            if zork_config::read_ready_pid(root, "zork-station")?.is_some_and(|pid| Some(pid) != previous_station) {
                 let verify = async {
                     let info: serde_json::Value = client.get(format!("{base}/v1/node/info"))
                         .bearer_auth(&token).send().await?.error_for_status()?.json().await?;
@@ -127,7 +127,7 @@ async fn perform(root: &Path, version: &str) -> Result<()> {
     }).await.context("新版本未在两分钟内恢复连接。旧版本保留在 run/update-previous-*；请检查设备日志，升级后的数据不会自动回退")?
 }
 
-/// Called only by the supervisor after the Gateway (including its Agent) has exited. Renaming the
+/// Called only by the supervisor after the Station (including its Agent) has exited. Renaming the
 /// complete directory prevents mixing components. exec preserves the supervisor
 /// PID, background service relationship, and original startup arguments.
 pub fn activate(root: &Path) -> Result<()> {

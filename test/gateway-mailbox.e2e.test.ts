@@ -84,7 +84,7 @@ describe.sequential("Gateway mailbox delivery", () => {
   });
 
   it("routes every observed Slack message to one proactive Agent session without replying automatically", { timeout: 30_000 }, async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-gateway-proactive-"));
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-station-proactive-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const slack = new MockSlackServer("UBOT", { botId: "BBOT", appId: "AAPP" });
     const slackPort = await slack.start();
@@ -104,7 +104,7 @@ describe.sequential("Gateway mailbox delivery", () => {
         agent: `127.0.0.1:${agentPort}`,
       },
     });
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -169,7 +169,7 @@ describe.sequential("Gateway mailbox delivery", () => {
 
     await stopChild(gateway);
     await new Promise((resolve) => setTimeout(resolve, 100));
-    const restartedGateway = spawnBinary("zork-gateway", {
+    const restartedGateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -261,7 +261,7 @@ describe.sequential("Gateway mailbox delivery", () => {
   });
 
   it("exposes Agent-owned profiles to Admin without a Gateway profile store", { timeout: 30_000 }, async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-gateway-profile-proxy-"));
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-station-profile-proxy-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const slack = new MockSlackServer("UBOT");
     const slackPort = await slack.start();
@@ -281,7 +281,7 @@ describe.sequential("Gateway mailbox delivery", () => {
         agent: `127.0.0.1:${agentPort}`,
       },
     });
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -335,7 +335,7 @@ describe.sequential("Gateway mailbox delivery", () => {
   });
 
   it("updates fixed selections independently and preserves automatic Profile intent", { timeout: 30_000 }, async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-gateway-selection-"));
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-station-selection-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const slack = new MockSlackServer("UBOT");
     const slackPort = await slack.start();
@@ -385,7 +385,7 @@ describe.sequential("Gateway mailbox delivery", () => {
         agent: `127.0.0.1:${agentPort}`,
       },
     });
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -452,7 +452,7 @@ describe.sequential("Gateway mailbox delivery", () => {
   });
 
   it("acknowledges a Slack envelope only after the Agent durably accepts its mailbox message", { timeout: 30_000 }, async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-gateway-mailbox-ack-"));
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-station-mailbox-ack-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const stateDir = path.join(tempRoot, "state");
     const slack = new MockSlackServer("UBOT");
@@ -474,7 +474,7 @@ describe.sequential("Gateway mailbox delivery", () => {
         agent: `127.0.0.1:${agentPort}`,
       },
     });
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -587,7 +587,7 @@ describe.sequential("Gateway mailbox delivery", () => {
   });
 
   it("does not turn an auth-blocked input into an automatic Slack reply", { timeout: 30_000 }, async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-gateway-mailbox-auth-block-"));
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-station-mailbox-auth-block-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const stateDir = path.join(tempRoot, "state");
     const slack = new MockSlackServer("UBOT");
@@ -609,7 +609,7 @@ describe.sequential("Gateway mailbox delivery", () => {
         agent: `127.0.0.1:${agentPort}`,
       },
     });
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -637,7 +637,7 @@ describe.sequential("Gateway mailbox delivery", () => {
   });
 
   it("ignores previous database names and delivers through a fresh Gateway database", { timeout: 30_000 }, async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-gateway-mailbox-legacy-"));
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-station-mailbox-legacy-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const stateDir = path.join(tempRoot, "state");
     await fs.mkdir(stateDir, { recursive: true });
@@ -664,7 +664,7 @@ describe.sequential("Gateway mailbox delivery", () => {
         agent: `127.0.0.1:${agentPort}`,
       },
     });
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });
@@ -717,7 +717,7 @@ describe.sequential("Gateway mailbox delivery", () => {
   });
 
   it("finishes each Slack delivery at mailbox receipt without tracking Agent execution", { timeout: 45_000 }, async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-gateway-mailbox-"));
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-station-mailbox-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const stateDir = path.join(tempRoot, "state");
 
@@ -766,7 +766,7 @@ describe.sequential("Gateway mailbox delivery", () => {
       })}\n`,
     );
 
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--agent-token", agentToken],
     });
@@ -857,7 +857,7 @@ describe.sequential("Gateway mailbox delivery", () => {
   });
 
   it("runs two Slack connections with independent normal and proactive routing", { timeout: 45_000 }, async () => {
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-gateway-multi-im-"));
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "zork-station-multi-im-"));
     cleanups.push(async () => removeTempRoot(tempRoot));
     const normalSlack = new MockSlackServer("U-NORMAL", { botId: "B-NORMAL", appId: "A-NORMAL" });
     const proactiveSlack = new MockSlackServer("U-PROACTIVE", {
@@ -901,7 +901,7 @@ describe.sequential("Gateway mailbox delivery", () => {
         agent: `127.0.0.1:${agentPort}`,
       },
     });
-    const gateway = spawnBinary("zork-gateway", {
+    const gateway = spawnBinary("zork-station", {
       cwd: brokerRoot,
       args: ["--data", tempRoot, "--fake-agent", "--agent-token", agentToken],
     });

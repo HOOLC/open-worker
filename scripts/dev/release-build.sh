@@ -6,7 +6,7 @@
 # All kache steps degrade gracefully when no remote is configured.
 set -euo pipefail
 
-target_bins=(zork zork-gateway zork-agent zork-gh)
+target_bins=(zork zork-station zork-agent zork-gh)
 data_bin=/src/.data/bin
 
 kache_setup() {
@@ -41,7 +41,7 @@ else
   echo "building without kache" >&2
 fi
 
-cargo build --locked --release -p zork -p zork-gateway -p zork-agent-server
+cargo build --locked --release -p zork -p zork-station -p zork-agent-server
 cargo build --locked --release -p zork-gh --bin zork-gh
 
 mkdir -p "$data_bin"

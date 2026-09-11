@@ -38,7 +38,7 @@ def generate(source, destination):
 
 def main():
     assets = Path(__file__).resolve().parents[2] / 'crates/zork-ui/assets/app'
-    for source, output in [('icon.png', 'Zork.icns'), ('gateway.svg', 'ZorkGateway.icns'),
+    for source, output in [('icon.png', 'Zork.icns'), ('station.svg', 'ZorkStation.icns'),
                            ('supervisor.svg', 'ZorkSupervisor.icns')]:
         generate(assets / source, assets / output)
 

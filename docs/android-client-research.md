@@ -4,7 +4,7 @@
 
 ## 建议
 
-首版定位为已有 Zork 设备的移动访问端：手机发消息、查看任务、接收结果、验收结果，Gateway/Agent 继续在原设备执行。保持 Device → Leader → Task 的对象关系，手机界面采用逐级导航。
+首版定位为已有 Zork 设备的移动访问端：手机发消息、查看任务、接收结果、验收结果，Station/Agent 继续在原设备执行。保持 Device → Leader → Task 的对象关系，手机界面采用逐级导航。
 
 默认建议 Kotlin + Jetpack Compose 界面，抽取 Rust 客户端核心，通过 UniFFI/JNI 接入。Zork 最新工作树已完成进程内嵌入 Synch，下一步验证现有嵌入实现的安卓兼容性和连接，再全面制作页面。GPUI Mobile 值得一个有明确退出条件的兼容性实验；目前不能把现有桌面组件直接复用当作已证实能力。
 
@@ -18,9 +18,9 @@
 | Mesh 生命周期 | `crates/zork-gui/src/desktop/transport.rs` | 最新实现由 GUI 进程内 Tokio runtime 承载 Synch，无独立传输辅助进程 |
 | Synch 控制 | `crates/zork-mesh/src/managed.rs`、`node.rs` | 直接 `Node::open`，通过 `MeshNode` 调用 engine；已移除 `synch-cli` 依赖及本地 gRPC 控制层，固定 Synch 0.1.8 revision |
 | 客户端数据 | `crates/zork-gui/src/desktop/store.rs` | SQLite 保存设备、缓存、文件、outbox；草稿清空与入队同一事务，可抽出复用 |
-| 去重 | `crates/gateway/src/http.rs` | 消息携带稳定 `request_id`，服务端核对回执；不能推导所有任务操作都具有相同幂等性 |
-| 权限 | `crates/gateway/src/mesh.rs` | 独立 client 授权、路由白名单和订阅撤权检查；手机应保留客户端身份 |
-| 首次接入 | `desktop/mod.rs::sync_mesh_devices`、`docs/mesh-onboarding.md` | 现有注册依赖已授权入口；现有安装邀请面向 Gateway，手机首次配对仍需单独设计 |
+| 去重 | `crates/station/src/http.rs` | 消息携带稳定 `request_id`，服务端核对回执；不能推导所有任务操作都具有相同幂等性 |
+| 权限 | `crates/station/src/mesh.rs` | 独立 client 授权、路由白名单和订阅撤权检查；手机应保留客户端身份 |
+| 首次接入 | `desktop/mod.rs::sync_mesh_devices`、`docs/mesh-onboarding.md` | 现有注册依赖已授权入口；现有安装邀请面向 Station，手机首次配对仍需单独设计 |
 
 特别注意两条产品语义：可见回复只来自显式 `chat.post_message`，不能直接显示内部 Agent transcript；运行结束不等于产品任务验收完成。
 
@@ -43,7 +43,7 @@ GPUI Mobile 已提供 Android arm64 示例，但其清单使用 Zed Git revision
 
 用户再次告知完成改动后，已核对新的直接嵌入实现：`managed::start_owned` 取得生命周期锁并调用 `Node::open`，自行管理 anti-entropy、publisher、maintenance、scanner、watcher、replicas、checkouts 后台循环及关闭；`MeshNode` 直接提供身份、授权、对象读写、请求和订阅。`control.rs` 已移除，Cargo 清单和锁文件未再出现 `synch-cli`。旧本地控制 socket/token 只作为迁移残留清理，不再作为当前调用通路。
 
-下一步复用 `MeshNode` 向安卓 UI 暴露有界接口。仍需检查 `synch-cc`、`synch-sock` 等依赖对 Android 的影响，按需拆分仅供客户端使用的 feature，并评估手机所需的后台循环和资源预算。Android 侧不承接 Gateway/Agent 进程管理。上述更新经过源码核对，本次未重跑嵌入测试或进行 Android 编译。
+下一步复用 `MeshNode` 向安卓 UI 暴露有界接口。仍需检查 `synch-cc`、`synch-sock` 等依赖对 Android 的影响，按需拆分仅供客户端使用的 feature，并评估手机所需的后台循环和资源预算。Android 侧不承接 Station/Agent 进程管理。上述更新经过源码核对，本次未重跑嵌入测试或进行 Android 编译。
 
 进一步核对 v0.1.8：已有 `Node::init(data_dir, domain)`、`Node::open(NodeConfig)`、`Node::shutdown()`，以及 `trust_add`、`remember_peer` 等接口。`NodeConfig.socket_workers = 0` 明确关闭本机 socket 执行池和对应服务通告，适合作为移动访问端配置；仍可调用远端 `connect_socket`。当前 Zork `managed::start_owned` 尚未显式设置该字段，客户端与执行节点的配置需区分。待验证的是安卓依赖兼容性与 Zork 适配，并非必须等待上游开发嵌入 API。Android 应显式传入应用私有数据目录，不依赖桌面默认目录推断。
 
@@ -55,7 +55,7 @@ Iroh 提供 Kotlin/Android 构建入口，但 Iroh 只是下层连接能力，�
 
 ## 首版范围
 
-- 配对已有设备：手机生成自己的身份，已授权设备确认；邀请过期、单次使用、拒绝和撤销有明确结果。初期可用粘贴配对码，随后加二维码；避免将 Gateway 安装命令直接包装成手机接入。
+- 配对已有设备：手机生成自己的身份，已授权设备确认；邀请过期、单次使用、拒绝和撤销有明确结果。初期可用粘贴配对码，随后加二维码；避免将 Station 安装命令直接包装成手机接入。
 - 设备 → Leader → 任务列表，显示最后确认状态；设备离线不推断任务停止。
 - 创建/继续任务、消息历史、Markdown、活动状态、停止操作；逐条核对 Mesh 白名单支持的实际业务入口。
 - 离线已读历史、草稿、待发送队列；进程重启和丢回执后继续使用同一个请求 ID。
@@ -66,7 +66,7 @@ Iroh 提供 Kotlin/Android 构建入口，但 Iroh 只是下层连接能力，�
 
 ## 实施顺序与验收
 
-1. **连接实验**：Android arm64 加载 Rust 库，生成持久身份，经授权连接隔离测试 Gateway，读设备信息和一页消息，订阅事件。覆盖同网直连及 relay 场景，手机进程结束不影响远端任务。
+1. **连接实验**：Android arm64 加载 Rust 库，生成持久身份，经授权连接隔离测试 Station，读设备信息和一页消息，订阅事件。覆盖同网直连及 relay 场景，手机进程结束不影响远端任务。
 2. **恢复实验**：发送后断网、丢回执、杀进程、重新打开、Wi-Fi/蜂窝切换；消息无重复可见副本，离线缓存可读，撤销权限后请求被拒绝。
 3. **抽取共享核心**：建议新建 `crates/zork-client-core`，包含 DTO、投递/回执、缓存与 transport trait；桌面和 Android 尽量共享现有嵌入传输，平台分别管理生命周期。UI、窗口、文件选择、密钥存储为平台适配。复用现有 outbox/client-mesh 回归场景。
 4. **移动 UI**：完成首版任务闭环；中文输入、多行编辑、键盘遮挡、系统返回、长消息滚动、字体缩放、TalkBack、旋转恢复做真机验收。
@@ -78,4 +78,4 @@ Iroh 提供 Kotlin/Android 构建入口，但 Iroh 只是下层连接能力，�
 
 本次检查未在 PATH/常规安装位置找到 adb、sdkmanager、Android Studio 或 Android SDK；`java_home -V` 报告无 Java Runtime。磁盘当时可用约 8.4 GiB，低于迁移记录的约 23 GiB。正式构建前需要安排工具链和缓存空间，优先真机，暂不叠加大型模拟器镜像。
 
-只进行了源码、固定版本依赖和官方资料核对；未安装工具链、编译 APK、修改生产代码、启动真实设备任务或生成真实邀请。下一步最有价值的交付是一个能连接隔离 Gateway、支持断线恢复的 Android 实验 APK。
+只进行了源码、固定版本依赖和官方资料核对；未安装工具链、编译 APK、修改生产代码、启动真实设备任务或生成真实邀请。下一步最有价值的交付是一个能连接隔离 Station、支持断线恢复的 Android 实验 APK。

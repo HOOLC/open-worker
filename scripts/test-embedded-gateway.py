@@ -28,7 +28,7 @@ def main():
             return json.loads(raw) if raw else None
     for index in range(3):
         with (node.root / f'gateway-{index}.log').open('wb') as log:
-            gateway = subprocess.Popen([str(f.TARGET / 'zork-gateway'), '--data', str(node.root), '--fake-agent'],
+            gateway = subprocess.Popen([str(f.TARGET / 'zork-station'), '--data', str(node.root), '--fake-agent'],
                                        stdout=log, stderr=log)
             try:
                 f.wait(lambda: node.get('/v1/mesh').get('origin') == origin, 'standalone Gateway Synch ready')
@@ -51,7 +51,7 @@ def main():
                     assert (node.workspace/'executions.txt').read_text().splitlines() == ['started']
                 # Fixed bind is reused on each restart; shutdown must release it.
                 if index == 1:
-                    duplicate = subprocess.run([str(f.TARGET / 'zork-gateway'), '--data', str(node.root), '--fake-agent'],
+                    duplicate = subprocess.run([str(f.TARGET / 'zork-station'), '--data', str(node.root), '--fake-agent'],
                                                capture_output=True, text=True, timeout=20)
                     assert duplicate.returncode != 0, 'duplicate node ownership was accepted'
                     assert node.get('/v1/mesh')['origin'] == origin, 'duplicate stopped the owner'
