@@ -51,10 +51,7 @@ futures-channel = "0.3.31"
 tokio.workspace = true
 serde.workspace = true
 serde_json = "1.0.145"
-thiserror = "2.0.17"
 bytes = "1"
-unicode-segmentation = "1.12"
-markdown = "1.0.0"
 axum = "0.8"
 image = { version = "0.25", default-features = false, features = ["png"] }
 tempfile = { version = "3", optional = true }

@@ -155,7 +155,6 @@ async fn connect_once(
     let bot = fetch_bot_identity(slack).await?;
     let bot_self = crate::slack::BotSelf {
         user_id: bot.user_id.clone(),
-        mention: format!("<@{}>", bot.user_id),
         raw: json!({
             "surface": bot.surface,
             "userId": bot.user_id,

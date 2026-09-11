@@ -1062,9 +1062,6 @@ fn render_code(
         .into_any_element()
 }
 
-#[allow(dead_code)]
-fn _mdast_type_check(_: &mdast::Root) {}
-
 /// Share message text between frames and parse each visible Markdown row once.
 #[cfg(test)]
 mod selection_style_tests {

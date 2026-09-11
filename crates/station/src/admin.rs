@@ -1,4 +1,4 @@
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post};
@@ -910,9 +910,6 @@ pub(crate) fn unauthorized() -> Response {
     )
         .into_response()
 }
-
-#[allow(unused)]
-fn unused(_: Path<String>, _: Query<Value>) {}
 
 #[cfg(test)]
 mod tests {

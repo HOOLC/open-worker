@@ -924,7 +924,6 @@ async fn bot_identity(State(state): State<AppState>, Path(session_key): Path<Str
         Ok(bot) => {
             *connection.bot.lock().await = Some(crate::slack::BotSelf {
                 user_id: bot.user_id.clone(),
-                mention: bot.mention.clone(),
                 raw: bot.raw.clone(),
             });
             Json(json!({ "ok": true, "self": bot.raw })).into_response()
@@ -1410,25 +1409,10 @@ async fn resolve_github_token(State(state): State<AppState>, Json(body): Json<Va
                 "mode": "initiator",
                 "slackUserId": user_id,
                 "githubLogin": mapping.get("githubAuthor"),
-                "token": mapping.get("token").cloned().or_else(|| state.config.default_github_token.clone().map(Value::String)),
+                "token": mapping.get("token"),
             }))
             .into_response();
         }
-    }
-    if let (Some(login), Some(token)) = (
-        state.config.default_github_login.as_ref(),
-        state.config.default_github_token.as_ref(),
-    ) {
-        return Json(json!({
-            "ok": true,
-            "mode": "default",
-            "defaultSource": "env",
-            "githubLogin": login,
-            "token": token,
-            "reason": if initiator_user_id.is_some() { "initiator_unbound" } else { "missing_initiator" },
-            "slackUserId": initiator_user_id,
-        }))
-        .into_response();
     }
     (
         StatusCode::CONFLICT,

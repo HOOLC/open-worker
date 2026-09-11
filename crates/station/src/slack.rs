@@ -12,8 +12,6 @@ pub struct SlackGateway {
 #[derive(Clone, Debug, Default)]
 pub struct BotSelf {
     pub user_id: String,
-    #[allow(dead_code)]
-    pub mention: String,
     pub raw: Value,
 }
 
@@ -44,7 +42,6 @@ impl SlackGateway {
             .to_string();
         let mention = format!("<@{user_id}>");
         Ok(BotSelf {
-            mention: mention.clone(),
             user_id,
             raw: json!({
                 "surface": "Slack",

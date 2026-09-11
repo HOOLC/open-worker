@@ -1,7 +1,7 @@
 {
   "name": "@agent-session-broker/zork",
   "version": "0.1.30",
-  "description": "Local-first AI workspace with durable agents, native clients, and mesh-connected stations.",
+  "description": "A local-first agent mesh. Run persistent agents on your own devices and connect them to collaborate.",
   "homepage": "https://github.com/HOOLC/zork#readme",
   "bugs": {
     "url": "https://github.com/HOOLC/zork/issues"

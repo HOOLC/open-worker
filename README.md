@@ -1,15 +1,33 @@
-# Zork
+<p align="center">
+  <img src="crates/zork-ui/assets/app/icon.png" alt="Zork icon" width="112" />
+</p>
 
-A local-first workspace for running durable AI agents across your own devices.
+<h1 align="center">Zork</h1>
 
-Zork brings conversations, coding workspaces, model connections and background
-agent work into one system. Use the native desktop or Android client, connect
-Slack when you need an external entry, and connect devices through a mesh.
-Workspace files and runtime state stay on your devices; model requests go to the
-providers you configure.
+<p align="center"><strong>A local-first agent mesh.</strong></p>
+
+<p align="center">
+  <a href="#get-started">Get started</a> ·
+  <a href="#the-mesh">The mesh</a> ·
+  <a href="#documentation">Documentation</a> ·
+  <a href="https://github.com/HOOLC/zork/actions">Build status</a>
+</p>
+
+Run persistent agents on your own devices, connect them through a mesh, and let
+them collaborate. Agents keep durable state and work in local workspaces. They
+communicate through chats and can delegate work to other agents and devices.
+
+Use native desktop and Android clients to talk to your agents and manage the mesh.
+Model requests go to the providers you configure.
+
+![Hand-drawn Zork architecture: four peer Stations each host agents, skills, MCP connections, services, files and local state. Mesh links carry messages, delegation and authorized resource sharing. Desktop and Android clients connect to one or more Stations; a client and Station can run on the same device.](docs/images/agent-mesh.png)
 
 ## What you can do
 
+- **Build an agent mesh.** Connect stations and clients with invitations and
+  explicit permissions. Let agents communicate and delegate across devices.
+- **Share capabilities across devices.** Reuse skills, call another Station's
+  MCP tools, access shared services and exchange files through the mesh.
 - **Work through conversations.** Choose agents and models, send messages and
   files, follow progress, and manage work from a native client.
 - **Keep agents running.** Each agent session has a durable mailbox and event
@@ -17,47 +35,14 @@ providers you configure.
 - **Use your existing workspaces.** Agents run tools in an explicitly selected
   directory. They can read and edit files, run shell commands and use configured
   MCP services and skills.
-- **Connect your devices.** Mesh membership, invitations and permissions connect
-  stations and clients; agents can delegate work to another device.
 - **Bring your own model connections.** Profiles manage provider credentials and
   model access. Slack is optional; the native conversation entry works without it.
 
-## How it fits together
+## Get started
 
-**Station** is the node service, now named `zork-station` (formerly
-`zork-gateway`). It owns conversations, delivery, device APIs and mesh coordination.
-The `zork` supervisor starts one Station process, which embeds the agent runtime.
-The standalone `zork-agent` binary is available for independent use.
-
-```mermaid
-flowchart LR
-    Desktop[Desktop client] --> Core[Shared Rust client core]
-    Android[Android client] --> Core
-    Core --> Station[Station]
-    Slack[Slack] --> Station
-    Station --> Agent[Embedded agent runtime]
-    Station <-->|Mesh| Peers[Other stations]
-    Agent --> Workspaces[Workspaces and tools]
-```
-
-Clients submit business intents through `zork-client-core` and render its state.
-Agent transcripts are execution context; visible chat messages are sent explicitly
-through the chat tools. See the [client boundary](docs/client-core-ui-boundary.md)
-and [chat contracts](docs/chat-tools-design.md).
-
-## Project status
-
-Zork is under active development. This repository contains the macOS desktop
-client, Android client, native Station, agent runtime and shared client core.
-The Web design workspace is an interactive reference and component showcase.
-
-Native node packaging targets macOS and Linux on ARM64 and x64. Source and
-packaging workflows are available; use a published native release only when its
-complete assets are present on the [Releases page](https://github.com/HOOLC/zork/releases).
-Desktop app packaging and signing follow a separate workflow. See
-[native releases](docs/native-releases.md) for platform requirements and validation.
-
-## Run from source
+Zork is under active development. Start from source today; prebuilt node packages
+are available only when a complete release is published on the
+[Releases page](https://github.com/HOOLC/zork/releases).
 
 You need Rust, Node.js 22.15 or later and pnpm 10.33.0. Coding tools also use
 `git`, `gh` and `rg` from `PATH`. Native desktop builds require the platform
@@ -90,7 +75,8 @@ devices. Product settings live in the node's `config.json`; local build settings
 may use an ignored `.env`. See [desktop setup](docs/desktop-node.md) and
 [Android development](apps/android/README.md).
 
-## Install a native node
+<details>
+<summary>Install a published native node</summary>
 
 Once a complete native release is available:
 
@@ -108,7 +94,53 @@ version pinning, service management and upgrades.
 `zork upgrade --version X.Y.Z` downloads and activates a complete release.
 Neither a fresh install nor joining a mesh silently upgrades a running node.
 
-## Repository map
+</details>
+
+## The mesh
+
+- **An agent** runs a persistent session with a mailbox, tools and a local
+  workspace. It can exchange messages and delegate tasks to other agents.
+- **A Station** hosts agents on one device. It owns local state, conversations,
+  skills, MCP connections, services and files, and participates in the mesh as a peer.
+- **A client** connects to Stations to start conversations, configure agents and
+  manage devices and resources. One client can connect to multiple Stations;
+  a client and Station can also run on the same device. Stations can keep working
+  after the client closes.
+
+The mesh carries both agent collaboration and access to shared capabilities.
+Each owning Station checks the permissions it has granted:
+
+| Resource     | Across the mesh                                                                   |
+| ------------ | --------------------------------------------------------------------------------- |
+| **Skills**   | Share a fixed package revision, then bind it to an agent on the target Station.   |
+| **MCP**      | Discover and call tools on the Station that hosts the connection and credentials. |
+| **Services** | Open explicitly shared applications through their hosting Station.                |
+| **Files**    | Exchange selected attachments and artifacts; receivers keep their own snapshots.  |
+
+Each Station keeps its own state and workspace. Sharing is explicit; joining the
+mesh does not automatically replicate entire directories. See
+[device and skill tools](docs/agent-node-tools.md), [Mesh MCP](docs/mesh-mcp.md),
+[service sharing](docs/service-sharing.md) and [file sharing](docs/conversation-files.md).
+
+## Development
+
+The `zork` supervisor starts one `zork-station` process, which embeds the agent
+runtime. The standalone `zork-agent` binary is also available. Clients submit
+business intents through `zork-client-core` and render its state. See the
+[agent architecture](docs/zork-agent-architecture.md),
+[client boundary](docs/client-core-ui-boundary.md) and
+[chat contracts](docs/chat-tools-design.md).
+
+This repository includes a macOS desktop client and Android client. Native node
+packaging targets macOS and Linux on ARM64 and x64; desktop app packaging and
+signing follow a separate workflow. The Web design workspace is an interactive
+reference and component showcase. See [native releases](docs/native-releases.md)
+for platform requirements.
+
+<details>
+<summary>Repository map and validation commands</summary>
+
+### Repository map
 
 | Path                                                       | Responsibility                                                |
 | ---------------------------------------------------------- | ------------------------------------------------------------- |
@@ -125,7 +157,7 @@ Neither a fresh install nor joining a mesh silently upgrades a running node.
 | `benchmarks`                                               | Independent benchmarks and experiments                        |
 | `docs`                                                     | Architecture, contracts and operating guides                  |
 
-## Development checks
+### Development checks
 
 ```sh
 pnpm format:check
@@ -142,13 +174,18 @@ Design workspace: `pnpm design:dev`, `pnpm design:check`, `pnpm design:test` and
 Functional tests and performance measurements have separate entry points; see
 [validation](docs/zork-agent-status.md) and [repository content](docs/repository-content.md).
 
-## Further reading
+</details>
+
+## Documentation
 
 - [Station naming and compatibility](docs/station-naming.md)
 - [Agent architecture](docs/zork-agent-architecture.md)
 - [Chat and message tools](docs/chat-tools-design.md)
 - [Client core and UI boundaries](docs/client-core-ui-boundary.md)
 - [Mesh and device connections](docs/local-mesh.md)
+- [Device, MCP and skill tools](docs/agent-node-tools.md)
+- [Shared services](docs/service-sharing.md)
+- [Files and attachments](docs/conversation-files.md)
 - [Native releases and upgrades](docs/native-releases.md)
 - [Design workspace](apps/zork-design/README.md)
 

@@ -22,13 +22,6 @@ pub struct RuntimeConfig {
     pub zork_gh_path: Option<PathBuf>,
     pub real_gh_path: Option<PathBuf>,
 
-    #[allow(dead_code)]
-    pub isolated_mcp_servers: Vec<String>,
-    #[allow(dead_code)]
-    pub github_api_base_url: String,
-    pub default_github_login: Option<String>,
-    pub default_github_token: Option<String>,
-    #[allow(dead_code)]
     pub started_at: String,
 }
 
@@ -57,10 +50,6 @@ impl RuntimeConfig {
             zork_gh_path: None,
             real_gh_path: None,
 
-            isolated_mcp_servers: vec!["linear".into(), "notion".into()],
-            github_api_base_url: "https://api.github.com".into(),
-            default_github_login: None,
-            default_github_token: None,
             started_at: now_rfc3339(),
             data_root,
         })

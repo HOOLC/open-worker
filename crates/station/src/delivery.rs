@@ -29,14 +29,8 @@ async fn apply_bot(connection: &ConnectionRuntime, self_json: &Value) {
     if user_id.is_empty() {
         return;
     }
-    let mention = self_json
-        .get("mention")
-        .and_then(Value::as_str)
-        .map(ToOwned::to_owned)
-        .unwrap_or_else(|| format!("<@{user_id}>"));
     *connection.bot.lock().await = Some(BotSelf {
         user_id,
-        mention,
         raw: self_json.clone(),
     });
 }
