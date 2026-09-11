@@ -1,0 +1,10 @@
+import type { Catalog, PageFixture, Story } from "../workbench/types";
+type LegacyProfile = {
+  id: string;
+  profile_id: string;
+  name: string;
+  node: string;
+  provider: string;
+  billing: string;
+  models: Array<Record<string, unknown>>;
+  verified: b

@@ -1,0 +1,49 @@
+//! Desktop conversation navigation and shared icon buttons.
+use crate::design::CUE_UI;
+use gpui::{prelude::*, px, rgb, svg, Div};
+
+pub const PANEL_BACKGROUND: u32 = CUE_UI.palette.canvas;
+pub const ICON_COLOR: u32 = CUE_UI.palette.muted;
+pub const DISABLED_COLOR: u32 = CUE_UI.palette.subtle;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ShellRoute {
+    Home,
+    Task(String),
+}
+
+pub struct ShellState {
+    route: ShellRoute,
+    pub rail_open: bool,
+}
+
+impl Default for ShellState {
+    fn default() -> Self {
+        Self {
+            route: ShellRoute::Home,
+            rail_open: true,
+        }
+    }
+}
+impl ShellState {
+    pub fn route(&self) -> &ShellRoute {
+        &self.route
+    }
+    pub fn navigate(&mut self, route: ShellRoute) {
+        self.route = route;
+    }
+}
+
+pub fn icon_button(
+    id: impl Into<gpui::ElementId>,
+    icon: &'static str,
+    enabled: bool,
+) -> gpui::Stateful<Div> {
+    zork_ui::controls::icon_button_sized(id, enabled, zork_ui::controls::IconButtonSize::Compact)
+        .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation())
+        .child(svg().path(icon).size(px(16.)).text_color(rgb(if enabled {
+            ICON_COLOR
+        } else {
+            DISABLED_COLOR
+        })))
+}

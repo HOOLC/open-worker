@@ -1,0 +1,842 @@
+{
+  "api_version": "v1",
+  "revision": 7,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 900.0,
+    "height": 600.0
+  },
+  "elements": [
+    {
+      "id": "brand-header",
+      "role": "status",
+      "label": "Zork",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 72.0,
+        "y": 0.0,
+        "width": 120.0,
+        "height": 48.0
+      },
+      "visible_bounds": {
+        "x": 72.0,
+        "y": 0.0,
+        "width": 120.0,
+        "height": 48.0
+      },
+      "center": {
+        "x": 132.0,
+        "y": 24.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "composer-input",
+      "role": "text_input",
+      "label": "做任何事",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 285.0,
+        "y": 507.0,
+        "width": 250.0,
+        "height": 24.0
+      },
+      "visible_bounds": {
+        "x": 285.0,
+        "y": 507.0,
+        "width": 250.0,
+        "height": 24.0
+      },
+      "center": {
+        "x": 410.0,
+        "y": 519.0
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "composer-options",
+      "role": "button",
+      "label": "添加",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 277.0,
+        "y": 539.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 277.0,
+        "y": 539.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 293.0,
+        "y": 555.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "composer-surface",
+      "role": "status",
+      "label": "消息输入区",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 264.0,
+        "y": 486.0,
+        "width": 292.0,
+        "height": 98.0
+      },
+      "visible_bounds": {
+        "x": 264.0,
+        "y": 486.0,
+        "width": 292.0,
+        "height": 98.0
+      },
+      "center": {
+        "x": 410.0,
+        "y": 535.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "conversation-device",
+      "role": "status",
+      "label": "mini1",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 512.0,
+        "y": 12.5,
+        "width": 44.0,
+        "height": 18.0
+      },
+      "visible_bounds": {
+        "x": 512.0,
+        "y": 12.5,
+        "width": 44.0,
+        "height": 18.0
+      },
+      "center": {
+        "x": 534.0,
+        "y": 21.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "conversation-header",
+      "role": "status",
+      "label": "对话成员",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 340.0,
+        "height": 44.0
+      },
+      "visible_bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 340.0,
+        "height": 44.0
+      },
+      "center": {
+        "x": 410.0,
+        "y": 22.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "desktop-manage",
+      "role": "button",
+      "label": "设置",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 8.0,
+        "y": 560.0,
+        "width": 224.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 8.0,
+        "y": 560.0,
+        "width": 224.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 120.0,
+        "y": 576.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "device-add",
+      "role": "button",
+      "label": "连接设备",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 8.0,
+        "y": 524.0,
+        "width": 224.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 8.0,
+        "y": 524.0,
+        "width": 224.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 120.0,
+        "y": 540.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "device-mini1",
+      "role": "button",
+      "label": "mini1 · 在线",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 8.0,
+        "y": 56.0,
+        "width": 224.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 8.0,
+        "y": 56.0,
+        "width": 224.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 120.0,
+        "y": 72.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "header-member-leader",
+      "role": "button",
+      "label": "产品 Leader，查看成员",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 264.0,
+        "y": 8.5,
+        "width": 26.0,
+        "height": 26.0
+      },
+      "visible_bounds": {
+        "x": 264.0,
+        "y": 8.5,
+        "width": 26.0,
+        "height": 26.0
+      },
+      "center": {
+        "x": 277.0,
+        "y": 21.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-bar-0",
+      "role": "button",
+      "label": "用户输入 · 已接收 · 检查项目配置并运行测试。",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 625.0,
+        "y": 133.0,
+        "width": 4.0,
+        "height": 22.0
+      },
+      "visible_bounds": {
+        "x": 625.0,
+        "y": 133.0,
+        "width": 4.0,
+        "height": 22.0
+      },
+      "center": {
+        "x": 627.0,
+        "y": 144.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-bar-1",
+      "role": "button",
+      "label": "模型请求 · 已完成 · 先检查配置，再运行测试。",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 652.5,
+        "y": 165.0,
+        "width": 55.0,
+        "height": 22.0
+      },
+      "visible_bounds": {
+        "x": 652.5,
+        "y": 165.0,
+        "width": 55.0,
+        "height": 22.0
+      },
+      "center": {
+        "x": 680.0,
+        "y": 176.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-bar-2",
+      "role": "button",
+      "label": "read_file · 已完成 · package.json",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 707.5,
+        "y": 197.0,
+        "width": 13.75,
+        "height": 22.0
+      },
+      "visible_bounds": {
+        "x": 707.5,
+        "y": 197.0,
+        "width": 13.75,
+        "height": 22.0
+      },
+      "center": {
+        "x": 714.375,
+        "y": 208.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-bar-3",
+      "role": "button",
+      "label": "shell · 失败 · pnpm test",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 735.0,
+        "y": 197.0,
+        "width": 82.5,
+        "height": 22.0
+      },
+      "visible_bounds": {
+        "x": 735.0,
+        "y": 197.0,
+        "width": 82.5,
+        "height": 22.0
+      },
+      "center": {
+        "x": 776.25,
+        "y": 208.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-bar-4",
+      "role": "button",
+      "label": "模型请求 · 运行中 · ",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 831.25,
+        "y": 165.0,
+        "width": 68.75,
+        "height": 22.0
+      },
+      "visible_bounds": {
+        "x": 831.25,
+        "y": 165.0,
+        "width": 68.75,
+        "height": 22.0
+      },
+      "center": {
+        "x": 865.625,
+        "y": 176.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-close",
+      "role": "button",
+      "label": "关闭 Session 历史",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 856.0,
+        "y": 5.5,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 856.0,
+        "y": 5.5,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 872.0,
+        "y": 21.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-fit",
+      "role": "button",
+      "label": "全部",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 853.0,
+        "y": 53.5,
+        "width": 37.0,
+        "height": 24.0
+      },
+      "visible_bounds": {
+        "x": 853.0,
+        "y": 53.5,
+        "width": 37.0,
+        "height": 24.0
+      },
+      "center": {
+        "x": 871.5,
+        "y": 65.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-older",
+      "role": "button",
+      "label": "加载更早记录",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 581.0,
+        "y": 287.0,
+        "width": 319.0,
+        "height": 28.5
+      },
+      "visible_bounds": {
+        "x": 581.0,
+        "y": 287.0,
+        "width": 319.0,
+        "height": 28.5
+      },
+      "center": {
+        "x": 740.5,
+        "y": 301.25
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-record-0",
+      "role": "button",
+      "label": "用户输入 检查项目配置并运行测试。",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 581.0,
+        "y": 315.5,
+        "width": 319.0,
+        "height": 48.0
+      },
+      "visible_bounds": {
+        "x": 581.0,
+        "y": 315.5,
+        "width": 319.0,
+        "height": 48.0
+      },
+      "center": {
+        "x": 740.5,
+        "y": 339.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-record-1",
+      "role": "button",
+      "label": "模型请求 先检查配置，再运行测试。",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 581.0,
+        "y": 364.5,
+        "width": 319.0,
+        "height": 113.0
+      },
+      "visible_bounds": {
+        "x": 581.0,
+        "y": 364.5,
+        "width": 319.0,
+        "height": 113.0
+      },
+      "center": {
+        "x": 740.5,
+        "y": 421.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-record-2",
+      "role": "button",
+      "label": "read_file package.json",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 581.0,
+        "y": 478.5,
+        "width": 319.0,
+        "height": 46.0
+      },
+      "visible_bounds": {
+        "x": 581.0,
+        "y": 478.5,
+        "width": 319.0,
+        "height": 46.0
+      },
+      "center": {
+        "x": 740.5,
+        "y": 501.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-record-3",
+      "role": "button",
+      "label": "shell pnpm test",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 581.0,
+        "y": 525.5,
+        "width": 319.0,
+        "height": 46.0
+      },
+      "visible_bounds": {
+        "x": 581.0,
+        "y": 525.5,
+        "width": 319.0,
+        "height": 46.0
+      },
+      "center": {
+        "x": 740.5,
+        "y": 548.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-record-4",
+      "role": "button",
+      "label": "模型请求 ",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 581.0,
+        "y": 572.5,
+        "width": 319.0,
+        "height": 48.0
+      },
+      "visible_bounds": {
+        "x": 581.0,
+        "y": 572.5,
+        "width": 319.0,
+        "height": 11.5
+      },
+      "center": {
+        "x": 740.5,
+        "y": 578.25
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-zoom-in",
+      "role": "button",
+      "label": "放大",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 763.0,
+        "y": 53.5,
+        "width": 37.0,
+        "height": 24.0
+      },
+      "visible_bounds": {
+        "x": 763.0,
+        "y": 53.5,
+        "width": 37.0,
+        "height": 24.0
+      },
+      "center": {
+        "x": 781.5,
+        "y": 65.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-zoom-out",
+      "role": "button",
+      "label": "缩小",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 808.0,
+        "y": 53.5,
+        "width": 37.0,
+        "height": 24.0
+      },
+      "visible_bounds": {
+        "x": 808.0,
+        "y": 53.5,
+        "width": 37.0,
+        "height": 24.0
+      },
+      "center": {
+        "x": 826.5,
+        "y": 65.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "leader-mini1-leader",
+      "role": "button",
+      "label": "产品 Leader · 当前 领队",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 8.0,
+        "y": 90.0,
+        "width": 224.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 8.0,
+        "y": 90.0,
+        "width": 224.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 120.0,
+        "y": 106.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "message-0-0-selection",
+      "role": "status",
+      "label": "请先统一图标与头像，并保留原生界面的紧凑感。",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 298.0,
+        "y": 89.0,
+        "width": 258.0,
+        "height": 40.0
+      },
+      "visible_bounds": {
+        "x": 298.0,
+        "y": 89.0,
+        "width": 258.0,
+        "height": 40.0
+      },
+      "center": {
+        "x": 427.0,
+        "y": 109.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "message-1-0-selection",
+      "role": "status",
+      "label": "收到，先把共同组件统一。",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 381.0,
+        "y": 153.0,
+        "width": 159.0,
+        "height": 20.0
+      },
+      "visible_bounds": {
+        "x": 381.0,
+        "y": 153.0,
+        "width": 159.0,
+        "height": 20.0
+      },
+      "center": {
+        "x": 460.5,
+        "y": 163.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "send-button",
+      "role": "button",
+      "label": "发送消息",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 511.0,
+        "y": 539.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 511.0,
+        "y": 539.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 527.0,
+        "y": 555.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 300.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "zork-brand",
+      "role": "status",
+      "label": "Zork",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 8.0,
+        "y": 0.0,
+        "width": 224.0,
+        "height": 48.0
+      },
+      "visible_bounds": {
+        "x": 8.0,
+        "y": 0.0,
+        "width": 224.0,
+        "height": 48.0
+      },
+      "center": {
+        "x": 120.0,
+        "y": 24.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

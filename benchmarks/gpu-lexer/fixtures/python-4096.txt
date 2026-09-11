@@ -1,0 +1,112 @@
+"""Optional machine-local build settings. No shell evaluation of .env values."""
+import argparse
+import json
+import os
+from pathlib import Path
+import shlex
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[2]
+KEYS = {'ZORK_BUILD_ROOT', 'ZORK_BUILD_BUDGET_GIB', 'ZORK_BUILD_LOW_WATER_GIB',
+        'ZORK_BUILD_MOUNT', 'CARGO_TARGET_DIR', 'KACHE_CACHE_EXECUTABLES'}
+
+
+def settings(root=ROOT, environ=None):
+    env = dict(os.environ if environ is None else environ)
+    path = root / '.env'
+    if path.exists():
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if line.startswith('export '):
+                line = line[7:]
+            key, sep, raw = line.partition('=')
+            key = key.strip()
+            if sep and key in KEYS and key not in env:
+                values = shlex.split(raw, comments=True)
+                if len(values) > 1:
+                    raise ValueError(f'{key}: quote paths containing spaces')
+                env[key] = values[0] if values else ''
+    return env
+
+
+def build_environment(root=ROOT, environ=None, variant=None):
+    env = settings(root, environ)
+    mount = env.get('ZORK_BUILD_MOUNT')
+    if mount and not os.path.ismount(Path(mount).expanduser()):
+        raise ValueError('Configured ZORK_BUILD_MOUNT is not mounted')
+    if not env.get('CARGO_TARGET_DIR'):
+        configured = env.get('ZORK_BUILD_ROOT')
+        base = Path(configured or root / 'target').expanduser()
+        if not base.is_absolute():
+            base = root / base
+        if configured:
+            base /= variant or 'target'
+        elif variant:
+            base /= variant
+        env['CARGO_TARGET_DIR'] = str(base)
+    else:
+        target = Path(env['CARGO_TARGET_DIR']).expanduser()
+        env['CARGO_TARGET_DIR'] = str(target if target.is_absolute() else root / target)
+    return env
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--shell', action='store_true', help='Print quoted exports for eval')
+    parser.add_argument('--json', action='store_true', help='Show build settings only')
+    parser.add_argument('command', nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    env = build_environment()
+    public = {k: env[k] for k in sorted(KEYS) if k in env}
+    if args.shell:
+        for key, value in public.items():
+            print(f'export {key}={shlex.quote(value)}')
+    elif args.json:
+        print(json.dumps(public, indent=2))
+    else:
+        command = args.command
+        if command[:1] == ['--']:
+            command = command[1:]
+        if not command:
+            parser.error('provide a command or --shell/--json')
+        raise SystemExit(subprocess.call(command, cwd=ROOT, env=env))
+
+
+if __name__ == '__main__':
+    main()
+"""Optional machine-local build settings. No shell evaluation of .env values."""
+import argparse
+import json
+import os
+from pathlib import Path
+import shlex
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[2]
+KEYS = {'ZORK_BUILD_ROOT', 'ZORK_BUILD_BUDGET_GIB', 'ZORK_BUILD_LOW_WATER_GIB',
+        'ZORK_BUILD_MOUNT', 'CARGO_TARGET_DIR', 'KACHE_CACHE_EXECUTABLES'}
+
+
+def settings(root=ROOT, environ=None):
+    env = dict(os.environ if environ is None else environ)
+    path = root / '.env'
+    if path.exists():
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if line.startswith('export '):
+                line = line[7:]
+            key, sep, raw = line.partition('=')
+            key = key.strip()
+            if sep and key in KEYS and key not in env:
+                values = shlex.split(raw, comments=True)
+                if len(values) > 1:
+                    raise ValueError(f'{key}: quote paths containing spaces')
+                env[key] = values[0] if values else ''
+    return env
+
+
+def build_environment(root=ROOT, environ=None, variant=None):
+    env = settings(root, environ)
+    mount = env.get('ZORK_BUILD_MOUNT')
+    if mount and not os.path.ismount(Path(mount).expanduser()):
+        raise ValueError('Configured ZORK_BUILD_MOUNT is not mounted')

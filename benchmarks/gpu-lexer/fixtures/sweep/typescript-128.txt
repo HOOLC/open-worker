@@ -1,0 +1,4 @@
+import type { Catalog, PageFixture, Story } from "../workbench/types";
+type LegacyProfile = {
+  id: string;
+  profile_id: string

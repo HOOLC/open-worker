@@ -1,0 +1,5 @@
+pre-commit:
+  parallel: false
+  commands:
+    check:
+      run: vp staged

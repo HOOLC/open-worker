@@ -1,0 +1,177 @@
+[
+  {
+    "file": "rust-512.txt",
+    "language": "rs",
+    "source": "crates/zork-ui/src/components/message_code.rs",
+    "sha256": "316da58293be37bf88265657cc0112ff655f4a73b11cc1f4bc0b18a4477c76c1",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "rust-4096.txt",
+    "language": "rs",
+    "source": "crates/zork-ui/src/components/message_code.rs",
+    "sha256": "21747b424175aadbaf32199fa1592955d29032957aa44bd10e9295f8e69d772b",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "rust-16384.txt",
+    "language": "rs",
+    "source": "crates/zork-ui/src/components/message_code.rs",
+    "sha256": "bd2b01d30817a2a2f2e1abe14f72a2b3a673f7483e5d327950091ba187c4f9d3",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "rust-61440.txt",
+    "language": "rs",
+    "source": "crates/zork-ui/src/components/message_code.rs",
+    "sha256": "5d4bd15db1b98064e4ef8502d781d49688e3d1ab842415a38c8f5ca83f7cd178",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "rust-262144.txt",
+    "language": "rs",
+    "source": "crates/zork-ui/src/components/message_code.rs",
+    "sha256": "42ef994e899a4e526d3c1dbf35d344e581e314187a32e9691048298235740352",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "typescript-512.txt",
+    "language": "ts",
+    "source": "apps/zork-design/src/bridge/reference-entry.ts",
+    "sha256": "0334a36945e47d9bbc8d7d7c14828a84c64d0b95c25c2c3bbde627467293a22e",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "typescript-4096.txt",
+    "language": "ts",
+    "source": "apps/zork-design/src/bridge/reference-entry.ts",
+    "sha256": "600fe7f09782ccefc49bd955a846bd35cc2213cf294ad9fe401035296f581ab5",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "typescript-16384.txt",
+    "language": "ts",
+    "source": "apps/zork-design/src/bridge/reference-entry.ts",
+    "sha256": "76a57db73ef7da5583d44909e4f65a611ea508ace19b4aadfb3ee4a77c0c41b0",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "typescript-61440.txt",
+    "language": "ts",
+    "source": "apps/zork-design/src/bridge/reference-entry.ts",
+    "sha256": "7261879fb6db842a28986669e589d1d7ceee1d50ed4ba1c1436a47230fdbc1ec",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "typescript-262144.txt",
+    "language": "ts",
+    "source": "apps/zork-design/src/bridge/reference-entry.ts",
+    "sha256": "a08ea210eeb42202d869f5275c5f2d1dacddb840d212bd8a953043da64caeb63",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "json-512.txt",
+    "language": "json",
+    "source": "package.json",
+    "sha256": "4321f44739e16fda34ab5012c4f1da8d3e63103f5569d210ce200c8cabd01688",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "json-4096.txt",
+    "language": "json",
+    "source": "package.json",
+    "sha256": "d2ec080d8b6df3e4523e6684f1753737032108bd7b3c32ef02a3c03a9ae7e146",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "json-16384.txt",
+    "language": "json",
+    "source": "package.json",
+    "sha256": "908bcf3fde1d9b2d1208e9278bb7bf94c6d6f7d73a9f6e0ae590209d2cd85357",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "json-61440.txt",
+    "language": "json",
+    "source": "package.json",
+    "sha256": "5cb7b72943d1c0ab355cb9c16e82c92399aa5514a3e4a00abb94e4da5a5bffd9",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "json-262144.txt",
+    "language": "json",
+    "source": "package.json",
+    "sha256": "db6ad0b8a1abc5bcc485d297b946ddb1afc547df689d2de0b6b8893972a3ddcb",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "yaml-512.txt",
+    "language": "yaml",
+    "source": ".github/workflows/ci.yml",
+    "sha256": "c18e08c6c339ece1e69e6d26463fe33892b3813d73ee93b2fe5a009f8fb50624",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "yaml-4096.txt",
+    "language": "yaml",
+    "source": ".github/workflows/ci.yml",
+    "sha256": "226d8459ac9ca0a503953ecb6df976b2f60077fc99df77b43b6da11b42b191fe",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "yaml-16384.txt",
+    "language": "yaml",
+    "source": ".github/workflows/ci.yml",
+    "sha256": "2e5f8886b52d7d493dcdd596cdfaee6d7eeb0bb5790f80a5e66fd388d9615cc3",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "yaml-61440.txt",
+    "language": "yaml",
+    "source": ".github/workflows/ci.yml",
+    "sha256": "74ee7c7af39a096866fe43203f54403268ea463e148850a41610770ffdf043c1",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "yaml-262144.txt",
+    "language": "yaml",
+    "source": ".github/workflows/ci.yml",
+    "sha256": "2603fad435074c3d8f5fd3136ee61bd213eed4e85aa188bbe7484eecfdbaee45",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "python-512.txt",
+    "language": "py",
+    "source": "scripts/lib/build_env.py",
+    "sha256": "e4340edcad0836d767173512d953fcadbb7ab76ced0e862cc51bc787e8b0b91d",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "python-4096.txt",
+    "language": "py",
+    "source": "scripts/lib/build_env.py",
+    "sha256": "186f69508a69f9542529ea1e697b22b3eacae53ee64d24380c1849ca81577a49",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "python-16384.txt",
+    "language": "py",
+    "source": "scripts/lib/build_env.py",
+    "sha256": "1488021233d0247cfb3c5504a06af4b2d9746053e651c361ca2978a23835eb3e",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "python-61440.txt",
+    "language": "py",
+    "source": "scripts/lib/build_env.py",
+    "sha256": "db65cad18dcb16220a051b2ccba95c3a20d5361508b063810b4507a127a7ba49",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  },
+  {
+    "file": "python-262144.txt",
+    "language": "py",
+    "source": "scripts/lib/build_env.py",
+    "sha256": "546989b0d30c6ec647fa0cd8bbc8b1913b5aaf0ec64d021d662af04737d24757",
+    "construction": "whole-line prefix / repetition of repository source; may end mid-syntax"
+  }
+]

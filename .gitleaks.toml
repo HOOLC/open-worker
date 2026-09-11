@@ -1,0 +1,31 @@
+title = "Zork source secret scanning"
+
+[extend]
+useDefault = true
+
+# Test-only unsigned tokens: the literal header/signature are deliberately fake.
+[[allowlists]]
+description = "Synthetic JWT fixture in the DeepSWE adapter test"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)benchmarks/deep-swe/tests/test_pi_agent\.py$''']
+regexTarget = "secret"
+regexes = ['''^header\.[A-Za-z0-9_-]+\.signature$''']
+
+# This JSON entry is a source-file digest, not an API credential.
+[[allowlists]]
+description = "Source SHA-256 in the component capture manifest"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)apps/zork-design/components/manifest\.json$''']
+regexTarget = "line"
+regexes = ['''"crates/zork-gui/src/api\.rs": "[0-9a-f]{64}"''']
+
+# Public RFC 6455 opening-handshake example: base64 of "the sample nonce".
+[[allowlists]]
+description = "WebSocket protocol example nonce in the shared-service test"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)scripts/test-shared-services\.py$''']
+regexTarget = "secret"
+regexes = ['''^dGhlIHNhbXBsZSBub25jZQ==$''']

@@ -1,0 +1,54 @@
+/* Hallmark · task workbench · native restrained · existing zork brand */
+@font-face {
+  font-family: ZorkInter;
+  src: url(../assets/fonts/InterVariable.ttf);
+  font-display: swap;
+}
+:root {
+  --font-body: ZorkInter, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-canvas: oklch(100% 0 0);
+  --color-sidebar: oklch(96.9% 0.005 85);
+  --color-list: oklch(98.5% 0.002 85);
+  --color-text: oklch(27% 0.009 255);
+  --color-muted: oklch(52% 0.012 255);
+  --color-subtle: oklch(57% 0.01 255);
+  --color-line: oklch(91% 0.005 85);
+  --color-line-strong: oklch(82% 0.008 255);
+  --color-hover: oklch(94.8% 0.005 85);
+  --color-selected: oklch(93% 0.009 85);
+  --color-paper: oklch(96.3% 0.012 88);
+  --color-accent: oklch(68% 0.175 39);
+  --color-accent-text: oklch(48% 0.155 38);
+  --color-blue: oklch(49% 0.18 260);
+  --color-blue-bg: oklch(96% 0.02 260);
+  --color-green: oklch(46% 0.11 158);
+  --color-green-bg: oklch(96% 0.02 158);
+  --color-amber: oklch(48% 0.1 73);
+  --color-amber-bg: oklch(97% 0.028 85);
+  --color-red: oklch(48% 0.15 22);
+  --color-neutral-bg: oklch(95% 0.004 255);
+  --color-overlay: oklch(20% 0.01 255 / 0.2);
+  --color-shadow: oklch(20% 0.01 255 / 0.1);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-body: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.375rem;
+  --text-title: 1.625rem;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 0.8, 0.3);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-normal: 180ms;
+}

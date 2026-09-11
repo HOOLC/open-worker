@@ -1,0 +1,15 @@
+{
+  "package": "@lobehub/icons-static-svg",
+  "version": "1.95.0",
+  "license": "MIT",
+  "repository": "https://github.com/lobehub/lobe-icons",
+  "icons": [
+    "xai",
+    "openai",
+    "anthropic",
+    "githubcopilot",
+    "openrouter",
+    "kimi",
+    "opencode"
+  ]
+}

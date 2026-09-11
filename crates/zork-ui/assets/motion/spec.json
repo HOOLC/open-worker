@@ -1,0 +1,49 @@
+{
+  "icon": {
+    "durationMs": 680,
+    "file": "icon.svg"
+  },
+  "wordmark": {
+    "durationMs": 675,
+    "file": "wordmark.svg"
+  },
+  "linked": {
+    "durationMs": 805,
+    "file": "linked.svg"
+  },
+  "morph": {
+    "durationMs": 2000,
+    "file": "icon-to-wordmark.svg",
+    "geometry": "morph-points.json",
+    "choreography": {
+      "anticipate": [
+        0,
+        240
+      ],
+      "upper_hop": [
+        240,
+        740
+      ],
+      "land": [
+        740,
+        990
+      ],
+      "lower_crawl_to_z": [
+        820,
+        1700
+      ],
+      "upper_separate_to_ork": [
+        1010,
+        1850
+      ],
+      "settle": [
+        1850,
+        2000
+      ]
+    },
+    "correspondence": "bottom -> Z; upper left -> o; upper right -> rk; upper group jumps before separation"
+  },
+  "loop": false,
+  "reducedMotion": "static endpoints; no autoplay",
+  "status": "shared SVG and native GPUI sampled geometry"
+}

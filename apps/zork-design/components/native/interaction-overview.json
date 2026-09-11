@@ -1,0 +1,360 @@
+{
+  "api_version": "v1",
+  "revision": 12,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 800.0,
+    "height": 620.0
+  },
+  "elements": [
+    {
+      "id": "interaction-overview-canvas-browser",
+      "role": "button",
+      "label": "浏览器",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 118.0,
+        "y": 160.5,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "visible_bounds": {
+        "x": 118.0,
+        "y": 160.5,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "center": {
+        "x": 132.0,
+        "y": 174.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-canvas-chat",
+      "role": "button",
+      "label": "聊天",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 41.0,
+        "y": 160.5,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "visible_bounds": {
+        "x": 41.0,
+        "y": 160.5,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "center": {
+        "x": 55.0,
+        "y": 174.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-canvas-primary",
+      "role": "button",
+      "label": "主操作",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 343.0,
+        "y": 158.5,
+        "width": 71.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 343.0,
+        "y": 158.5,
+        "width": 71.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 378.5,
+        "y": 174.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-canvas-quiet",
+      "role": "button",
+      "label": "附件",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 284.0,
+        "y": 160.5,
+        "width": 43.0,
+        "height": 28.0
+      },
+      "visible_bounds": {
+        "x": 284.0,
+        "y": 160.5,
+        "width": 43.0,
+        "height": 28.0
+      },
+      "center": {
+        "x": 305.5,
+        "y": 174.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-canvas-settings",
+      "role": "button",
+      "label": "设置",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 207.0,
+        "y": 160.5,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "visible_bounds": {
+        "x": 207.0,
+        "y": 160.5,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "center": {
+        "x": 221.0,
+        "y": 174.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-count",
+      "role": "status",
+      "label": "已触发 0 次操作",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 489.0,
+        "width": 752.0,
+        "height": 19.5
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 489.0,
+        "width": 752.0,
+        "height": 19.5
+      },
+      "center": {
+        "x": 400.0,
+        "y": 498.75
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-sidebar-browser",
+      "role": "button",
+      "label": "浏览器",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 118.0,
+        "y": 352.0,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "visible_bounds": {
+        "x": 118.0,
+        "y": 352.0,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "center": {
+        "x": 132.0,
+        "y": 366.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-sidebar-chat",
+      "role": "button",
+      "label": "聊天",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 41.0,
+        "y": 352.0,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "visible_bounds": {
+        "x": 41.0,
+        "y": 352.0,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "center": {
+        "x": 55.0,
+        "y": 366.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-sidebar-primary",
+      "role": "button",
+      "label": "主操作",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 343.0,
+        "y": 350.0,
+        "width": 71.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 343.0,
+        "y": 350.0,
+        "width": 71.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 378.5,
+        "y": 366.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-sidebar-quiet",
+      "role": "button",
+      "label": "附件",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 284.0,
+        "y": 352.0,
+        "width": 43.0,
+        "height": 28.0
+      },
+      "visible_bounds": {
+        "x": 284.0,
+        "y": 352.0,
+        "width": 43.0,
+        "height": 28.0
+      },
+      "center": {
+        "x": 305.5,
+        "y": 366.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "interaction-overview-sidebar-settings",
+      "role": "button",
+      "label": "设置",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 207.0,
+        "y": 352.0,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "visible_bounds": {
+        "x": 207.0,
+        "y": 352.0,
+        "width": 28.0,
+        "height": 28.0
+      },
+      "center": {
+        "x": 221.0,
+        "y": 366.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 800.0,
+        "height": 620.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 800.0,
+        "height": 620.0
+      },
+      "center": {
+        "x": 400.0,
+        "y": 310.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-sample",
+      "role": "status",
+      "label": "交互反馈",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 752.0,
+        "height": 484.5
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 752.0,
+        "height": 484.5
+      },
+      "center": {
+        "x": 400.0,
+        "y": 266.25
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

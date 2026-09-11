@@ -1,0 +1,38 @@
+{
+  "reduced_motion": false,
+  "geometry_mode": "rounded-hop-unfold",
+  "duration_ms": 2000,
+  "geometry_sha256": "f9871592623f776afbf89aca7c51f219c6b1183b9e8d16a61e93ce3522e2285e",
+  "sha256": {
+    "brand-morph": {
+      "start": "a3149b93ba8643d9cd7f99d2e18f8e2e77121a3c0c8c203d62635b4a33559539",
+      "early": "b5435c9d06bdbdd806335f6097c8bac780241816a7828f420b4e13272934f2b4",
+      "mid": "8c22d8b13985a455f67899b9c1886b640402054e2cdfa32b3bbb8b4a5c14e910",
+      "unfold": "b0b40a36ad440325d26a89098b9aa875703d465ed6e1f8fda679e30c2a1cc0dc",
+      "late": "03e7a3838d860b4886e2821a0b9f34499555d85e09a10a08cba41c4aff67c38e",
+      "settle": "e9f4ed6ba32457842b841140ab6849dc9bce2e63622125bdf20610aec38beb7f",
+      "end": "73f3f71a4d7c3fa37a454449f05dcad6608315fe79c3af0006a31fe7e330d56b"
+    },
+    "brand-icon": {
+      "start": "ee9a75d43947a8fa8a10b0c6e26c4995133e99ceb576848f5f1ae0edf3ea6a48",
+      "early": "d0511728107a5d55e15d7d52497e0f0dd58a1bdc70cd1050815dcbebd8c106ab",
+      "mid": "f7d3c77d46da35ce639324731dc4d39593c0d9dfa7d654454b15c381181ed229",
+      "late": "f7d3c77d46da35ce639324731dc4d39593c0d9dfa7d654454b15c381181ed229",
+      "end": "ee9a75d43947a8fa8a10b0c6e26c4995133e99ceb576848f5f1ae0edf3ea6a48"
+    },
+    "brand-linked": {
+      "start": "ee9a75d43947a8fa8a10b0c6e26c4995133e99ceb576848f5f1ae0edf3ea6a48",
+      "early": "986c85ea349104b75a1bae34b0b5b4e23fc94016b2dc631034a479351b45fbd7",
+      "mid": "c5766e084a936248abd8613a0efa3f22bf6d7513cb18fdd38ec995096a8c8fed",
+      "late": "55757d5b4ac04dfed8cdabc01ce6f02921d4e1753edd5d3e7f0c795e4495ec33",
+      "end": "ee9a75d43947a8fa8a10b0c6e26c4995133e99ceb576848f5f1ae0edf3ea6a48"
+    },
+    "brand-wordmark": {
+      "start": "c734ed86419321227347f702cb682ce2077fd923819f395dd3282d972ac178b0",
+      "early": "c1f2f6ffae429f1b4460be4d623951f5ebfef823b7342a150e0ea5506aa90a9a",
+      "mid": "27c24bc88778391ed1ce7c4a2c5d538dc9eee44e9697e7941ae5059efeab08e8",
+      "late": "c734ed86419321227347f702cb682ce2077fd923819f395dd3282d972ac178b0",
+      "end": "c734ed86419321227347f702cb682ce2077fd923819f395dd3282d972ac178b0"
+    }
+  }
+}

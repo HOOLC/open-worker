@@ -1,0 +1,548 @@
+{
+  "api_version": "v1",
+  "revision": 12,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 900.0,
+    "height": 600.0
+  },
+  "elements": [
+    {
+      "id": "desktop-settings-column",
+      "role": "status",
+      "label": "设置内容列",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 660.0,
+        "height": 204.5
+      },
+      "visible_bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 660.0,
+        "height": 204.5
+      },
+      "center": {
+        "x": 570.0,
+        "y": 102.25
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "profile-access-false",
+      "role": "button",
+      "label": "API 接入",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 451.0,
+        "y": 235.0,
+        "width": 241.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 451.0,
+        "y": 235.0,
+        "width": 241.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 571.5,
+        "y": 251.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-access-true",
+      "role": "button",
+      "label": "订阅账号",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 208.0,
+        "y": 235.0,
+        "width": 241.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 208.0,
+        "y": 235.0,
+        "width": 241.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 328.5,
+        "y": 251.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-add",
+      "role": "button",
+      "label": "添加连接",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 773.0,
+        "y": 40.0,
+        "width": 93.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 773.0,
+        "y": 40.0,
+        "width": 93.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 819.5,
+        "y": 56.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-close-form",
+      "role": "button",
+      "label": "取消添加",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 534.0,
+        "y": 454.0,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 534.0,
+        "y": 454.0,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 563.5,
+        "y": 470.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-create-dialog",
+      "role": "status",
+      "label": "添加模型连接",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 180.0,
+        "y": 89.5,
+        "width": 540.0,
+        "height": 420.5
+      },
+      "visible_bounds": {
+        "x": 180.0,
+        "y": 89.5,
+        "width": 540.0,
+        "height": 420.5
+      },
+      "center": {
+        "x": 450.0,
+        "y": 299.75
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "profile-create-dialog-close",
+      "role": "button",
+      "label": "关闭添加模型连接",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 664.0,
+        "y": 111.5,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 664.0,
+        "y": 111.5,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 680.0,
+        "y": 127.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-create-dialog-footer",
+      "role": "status",
+      "label": "弹窗操作区",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 180.0,
+        "y": 434.0,
+        "width": 540.0,
+        "height": 76.0
+      },
+      "visible_bounds": {
+        "x": 180.0,
+        "y": 434.0,
+        "width": 540.0,
+        "height": 76.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 472.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "profile-detail-fixture",
+      "role": "button",
+      "label": "fixture",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 274.0,
+        "y": 100.5,
+        "width": 592.0,
+        "height": 72.0
+      },
+      "visible_bounds": {
+        "x": 274.0,
+        "y": 100.5,
+        "width": 592.0,
+        "height": 72.0
+      },
+      "center": {
+        "x": 570.0,
+        "y": 136.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-id",
+      "role": "text_input",
+      "label": "连接名称",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 390.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 390.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 406.0
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "profile-provider-select",
+      "role": "button",
+      "label": "OpenAI",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 314.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 314.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 330.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-provider-select-menu",
+      "role": "status",
+      "label": "下拉菜单",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 200.0,
+        "y": 352.5,
+        "width": 500.0,
+        "height": 218.0
+      },
+      "visible_bounds": {
+        "x": 200.0,
+        "y": 352.5,
+        "width": 500.0,
+        "height": 218.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 461.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "profile-signin",
+      "role": "button",
+      "label": "登录并创建 Profile",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 601.0,
+        "y": 454.0,
+        "width": 95.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 601.0,
+        "y": 454.0,
+        "width": 95.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 648.5,
+        "y": 470.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "provider-option-0",
+      "role": "option",
+      "label": "xAI / Grok",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 209.0,
+        "y": 361.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 209.0,
+        "y": 361.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 377.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "provider-option-1",
+      "role": "option",
+      "label": "OpenAI",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 209.0,
+        "y": 395.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 209.0,
+        "y": 395.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 411.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "provider-option-3",
+      "role": "option",
+      "label": "OpenCode Go",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 209.0,
+        "y": 429.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 209.0,
+        "y": 429.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 445.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "provider-option-4",
+      "role": "option",
+      "label": "Anthropic / Claude",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 209.0,
+        "y": 463.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 209.0,
+        "y": 463.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 479.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "provider-option-5",
+      "role": "option",
+      "label": "GitHub Copilot",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 209.0,
+        "y": 497.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 209.0,
+        "y": 497.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 513.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "provider-option-7",
+      "role": "option",
+      "label": "Kimi For Coding",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 209.0,
+        "y": 531.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 209.0,
+        "y": 531.5,
+        "width": 482.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 547.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 300.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

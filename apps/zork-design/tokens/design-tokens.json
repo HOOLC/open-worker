@@ -1,0 +1,191 @@
+{
+  "version": "2026-09-07",
+  "status": "approved-desktop-controls",
+  "brand": {
+    "ink": "#24272B",
+    "paper": "#F6F3EA",
+    "accent": "#E9643B",
+    "accentText": "#B83C21"
+  },
+  "ui": {
+    "color-canvas": "oklch(100% 0 0)",
+    "color-sidebar": "oklch(96.9% .005 85)",
+    "color-list": "oklch(98.5% .002 85)",
+    "color-text": "oklch(27% .009 255)",
+    "color-muted": "oklch(52% .012 255)",
+    "color-subtle": "oklch(57% .01 255)",
+    "color-line": "#EEEDEA",
+    "color-line-strong": "#DEDFDF",
+    "color-hover": "oklch(94.8% .005 85)",
+    "color-selected": "oklch(93% .009 85)",
+    "color-paper": "oklch(96.3% .012 88)",
+    "color-accent": "oklch(68% .175 39)",
+    "color-accent-text": "oklch(48% .155 38)",
+    "color-blue": "oklch(49% .18 260)",
+    "color-blue-bg": "oklch(96% .02 260)",
+    "color-green": "oklch(46% .11 158)",
+    "color-green-bg": "oklch(96% .02 158)",
+    "color-amber": "oklch(48% .10 73)",
+    "color-amber-bg": "oklch(97% .028 85)",
+    "color-red": "oklch(48% .15 22)",
+    "color-neutral-bg": "oklch(95% .004 255)",
+    "color-overlay": "oklch(20% .01 255 / .2)",
+    "color-shadow": "oklch(20% .01 255 / .10)"
+  },
+  "layout": {
+    "sidebar": {
+      "default": 240,
+      "min": 200,
+      "max": 420,
+      "resizerHitArea": 6
+    },
+    "navigation": {
+      "rowHeight": 32,
+      "radius": 12,
+      "fontSize": 12,
+      "selectedChangesWeight": false
+    },
+    "settingsAgentRowHeight": 32,
+    "conversationHeaderHeight": 44,
+    "contentMaxWidth": 1000,
+    "contentWideMaxWidth": 1040,
+    "gutters": [
+      26,
+      22,
+      18,
+      12
+    ],
+    "composer": {
+      "minHeight": 32,
+      "maxHeight": 160,
+      "manualResize": false,
+      "surfaceRadius": 32,
+      "paddingX": 16,
+      "padding": 16
+    }
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32
+  ],
+  "radii": [
+    8,
+    12,
+    20,
+    24,
+    32,
+    999
+  ],
+  "icons": {
+    "viewBox": 24,
+    "stroke": 1.7,
+    "sizes": [
+      16,
+      18,
+      20,
+      24
+    ]
+  },
+  "avatars": {
+    "navigation": 20,
+    "conversation": 26,
+    "header": 26
+  },
+  "typography": {
+    "latin": "Inter Variable",
+    "cjk": "PingFang SC / system sans-serif",
+    "code": "system monospace",
+    "navigation": 12,
+    "message": 13,
+    "messageLineHeight": 1.65
+  },
+  "motion": {
+    "feedbackMs": 140,
+    "enterMs": 180,
+    "menuOffsetPx": 4,
+    "dialogOffsetPx": 0,
+    "spring": {
+      "stiffness": 2500,
+      "damping": 100,
+      "mass": 1
+    },
+    "reduceMotion": "system",
+    "tooltipShowDelayMs": 0,
+    "tooltipLeaveGraceMs": 80,
+    "tooltipFadeMs": 0
+  },
+  "desktopControls": {
+    "height": 32,
+    "buttonRadius": 999,
+    "fieldRadius": 12,
+    "selectMenuRadius": 20,
+    "selectOptionRadius": 12,
+    "dialogRadius": 32,
+    "commentRadius": 32,
+    "commentPadding": 20,
+    "selectMenuGap": 6,
+    "selectMenuOutset": 4,
+    "selectMenuPadding": 8,
+    "selectOptionPadding": 8,
+    "primaryHover": "#41464C",
+    "fieldHoverBorder": "#9A9EA3",
+    "fieldFocusBorder": "#646970",
+    "errorBorder": "#C9837E",
+    "errorBackground": "#FFFAFA",
+    "errorText": "#B42318",
+    "historyRowPadding": [
+      6,
+      10
+    ],
+    "historyRowMinHeight": 36,
+    "buttonPaddingX": 16,
+    "choiceRadius": 999,
+    "iconButtonRadius": 12,
+    "navigationRadius": 12,
+    "cardRadius": 20,
+    "noticeRadius": 12,
+    "attachmentHeight": 48,
+    "avatarRadiusRatio": 0.375,
+    "avatarRadiusMax": 12,
+    "avatarBorder": 1,
+    "composerRadius": 32,
+    "composerPaddingX": 12,
+    "errorIconLineHeight": 17,
+    "iconButtonHover": "#FAFAF8",
+    "sendButtonRadius": 16,
+    "sendButtonDisabled": "#A7A9AA",
+    "messageBubbleRadius": 20,
+    "messageBubblePadding": [
+      10,
+      16
+    ],
+    "composerPadding": 12,
+    "composerToolbarGap": 8,
+    "tooltipWidth": 320,
+    "tooltipRadius": 20,
+    "tooltipPadding": 16,
+    "tooltipShowDelayMs": 0,
+    "iconLabelButtonPaddingLeft": 12,
+    "composerInputInset": 8,
+    "choiceGroupPadding": 4,
+    "choiceGroupGap": 2
+  },
+  "windowHeader": {
+    "height": 48,
+    "brandWidth": 120,
+    "brandHeight": 48,
+    "trafficLightsTop": 17,
+    "brandTimelineMs": 2000,
+    "reversible": true
+  },
+  "modalMaterial": {
+    "borderWidth": 0,
+    "blurRadius": 0,
+    "scrim": "#0000008C",
+    "shadow": "0 8px 20px #24272B1C"
+  }
+}

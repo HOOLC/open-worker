@@ -1,0 +1,1 @@
+../../../docs/gui-approved-design.md

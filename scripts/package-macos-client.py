@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Package the standalone desktop app."""
+import argparse
+import importlib.util
+import hashlib
+import json
+import os
+import plistlib
+from pathlib import Path
+import shutil
+import subprocess
+import tarfile
+import tempfile
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+from test_app_slot import app_slot, run_test
+from build_env import build_environment
+
+LOCAL_LAUNCHER = r'''#!/bin/zsh
+set -eu
+base="${0:A:h}"
+state="$HOME/Library/Application Support/Zork"
+mkdir -p "$state/logs"
+chmod 700 "$state"
+export ZORK_GUI_PREFERENCES_PATH="$state/preferences.json"
+exec "$base/zork-gui" "$@" >>"$state/logs/client.log" 2>&1
+'''
+
+
+HELPERS = [('zork', 'ZorkSupervisor', 'supervisor'), ('zork-gateway', 'ZorkGateway', 'gateway')]
+COMPONENTS = ['zork-gui', 'zork', 'zork-gateway', 'zork-agent', 'zork-gh']
+
+
+def stage_binaries(app, binaries, assets, version, launcher):
+    mac = app / 'Contents/MacOS'
+    helpers = []
+    for name in COMPONENTS:
+        if name not in {item[0] for item in HELPERS}:
+            shutil.copy2(binaries / name, mac / name)
+    for name, bundle_name, role in HELPERS:
+        bundle = app / 'Contents/Helpers' / (bundle_name + '.app')
+        executable_dir = bundle / 'Contents/MacOS'
+        resources = bundle / 'Contents/Resources'
+        executable_dir.mkdir(parents=True)
+        resources.mkdir()
+        shutil.copy2(binaries / name, executable_dir / name)
+        shutil.copy2(launcher, executable_dir / 'ZorkHelperLauncher')
+        shutil.copy2(assets / (bundle_name + '.icns'), resources / (bundle_name + '.icns'))
+        with (bundle / 'Contents/Info.plist').open('wb') as output:
+            plistlib.dump({'CFBundleIdentifier': 'surf.zork.desktop.' + role,
+                          'CFBundleName': 'Zork-' + role.title(),
+                          'CFBundleDisplayName': 'Zork-' + role.title(),
+                          'CFBundleExecutable': 'ZorkHelperLauncher', 'ZorkRuntimeExecutable': name,
+                          'CFBundlePackageType': 'APPL',
+                          'CFBundleIconFile': bundle_name + '.icns',
+                          'CFBundleShortVersionString': version, 'CFBundleVersion': version,
+                          'LSBackgroundOnly': True, 'LSMinimumSystemVersion': '26.0'}, output)
+        # Keep the CLI entry points and sibling discovery used by the runtime.
+        (mac / name).symlink_to(os.path.relpath(executable_dir / 'ZorkHelperLauncher', mac))
+        for sibling in COMPONENTS:
+            if sibling != name:
+                (executable_dir / sibling).symlink_to(os.path.relpath(mac / sibling, executable_dir))
+        helpers.append(bundle)
+    return helpers
+
+def build_app(args, repo, app):
+    version=json.loads((repo/'packages/zork/package.json').read_text())['version']
+    mac=app/'Contents/MacOS';resources=app/'Contents/Resources'
+    mac.mkdir(parents=True);resources.mkdir()
+    shutil.copyfile(repo/'crates/zork-ui/assets/app/Zork.icns',resources/'Zork.icns')
+    (resources/'licenses').mkdir()
+    shutil.copyfile(repo/'crates/zork-mesh/LICENSE.synchronicity',resources/'licenses/Synchronicity.txt')
+    shutil.copyfile(repo/'crates/zork-ui/LICENSE.qrcode',resources/'licenses/QRCode.txt')
+    shutil.copyfile(repo/'crates/zork-mesh/LICENSE.flate2',resources/'licenses/flate2.txt')
+    binaries=args.bin_dir or Path(build_environment()['CARGO_TARGET_DIR'])/'debug'
+    with tempfile.TemporaryDirectory(prefix='zork-helper-launcher-') as scratch:
+        helper_launcher = Path(scratch) / 'ZorkHelperLauncher'
+        subprocess.run(['clang', '-arch', 'arm64', '-mmacosx-version-min=26.0',
+                        str(repo/'scripts/build/macos-helper-launcher.m'),
+                        '-framework', 'AppKit', '-o', str(helper_launcher)], check=True)
+        helpers = stage_binaries(app, binaries, repo/'crates/zork-ui/assets/app', version, helper_launcher)
+    spec = importlib.util.spec_from_file_location('browser_runtime', repo / 'scripts/lib/browser-runtime.py')
+    browser_runtime = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(browser_runtime)
+    signing_identity = browser_runtime.signing_identity()
+    browser_runtime.stage_runtime((args.browser_bin_dir or binaries).resolve(), app / 'Contents/Helpers')
+    if args.services_config:
+        services=json.loads(args.services_config.read_text())
+        assert isinstance(services,dict) and not set(services)-{'relay_urls','discovery_url','cue'}
+        if services.get('cue') is not None:
+            assert not set(services['cue'])-{'issuer','client_id','redirect_uri'}
+        (resources/'services.json').write_text(json.dumps(services,indent=2)+'\n')
+    launcher=mac/'ZorkLauncher';launcher.write_text(LOCAL_LAUNCHER);launcher.chmod(0o755)
+    with (app/'Contents/Info.plist').open('wb') as f:
+        plistlib.dump({'CFBundleIdentifier':'surf.zork.desktop','CFBundleName':'Zork','CFBundleDisplayName':'Zork','CFBundleIconFile':'Zork.icns','CFBundleExecutable':'ZorkLauncher','CFBundlePackageType':'APPL','CFBundleShortVersionString':version,'CFBundleVersion':version,'LSMinimumSystemVersion':'26.0','NSHighResolutionCapable':True,'NSPrincipalClass':'NSApplication','NSLocalNetworkUsageDescription':'用于发现并连接同一网络中的已配对设备，同步消息和任务。','NSBonjourServices':['_zork-mesh-v1._udp']},f)
+    (resources/'README.txt').write_text('Zork desktop. The local node starts only when enabled. Keep Gateway running after quitting is available in Node settings; independently installed Gateways outlive the client.\nPublic service defaults: services.json. Device overrides: ~/Library/Application Support/Zork/client/services.json.\nCue OAuth redirect_uri must exactly match the registered loopback callback. Model credentials are configured on each node.\n')
+    for helper, (name, _, _) in zip(helpers, HELPERS):
+        browser_runtime.sign(helper/'Contents/MacOS'/name, signing_identity)
+        browser_runtime.sign(helper, signing_identity)
+    for binary in mac.iterdir():
+        if binary.name!='ZorkLauncher' and not binary.is_symlink():browser_runtime.sign(binary, signing_identity)
+    browser_runtime.sign(app, signing_identity)
+    subprocess.run(['codesign','--verify','--deep','--strict',str(app)],check=True)
+
+
+def main():
+    parser=argparse.ArgumentParser(description='Update the one persistent app for this worktree')
+    parser.add_argument('--services-config',type=Path,help='Public service defaults; no credentials')
+    parser.add_argument('--bin-dir',type=Path)
+    parser.add_argument('--browser-bin-dir',type=Path)
+    parser.add_argument('--output',type=Path,help='Explicitly export an archive to this directory')
+    parser.add_argument('--launch',action='store_true',help='Launch after update even if not previously running')
+    parser.add_argument('--run',nargs=argparse.REMAINDER,help='Run tests against the updated {app}; retain the app afterward')
+    args=parser.parse_args()
+    if args.run == []:
+        parser.error('--run requires a command')
+    repo=Path(__file__).resolve().parents[1]
+    with app_slot(repo) as slot:
+        build_app(args, repo, slot.staged)
+        if args.output:
+            args.output.mkdir(parents=True,exist_ok=True)
+            archive=args.output/'Zork-macOS-arm64.tar.gz'
+            with tempfile.TemporaryDirectory(prefix='.package-',dir=args.output) as scratch:
+                staged=Path(scratch)/archive.name
+                with tarfile.open(staged,'w:gz') as tar:tar.add(slot.staged,arcname='Zork.app')
+                digest=hashlib.sha256(staged.read_bytes()).hexdigest()
+                os.replace(staged,archive)
+            archive.with_suffix(archive.suffix+'.sha256').write_text(digest+'  '+archive.name+'\n')
+            print(str(archive));print('SHA-256 '+digest)
+        app=slot.publish(launch=args.launch, restart=not bool(args.run))
+        if args.run:
+            run_test(args.run, app)
+        print('Worktree app: '+str(app))
+
+
+if __name__=='__main__':main()

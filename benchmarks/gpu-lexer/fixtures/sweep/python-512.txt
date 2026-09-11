@@ -1,0 +1,17 @@
+"""Optional machine-local build settings. No shell evaluation of .env values."""
+import argparse
+import json
+import os
+from pathlib import Path
+import shlex
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[2]
+KEYS = {'ZORK_BUILD_ROOT', 'ZORK_BUILD_BUDGET_GIB', 'ZORK_BUILD_LOW_WATER_GIB',
+        'ZORK_BUILD_MOUNT', 'CARGO_TARGET_DIR', 'KACHE_CACHE_EXECUTABLES'}
+
+
+def settings(root=ROOT, environ=None):
+    env = dict(os.environ if environ is None else environ)
+    path = root / '.env'
+    if path.e

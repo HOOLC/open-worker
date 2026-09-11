@@ -1,0 +1,766 @@
+{
+  "api_version": "v1",
+  "revision": 10,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 1280.0,
+    "height": 800.0
+  },
+  "elements": [
+    {
+      "id": "agent-add",
+      "role": "button",
+      "label": "创建小伙伴",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 1017.0,
+        "y": 40.0,
+        "width": 104.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 1017.0,
+        "y": 40.0,
+        "width": 104.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 1069.0,
+        "y": 56.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-bear",
+      "role": "option",
+      "label": "小熊",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 474.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 474.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 490.0,
+        "y": 345.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-bunny",
+      "role": "option",
+      "label": "小兔",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 434.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 434.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 345.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-cat",
+      "role": "option",
+      "label": "小猫 · 已选择",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 394.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 394.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 410.0,
+        "y": 345.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-chick",
+      "role": "option",
+      "label": "小鸡",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 594.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 594.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 610.0,
+        "y": 345.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-deer",
+      "role": "option",
+      "label": "小鹿",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 554.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 554.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 570.0,
+        "y": 385.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-dog",
+      "role": "option",
+      "label": "小狗",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 394.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 394.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 410.0,
+        "y": 385.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-fox",
+      "role": "option",
+      "label": "狐狸",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 514.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 514.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 530.0,
+        "y": 345.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-koala",
+      "role": "option",
+      "label": "考拉",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 474.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 474.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 490.0,
+        "y": 385.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-octopus",
+      "role": "option",
+      "label": "章鱼",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 594.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 594.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 610.0,
+        "y": 385.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-owl",
+      "role": "option",
+      "label": "猫头鹰",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 434.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 434.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 385.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-panda",
+      "role": "option",
+      "label": "熊猫",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 554.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 554.0,
+        "y": 329.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 570.0,
+        "y": 345.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-avatar-penguin",
+      "role": "option",
+      "label": "企鹅",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 514.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 514.0,
+        "y": 369.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 530.0,
+        "y": 385.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-close-form",
+      "role": "button",
+      "label": "取消创建",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 724.0,
+        "y": 688.0,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 724.0,
+        "y": 688.0,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 753.5,
+        "y": 704.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-create",
+      "role": "button",
+      "label": "创建小伙伴",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 791.0,
+        "y": 688.0,
+        "width": 95.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 791.0,
+        "y": 688.0,
+        "width": 95.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 838.5,
+        "y": 704.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-create-dialog",
+      "role": "status",
+      "label": "添加小伙伴",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 370.0,
+        "y": 55.5,
+        "width": 540.0,
+        "height": 688.5
+      },
+      "visible_bounds": {
+        "x": 370.0,
+        "y": 55.5,
+        "width": 540.0,
+        "height": 688.5
+      },
+      "center": {
+        "x": 640.0,
+        "y": 399.75
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "agent-create-dialog-close",
+      "role": "button",
+      "label": "关闭添加小伙伴",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 854.0,
+        "y": 77.5,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 854.0,
+        "y": 77.5,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 870.0,
+        "y": 93.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-create-dialog-footer",
+      "role": "status",
+      "label": "弹窗操作区",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 370.0,
+        "y": 660.0,
+        "width": 540.0,
+        "height": 84.0
+      },
+      "visible_bounds": {
+        "x": 370.0,
+        "y": 660.0,
+        "width": 540.0,
+        "height": 84.0
+      },
+      "center": {
+        "x": 640.0,
+        "y": 702.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "agent-instructions",
+      "role": "text_input",
+      "label": "职责与偏好 · 可选",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 394.0,
+        "y": 444.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 394.0,
+        "y": 444.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 640.0,
+        "y": 460.5
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "agent-model-select",
+      "role": "button",
+      "label": "fixture-model",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 394.0,
+        "y": 616.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 394.0,
+        "y": 616.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 640.0,
+        "y": 632.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-name",
+      "role": "text_input",
+      "label": "名称",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 394.0,
+        "y": 253.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 394.0,
+        "y": 253.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 640.0,
+        "y": 269.5
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "agent-profile-select",
+      "role": "button",
+      "label": "fixture",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 394.0,
+        "y": 540.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 394.0,
+        "y": 540.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 640.0,
+        "y": 556.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-role-leader",
+      "role": "button",
+      "label": "领队",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 394.0,
+        "y": 135.5,
+        "width": 240.0,
+        "height": 74.5
+      },
+      "visible_bounds": {
+        "x": 394.0,
+        "y": 135.5,
+        "width": 240.0,
+        "height": 74.5
+      },
+      "center": {
+        "x": 514.0,
+        "y": 172.75
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-role-worker",
+      "role": "button",
+      "label": "队员",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 646.0,
+        "y": 135.5,
+        "width": 240.0,
+        "height": 74.5
+      },
+      "visible_bounds": {
+        "x": 646.0,
+        "y": 135.5,
+        "width": 240.0,
+        "height": 74.5
+      },
+      "center": {
+        "x": 766.0,
+        "y": 172.75
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agent-settings-leader",
+      "role": "button",
+      "label": "设置 产品 Leader",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 399.0,
+        "y": 170.0,
+        "width": 722.0,
+        "height": 64.0
+      },
+      "visible_bounds": {
+        "x": 399.0,
+        "y": 170.0,
+        "width": 722.0,
+        "height": 64.0
+      },
+      "center": {
+        "x": 760.0,
+        "y": 202.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "agents-refresh",
+      "role": "button",
+      "label": "刷新 Profiles",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 827.0,
+        "y": 492.5,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 827.0,
+        "y": 492.5,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 856.5,
+        "y": 508.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "desktop-settings-column",
+      "role": "status",
+      "label": "设置内容列",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 365.0,
+        "y": 0.0,
+        "width": 790.0,
+        "height": 266.0
+      },
+      "visible_bounds": {
+        "x": 365.0,
+        "y": 0.0,
+        "width": 790.0,
+        "height": 266.0
+      },
+      "center": {
+        "x": 760.0,
+        "y": 133.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "center": {
+        "x": 640.0,
+        "y": 400.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+packages:
+  - packages/*
+  - apps/zork-design
+
+catalogMode: prefer
+
+catalog:
+  "@types/node": ^24.5.2
+  typescript: ^5.9.2
+  vite-plus: 0.1.20

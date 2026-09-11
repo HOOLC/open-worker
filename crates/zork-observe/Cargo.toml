@@ -1,0 +1,14 @@
+[package]
+name = "zork-observe"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+futures-util.workspace = true
+serde.workspace = true
+imbl.workspace = true
+
+[dev-dependencies]
+serde_json = "1"

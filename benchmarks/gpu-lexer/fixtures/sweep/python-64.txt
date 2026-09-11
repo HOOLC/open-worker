@@ -1,0 +1,1 @@
+"""Optional machine-local build settings. No shell evaluation of

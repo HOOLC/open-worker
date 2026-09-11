@@ -1,0 +1,8 @@
+{
+  "name": "zork",
+  "version": "0.1.30",
+  "private": true,
+  "description": "IM gateway that routes deliberate chat delivery into durable agent workspaces.",
+  "homepage": "https://github.com/HOOLC/open-worker#readme",
+  "bugs": {
+    "url": "https://gi

@@ -1,0 +1,32 @@
+{
+  "version": "nav7",
+  "platform": "mobile",
+  "source": "mobile/prototype/navigation.css",
+  "navigation": {
+    "nav-row-height": "48px",
+    "nav-row-radius": "6px",
+    "nav-row-gap": "2px",
+    "nav-gutter": "10px",
+    "nav-content-inset": "14px",
+    "nav-pressed": "oklch(94.8% .005 85)",
+    "nav-selected": "oklch(93% .009 85)",
+    "nav-text": "oklch(27% .009 255)"
+  },
+  "behavior": {
+    "persistent_chat_selection": false,
+    "hover": false,
+    "pressed_background_scope": "whole-row",
+    "clear_press_on": ["pointerup", "pointercancel", "drag", "scroll", "blur"],
+    "footer_columns": 2,
+    "independent_control_min_target_px": 44,
+    "enter": "newline",
+    "return_restores": ["origin", "draft", "reading-position"]
+  },
+  "layout": {
+    "preview_width_px": 390,
+    "desktop_preview_height_cap_px": 844,
+    "phone_height": "visualViewport.height",
+    "safe_area": true
+  },
+  "status": "design-prototype; real-device QA pending"
+}

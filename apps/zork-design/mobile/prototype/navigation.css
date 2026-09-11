@@ -1,0 +1,80 @@
+/* Desktop navigation rules, adapted to touch: shared geometry, full-row paint.
+   Indentation belongs to content. Nested controls never own a background. */
+:root{
+  --nav-row-height:48px;
+  --nav-row-radius:6px;
+  --nav-row-gap:2px;
+  --nav-gutter:10px;
+  --nav-content-inset:14px;
+  --nav-pressed:oklch(94.8% .005 85);
+  --nav-selected:oklch(93% .009 85);
+  --nav-text:oklch(27% .009 255);
+}
+.device-group,.device-group+.device-group{
+  display:grid;grid-template-columns:minmax(0,1fr);row-gap:var(--nav-row-gap);
+  margin:0;padding:16px var(--nav-gutter) 10px;
+}
+.nav-row,.nav-row.device,.nav-row.leader,.nav-row.task,
+.device-group+.device-group .nav-row{
+  position:relative;width:100%;height:var(--nav-row-height);min-height:var(--nav-row-height);
+  margin:0;padding:0 var(--nav-content-inset);border:0;
+  border-radius:var(--nav-row-radius);color:var(--nav-text);
+  background:transparent!important;box-shadow:none;
+}
+.nav-row.task,.device-group+.device-group .nav-row.task{padding-left:54px}
+.nav-row.leader{display:block;padding:0}
+.nav-row.leader>.leader-open{
+  position:absolute;inset:0;width:100%;height:100%;min-height:0;
+  padding:0 58px 0 var(--nav-content-inset);gap:12px;
+  border-radius:inherit;
+}
+.nav-row.leader>.leader-toggle{
+  position:absolute;right:6px;top:0;margin:0;
+  width:44px;height:100%;min-height:44px;border-radius:inherit;
+}
+.nav-row.leader>button,
+.nav-row.leader>button:active,
+.nav-row.leader>button:focus-visible{
+  background:transparent!important;outline:none;box-shadow:none;
+}
+.nav-row.is-pressed,
+.nav-row:focus-visible,
+.nav-row:has(>button:focus-visible){background:var(--nav-pressed)!important}
+/* The footer keeps its mobile two-column layout; both slots use the same rules. */
+.nav-footer{display:grid;grid-template-columns:1fr 1fr;gap:var(--nav-row-gap);padding:8px var(--nav-gutter)}
+.nav-footer>button,.nav-footer>button+button{
+  width:100%;height:var(--nav-row-height);min-height:var(--nav-row-height);
+  margin:0;padding:0 var(--nav-content-inset);border:0;border-radius:var(--nav-row-radius);
+  background:transparent!important;color:var(--nav-text);box-shadow:none;
+}
+.nav-footer>button.is-pressed,.nav-footer>button:focus-visible{background:var(--nav-pressed)!important}
+.nav-footer>button.selected{background:var(--nav-selected)!important}
+
+/* Settings lists: outer spacing cannot shrink the row's hit or paint area. */
+.setting-group{padding:0;display:flex;flex-direction:column;gap:var(--nav-row-gap)}
+.setting-group>.setting-row{
+  position:relative;flex-shrink:0;width:100%;margin:0;
+  min-height:var(--nav-row-height);padding:8px var(--nav-content-inset);
+  border:0;border-radius:var(--nav-row-radius);
+  background:transparent!important;box-shadow:none;
+}
+.setting-group>.setting-row+.setting-row{border-top:0}
+.setting-group>.setting-row+.setting-row::before{
+  content:"";position:absolute;top:-1px;left:var(--nav-content-inset);right:var(--nav-content-inset);
+  height:1px;background:var(--line);pointer-events:none;
+}
+.setting-group>button.setting-row.is-pressed,
+.setting-group>button.setting-row:focus-visible{background:var(--nav-pressed)!important}
+
+/* Compact header actions share the same pressed token and clear inner space. */
+#header>.header-device,#header>.header-back{
+  min-height:44px;padding:0 10px;border-radius:var(--nav-row-radius);
+  display:flex;align-items:center;gap:8px;background:transparent!important;
+  color:var(--nav-text);box-shadow:none;
+}
+#header>.header-device{margin-right:-6px}
+#header>.header-back{font-size:16px}
+#header>.header-device.is-pressed,#header>.header-device:focus-visible,
+#header>.header-back.is-pressed,#header>.header-back:focus-visible{
+  background:var(--nav-pressed)!important;
+}

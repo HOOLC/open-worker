@@ -1,0 +1,492 @@
+{
+  "providers": [
+    {
+      "id": "xai",
+      "label": "xAI / Grok",
+      "billing": [
+        {
+          "id": "subscription",
+          "label": "Grok 订阅",
+          "deviceCode": true,
+          "template": {
+            "baseUrl": "https://cli-chat-proxy.grok.com/v1",
+            "models": [
+              {
+                "id": "grok-4.6",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh"
+                ],
+                "default_thinking": "xhigh",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 500000,
+                  "max_output_tokens": 8192
+                },
+                "default": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "usage",
+          "label": "API 按量",
+          "deviceCode": false,
+          "template": {
+            "baseUrl": "https://api.x.ai/v1",
+            "models": [
+              {
+                "id": "grok-4.6",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh"
+                ],
+                "default_thinking": "xhigh",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 500000,
+                  "max_output_tokens": 8192
+                },
+                "default": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "openai",
+      "label": "OpenAI",
+      "billing": [
+        {
+          "id": "usage",
+          "label": "API 按量",
+          "deviceCode": false,
+          "template": {
+            "baseUrl": "https://api.openai.com/v1",
+            "models": [
+              {
+                "id": "gpt-4.1",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 1047576,
+                  "max_output_tokens": 32768
+                },
+                "default": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "subscription",
+          "label": "ChatGPT 订阅 (Codex)",
+          "deviceCode": true,
+          "template": {
+            "baseUrl": "https://chatgpt.com/backend-api/codex",
+            "models": [
+              {
+                "id": "gpt-5.6-luna",
+                "api": "openai-codex-responses",
+                "streaming": true,
+                "thinking": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "default_thinking": "medium",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 872000,
+                  "max_output_tokens": 128000
+                },
+                "default": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "openai-compatible",
+      "label": "OpenAI Compatible",
+      "billing": [
+        {
+          "id": "usage",
+          "label": "Custom API",
+          "deviceCode": false,
+          "template": {
+            "baseUrl": "https://example.invalid/v1",
+            "models": [
+              {
+                "id": "model-id",
+                "api": "openai-responses",
+                "streaming": true,
+                "parallel_tool_calls": false,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "default": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "opencode-go",
+      "label": "OpenCode Go",
+      "billing": [
+        {
+          "id": "subscription",
+          "label": "OpenCode Go 订阅",
+          "deviceCode": false,
+          "template": {
+            "baseUrl": "https://opencode.ai/zen/go/v1",
+            "models": [
+              {
+                "id": "muse-spark-1.2-contributor",
+                "api": "openai-responses",
+                "streaming": true,
+                "thinking": [
+                  "off",
+                  "minimal",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh"
+                ],
+                "default_thinking": "xhigh",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 1048576,
+                  "max_output_tokens": 131072
+                },
+                "default": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "anthropic",
+      "label": "Anthropic / Claude",
+      "billing": [
+        {
+          "id": "usage",
+          "label": "API 按量",
+          "deviceCode": false,
+          "template": {
+            "baseUrl": "https://api.anthropic.com",
+            "models": [
+              {
+                "id": "claude-sonnet-4-6",
+                "api": "anthropic-messages",
+                "streaming": true,
+                "thinking": [
+                  "off",
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "default_thinking": "high",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 1000000,
+                  "max_output_tokens": 128000
+                },
+                "default": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "subscription",
+          "label": "Claude 订阅 (Pro/Max)",
+          "deviceCode": true,
+          "template": {
+            "baseUrl": "https://api.anthropic.com",
+            "models": [
+              {
+                "id": "claude-sonnet-4-6",
+                "api": "anthropic-messages",
+                "streaming": true,
+                "thinking": [
+                  "off",
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "default_thinking": "high",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 1000000,
+                  "max_output_tokens": 128000
+                },
+                "default": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "github-copilot",
+      "label": "GitHub Copilot",
+      "billing": [
+        {
+          "id": "subscription",
+          "label": "Copilot 订阅",
+          "deviceCode": true,
+          "template": {
+            "baseUrl": "https://api.individual.githubcopilot.com",
+            "models": [
+              {
+                "id": "gpt-4.1",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 1047576,
+                  "max_output_tokens": 32768
+                },
+                "default": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "usage",
+          "label": "API 按量",
+          "deviceCode": false,
+          "template": {
+            "baseUrl": "https://api.individual.githubcopilot.com",
+            "models": [
+              {
+                "id": "gpt-4.1",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text"
+                  ]
+                },
+                "limits": {
+                  "context_window_tokens": 1047576,
+                  "max_output_tokens": 32768
+                },
+                "default": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "billing": [
+        {
+          "id": "usage",
+          "label": "API 按量",
+          "deviceCode": true,
+          "template": {
+            "baseUrl": "https://openrouter.ai/api/v1",
+            "models": [
+              {
+                "id": "openrouter/auto",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                },
+                "default": true
+              },
+              {
+                "id": "anthropic/claude-sonnet-4",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off",
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "default_thinking": "high",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "kimi-coding",
+      "label": "Kimi For Coding",
+      "billing": [
+        {
+          "id": "subscription",
+          "label": "Kimi Code 订阅",
+          "deviceCode": true,
+          "template": {
+            "baseUrl": "https://api.kimi.com/coding",
+            "models": [
+              {
+                "id": "kimi-for-coding",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text"
+                  ]
+                },
+                "default": true
+              },
+              {
+                "id": "kimi-k2.5",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "usage",
+          "label": "API 按量",
+          "deviceCode": false,
+          "template": {
+            "baseUrl": "https://api.kimi.com/coding",
+            "models": [
+              {
+                "id": "kimi-for-coding",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text"
+                  ]
+                },
+                "default": true
+              },
+              {
+                "id": "kimi-k2.5",
+                "api": "openai-completions",
+                "streaming": true,
+                "thinking": [
+                  "off"
+                ],
+                "default_thinking": "off",
+                "capabilities": {
+                  "input": [
+                    "text",
+                    "image"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

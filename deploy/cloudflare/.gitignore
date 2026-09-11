@@ -1,0 +1,4 @@
+.wrangler/
+*.local.json
+.dev.vars
+worker-configuration.d.ts

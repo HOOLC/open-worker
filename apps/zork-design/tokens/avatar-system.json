@@ -1,0 +1,118 @@
+{
+  "version": "2026-09-06",
+  "style": "flat, restrained, original vector animal heads; no role/status embedded",
+  "avatars": [
+    {
+      "id": "cat",
+      "name": "猫",
+      "background": "#EEF1F7",
+      "primary": "#657EA7",
+      "secondary": "#DFE7F3",
+      "svg": "assets/avatars/cat.svg"
+    },
+    {
+      "id": "bunny",
+      "name": "兔",
+      "background": "#F1EDFA",
+      "primary": "#8C7DAE",
+      "secondary": "#DDD4ED",
+      "svg": "assets/avatars/bunny.svg"
+    },
+    {
+      "id": "bear",
+      "name": "熊",
+      "background": "#F5EEE7",
+      "primary": "#987F69",
+      "secondary": "#DECCB9",
+      "svg": "assets/avatars/bear.svg"
+    },
+    {
+      "id": "fox",
+      "name": "狐狸",
+      "background": "#FFF0E8",
+      "primary": "#D67B47",
+      "secondary": "#FFE4C9",
+      "svg": "assets/avatars/fox.svg"
+    },
+    {
+      "id": "panda",
+      "name": "熊猫",
+      "background": "#EEF2F1",
+      "primary": "#FFFDF9",
+      "secondary": "#52616A",
+      "svg": "assets/avatars/panda.svg"
+    },
+    {
+      "id": "chick",
+      "name": "小鸡",
+      "background": "#FFF5D8",
+      "primary": "#DBAE45",
+      "secondary": "#FFE9AE",
+      "svg": "assets/avatars/chick.svg"
+    },
+    {
+      "id": "dog",
+      "name": "狗",
+      "background": "#EDF3FC",
+      "primary": "#8097BE",
+      "secondary": "#E0E9F6",
+      "svg": "assets/avatars/dog.svg"
+    },
+    {
+      "id": "owl",
+      "name": "猫头鹰",
+      "background": "#EFF3E9",
+      "primary": "#7E906F",
+      "secondary": "#DFE8D4",
+      "svg": "assets/avatars/owl.svg"
+    },
+    {
+      "id": "koala",
+      "name": "考拉",
+      "background": "#EEF3F7",
+      "primary": "#8B9DAA",
+      "secondary": "#DDE7EE",
+      "svg": "assets/avatars/koala.svg"
+    },
+    {
+      "id": "penguin",
+      "name": "企鹅",
+      "background": "#EAF0F6",
+      "primary": "#4F657B",
+      "secondary": "#FBFDFF",
+      "svg": "assets/avatars/penguin.svg"
+    },
+    {
+      "id": "deer",
+      "name": "鹿",
+      "background": "#F6EDE8",
+      "primary": "#B28A72",
+      "secondary": "#EBD4C5",
+      "svg": "assets/avatars/deer.svg"
+    },
+    {
+      "id": "octopus",
+      "name": "章鱼",
+      "background": "#F5ECF3",
+      "primary": "#AA80A4",
+      "secondary": "#EAD8E7",
+      "svg": "assets/avatars/octopus.svg"
+    }
+  ],
+  "grid": {
+    "viewBox": [0, 0, 64, 64],
+    "backgroundRadius": 18,
+    "centerX": 32,
+    "typicalEyes": [
+      [24, 32],
+      [40, 32]
+    ],
+    "pupilRadii": [1.9, 2.35]
+  },
+  "inks": {
+    "features": "#29323D",
+    "warmWhite": "#FFFDF9"
+  },
+  "guide": "docs/11-avatars.md",
+  "generation_brief": "avatars/generation-brief.md"
+}

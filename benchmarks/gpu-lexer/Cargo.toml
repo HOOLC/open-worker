@@ -1,0 +1,21 @@
+[package]
+name = "zork-gpu-lexer-bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+wgpu = { version = "=29.0.4", default-features = false, features = ["metal", "wgsl"] }
+pollster = "=0.4.0"
+bytemuck = "=1.25.0"
+serde_json = "1"
+objc2-metal = { version = "=0.3.2", default-features = false, features = ["MTLCommandBuffer", "MTLCommandQueue", "block2", "objc2-core-foundation"] }
+block2 = "=0.6.2"
+objc2 = "=0.6.4"
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["NSString", "NSError"] }
+syntect = { version = "=5.3.0", default-features = false, features = ["default-syntaxes", "default-themes", "regex-fancy"] }
+
+[profile.release]
+debug = 0

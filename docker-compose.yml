@@ -1,0 +1,49 @@
+services:
+  zork:
+    build:
+      context: .
+      target: node
+    volumes:
+      - ./.data:/data
+    environment:
+      PATH: /data/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    ports:
+      - "18790:18790"
+      - "3000:3000"
+      - "3001:3001"
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - |
+        if [ -x /data/bin/zork ]; then exec /data/bin/zork start --data /data --listen 0.0.0.0; fi
+        exec zork start --data /data --listen 0.0.0.0
+
+  rust-build:
+    image: rust:1-bookworm
+    profiles: ["tools"]
+    working_dir: /src
+    volumes:
+      - .:/src
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - rust-target:/src/target
+      - kache-store:/root/.cache/kache
+    environment:
+      KACHE_S3_ACCESS_KEY: ${KACHE_S3_ACCESS_KEY:-}
+      KACHE_S3_SECRET_KEY: ${KACHE_S3_SECRET_KEY:-}
+      KACHE_S3_BUCKET: ${KACHE_S3_BUCKET:-zork-kache}
+      KACHE_S3_ENDPOINT: ${KACHE_S3_ENDPOINT:-}
+      KACHE_S3_REGION: ${KACHE_S3_REGION:-auto}
+    command:
+      - bash
+      - -c
+      - |
+        set -euo pipefail
+        bash /src/scripts/dev/release-build.sh
+
+volumes:
+  cargo-registry:
+  cargo-git:
+  rust-target:
+  kache-store:

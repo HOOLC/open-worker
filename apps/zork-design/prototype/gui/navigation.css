@@ -1,0 +1,95 @@
+/* One navigation rhythm, across conversation and settings sidebars. */
+:root{--nav-row-height:30px;--nav-row-radius:6px}
+.device-heading,
+.leader-scope-heading,
+.leader-scope-heading>.conversation-row,
+.leader-tasks .conversation-row,
+.settings-navigation nav>button,
+.settings-device-tree>.settings-device-nav,
+.settings-device-children>button,
+.device-chat-link{
+ height:var(--nav-row-height);min-height:var(--nav-row-height);border-radius:var(--nav-row-radius);padding-top:0;padding-bottom:0;line-height:1.4;box-sizing:border-box;
+}
+.leader-scope-heading>.conversation-row,.leader-tasks .conversation-row,.device-heading{width:100%}
+.device-heading:hover,
+.leader-scope-heading:hover,
+.leader-scope-heading:focus-within,
+.leader-tasks .conversation-row:hover,
+.leader-tasks .conversation-row:focus-visible,
+.settings-navigation nav>button:hover,
+.settings-navigation nav>button:focus-visible,
+.settings-device-tree>.settings-device-nav:hover,
+.settings-device-tree>.settings-device-nav:focus-visible,
+.settings-device-children>button:hover,
+.settings-device-children>button:focus-visible,
+.device-chat-link:hover,
+.device-chat-link:focus-visible{background:var(--color-hover)}
+.leader-scope-heading.selected,
+.leader-tasks .conversation-row.selected,
+.settings-navigation nav>button[aria-current],
+.settings-device-tree>.settings-device-nav[aria-current],
+.settings-device-children>button[aria-current]{background:var(--color-selected)}
+.leader-scope-heading>.conversation-row:hover,.leader-scope-heading>.conversation-row.selected{background:transparent}
+.leader-scope-heading .scope-toggle{height:24px;border-radius:4px}
+.device-chat-link .single-avatar{width:22px;height:22px;border-radius:7px}
+/* The two connection modes use the same height and equal-sized targets. */
+.profile-billing{display:flex;gap:5px}
+.profile-billing>button{flex:1;height:var(--nav-row-height);min-height:var(--nav-row-height);padding:0 10px;border-radius:var(--nav-row-radius);text-align:center}
+.profile-billing>button:hover,.profile-billing>button:focus-visible{background:var(--color-hover)}
+.profile-billing>button[aria-pressed=true]{background:var(--color-selected)}
+/* Every active navigation item uses the same surface and emphasis. */
+.leader-scope-heading.selected,
+.leader-tasks .conversation-row.selected,
+.settings-navigation nav>button[aria-current],
+.settings-device-tree>.settings-device-nav[aria-current],
+.settings-device-children>button[aria-current],
+.profile-billing>button[aria-pressed=true],
+.profile-provider-options button[aria-pressed=true]{background:var(--color-selected);color:var(--color-text);border-radius:var(--nav-row-radius);box-shadow:none}
+.leader-scope-heading.selected .conversation-title b,
+.leader-tasks .conversation-row.selected .conversation-title b{color:var(--color-text)}
+.conversation-row.selected::before{display:none}
+.profile-billing>button[aria-pressed=true]{border-color:var(--color-line)}
+/* Footer actions share the same navigation geometry. */
+.sidebar-footer{padding:10px 7px}
+.footer-link{height:var(--nav-row-height);min-height:var(--nav-row-height);padding:0 7px;gap:8px;font-size:12px;line-height:1.4;border-radius:var(--nav-row-radius);color:var(--color-text);font-weight:400}
+.footer-link+.footer-link{margin-top:2px}
+.footer-link>.icon{width:20px;height:20px;flex:0 0 20px}
+.footer-link:hover,.footer-link:focus-visible{background:var(--color-hover)}
+.footer-link.selected{background:var(--color-selected);color:var(--color-text)}
+.sidebar-footer .demo-note{padding:0 7px}
+.settings-navigation nav>.settings-add-device{height:var(--nav-row-height);min-height:var(--nav-row-height);font-size:12px;line-height:1.4;gap:8px;color:var(--color-text);border-radius:var(--nav-row-radius)}
+.settings-add-device>.icon{width:16px;height:16px;flex:0 0 16px}
+/* Final alignment and sizing shared by chat and native implementation brief. */
+:root{--sidebar-width:240px;--chat-column-width:1000px;--chat-gutter:26px}
+.conversations,.settings-navigation{width:var(--sidebar-width);min-width:200px;flex-basis:var(--sidebar-width)}
+.sidebar-head{padding-left:14px;padding-right:14px}
+.sidebar-head .brand{gap:8px}.sidebar-head .brand img{width:20px;height:20px}
+.conversation-header{height:44px;min-height:44px;padding-left:max(var(--chat-gutter),calc((100% - var(--chat-column-width))/2 + var(--chat-gutter)));padding-right:var(--chat-gutter)}
+.member-avatars{padding:0}.header-member,.header-member img{height:26px;width:26px;border-radius:8px}
+.messages{max-width:var(--chat-column-width);padding-left:var(--chat-gutter);padding-right:var(--chat-gutter)}
+.composer-dock{max-width:var(--chat-column-width);padding-left:var(--chat-gutter);padding-right:var(--chat-gutter)}
+.composer textarea{resize:none;min-height:32px;max-height:160px;overflow-y:hidden}
+.sidebar-resizer{position:fixed;top:0;bottom:0;left:calc(var(--sidebar-width) - 3px);width:6px;z-index:25;cursor:col-resize;touch-action:none}
+.sidebar-resizer:hover,.sidebar-resizer:focus-visible,.resizing-sidebar .sidebar-resizer{background:var(--color-line-strong)}
+.resizing-sidebar,.resizing-sidebar *{cursor:col-resize!important;user-select:none!important}
+@media(min-width:1550px){:root{--chat-column-width:1040px}}
+@media(max-width:1120px){:root{--chat-gutter:22px}}
+@media(max-width:760px){
+ :root{--chat-gutter:18px}
+ .sidebar-resizer{display:none}
+ .mobile-list .conversations{width:100%;flex-basis:100%;min-width:0}
+ .sidebar-head{padding-left:19px;padding-right:19px}
+}
+@media(max-width:480px){:root{--chat-gutter:12px}}
+
+.sidebar-head .brand .brand-wordmark{width:64px;height:25px;object-fit:contain}
+
+/* The mascot nudges the folded wordmark once; transforms never change layout. */
+.sidebar-head .brand .brand-wordmark{width:70px;height:25px;overflow:visible}
+.brand-mark,.wordmark-letter{transform-box:fill-box;transform-origin:center}
+.brand:hover .brand-mark{animation:zork-mascot-tap 700ms cubic-bezier(.2,.7,.2,1)}
+.brand:hover .wordmark-letter{animation:zork-letter-response 500ms cubic-bezier(.2,.7,.2,1) both}
+.brand:hover .letter-z{animation-delay:140ms}.brand:hover .letter-o{animation-delay:195ms}.brand:hover .letter-r{animation-delay:250ms}.brand:hover .letter-k{animation-delay:305ms}
+@keyframes zork-mascot-tap{0%,100%{transform:translateX(0) rotate(0)}35%{transform:translateX(3px) rotate(-8deg)}60%{transform:translateX(1px) rotate(3deg)}}
+@keyframes zork-letter-response{0%,100%{transform:translate(0,0)}40%{transform:translate(2px,-1px)}70%{transform:translate(-.5px,0)}}
+@media(prefers-reduced-motion:reduce){.brand:hover .brand-mark,.brand:hover .wordmark-letter{animation:none;transform:none}}

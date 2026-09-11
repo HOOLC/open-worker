@@ -1,0 +1,132 @@
+{
+  "records": [
+    {
+      "id": "1",
+      "kind": "user",
+      "content": {
+        "content": "检查项目并读取配置"
+      },
+      "timestamp_ms": 1788596840542
+    },
+    {
+      "id": "2",
+      "kind": "assistant",
+      "content": {
+        "content": "先查看目录和项目配置。",
+        "model": "fixture-model",
+        "input_tokens": 2400,
+        "output_tokens": 320,
+        "cache_read_input_tokens": 1800
+      },
+      "timestamp_ms": 1788596843542,
+      "execution": {
+        "id": "model-1",
+        "lane": "model",
+        "started_at_ms": 1788596840542,
+        "observed_at_ms": 1788596843542,
+        "completed_at_ms": 1788596843542,
+        "duration_ms": 3000
+      }
+    },
+    {
+      "id": "3",
+      "kind": "tool",
+      "content": {
+        "type": "tool_call_completed",
+        "tool_call_id": "shell-1",
+        "tool_name": "shell.run",
+        "result": {
+          "status": "completed",
+          "input": {
+            "command": "ls -la"
+          },
+          "content": {
+            "stdout": "Cargo.toml\ncrates\ndocs"
+          }
+        }
+      },
+      "timestamp_ms": 1788596845542,
+      "execution": {
+        "id": "shell-1",
+        "lane": "tool",
+        "started_at_ms": 1788596843542,
+        "observed_at_ms": 1788596845542,
+        "completed_at_ms": 1788596845542,
+        "duration_ms": 2000
+      }
+    },
+    {
+      "id": "4",
+      "kind": "tool",
+      "content": {
+        "type": "tool_call_completed",
+        "tool_call_id": "read-1",
+        "tool_name": "file.read",
+        "result": {
+          "status": "completed",
+          "input": {
+            "path": "Cargo.toml"
+          },
+          "content": {
+            "content": "[workspace]\nmembers = [\"crates/*\"]"
+          }
+        }
+      },
+      "timestamp_ms": 1788596844742,
+      "execution": {
+        "id": "read-1",
+        "lane": "tool",
+        "started_at_ms": 1788596843542,
+        "observed_at_ms": 1788596844742,
+        "completed_at_ms": 1788596844742,
+        "duration_ms": 1200
+      }
+    },
+    {
+      "id": "5",
+      "kind": "assistant",
+      "content": {
+        "content": "已读取配置，项目包含 Agent、Gateway 和桌面客户端。",
+        "model": "fixture-model",
+        "input_tokens": 3300,
+        "output_tokens": 460
+      },
+      "timestamp_ms": 1788596851542,
+      "execution": {
+        "id": "model-2",
+        "lane": "model",
+        "started_at_ms": 1788596845542,
+        "observed_at_ms": 1788596851542,
+        "completed_at_ms": 1788596851542,
+        "duration_ms": 6000
+      }
+    },
+    {
+      "id": "6",
+      "kind": "tool",
+      "content": {
+        "type": "tool_call_completed",
+        "tool_call_id": "read-2",
+        "tool_name": "file.read",
+        "result": {
+          "status": "failed",
+          "input": {
+            "path": "missing.toml"
+          },
+          "content": {
+            "error": "No such file or directory"
+          }
+        }
+      },
+      "timestamp_ms": 1788596851742,
+      "execution": {
+        "id": "read-2",
+        "lane": "tool",
+        "started_at_ms": 1788596851542,
+        "observed_at_ms": 1788596851742,
+        "completed_at_ms": 1788596851742,
+        "duration_ms": 200
+      }
+    }
+  ]
+}

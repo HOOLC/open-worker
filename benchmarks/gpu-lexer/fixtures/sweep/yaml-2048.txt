@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kache build cache
+        uses: kunobi-ninja/kache-action@v1
+        with:
+          s3-bucket: zork-kache
+          s3-region: auto
+          s3-endpoint: https://00000000000000000000000000000000.r2.cloudflarestorage.com
+          s3-access-key-id: ${{ secrets.KACHE_S3_ACCESS_KEY }}
+          s3-secret-access-key: ${{ secrets.KACHE_S3_SECRET_KEY }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.15
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: |
+          pnpm format:check
+          cargo fmt --all -- --check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Check design workspace
+        run: |
+          pnpm design:check
+          pnpm design:test
+          pnpm design:build
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Run backend tests
+        run: pnpm test:rust
+
+      - name: Test Gateway sync reaches idle
+        run: python3 scripts/test-sync-idle.py
+
+      - name: Run desktop entry contract
+        run: python3 crates/zork-gui/tests/test_gateway_entry.py
+
+      - name: Test native installer and release assembly
+        run: python3 scripts/test-native-installer.py
+
+      - name: Test native Gateway upgrades
+        run: |
+          python3 scripts/test-native-upgrade.py
+          python3 scripts/test-gateway-upgrade.py
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel

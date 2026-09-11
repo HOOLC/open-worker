@@ -1,0 +1,199 @@
+{
+  "api_version": "v1",
+  "revision": 8,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 560.0,
+    "height": 360.0
+  },
+  "elements": [
+    {
+      "id": "history-collapsed-row-0",
+      "role": "button",
+      "label": "输入 检查项目配置并运行测试。",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 36.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 36.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 42.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-collapsed-row-1",
+      "role": "button",
+      "label": "对话 先检查配置，再运行测试。",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 61.0,
+        "width": 512.0,
+        "height": 63.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 61.0,
+        "width": 512.0,
+        "height": 63.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 92.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-collapsed-row-2",
+      "role": "button",
+      "label": "read_file package.json",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 125.0,
+        "width": 512.0,
+        "height": 46.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 125.0,
+        "width": 512.0,
+        "height": 46.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 148.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-collapsed-row-3",
+      "role": "button",
+      "label": "shell pnpm test",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 172.0,
+        "width": 512.0,
+        "height": 46.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 172.0,
+        "width": 512.0,
+        "height": 46.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 195.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "history-collapsed-row-4",
+      "role": "button",
+      "label": "对话 ",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 219.0,
+        "width": 512.0,
+        "height": 48.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 219.0,
+        "width": 512.0,
+        "height": 48.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 243.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 560.0,
+        "height": 360.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 560.0,
+        "height": 360.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 180.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-sample",
+      "role": "status",
+      "label": "执行历史",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 312.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 312.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 180.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

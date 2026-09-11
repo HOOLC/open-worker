@@ -1,0 +1,23 @@
+[package]
+name = "zork-browser-runtime"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow = "1"
+cef = { version = "=152.0.0", default-features = false, features = ["sandbox"] }
+serde_json = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6.3"
+objc2-app-kit = { version = "0.3.2", features = ["NSApplication", "NSEvent", "NSResponder"] }
+
+[[bin]]
+name = "zork-browser-runtime"
+path = "src/main.rs"
+
+[[bin]]
+name = "zork-browser-helper"
+path = "src/bin/helper.rs"

@@ -1,0 +1,36 @@
+import type { Catalog, PageFixture, Story } from "../workbench/types";
+type LegacyProfile = {
+  id: string;
+  profile_id: string;
+  name: string;
+  node: string;
+  provider: string;
+  billing: string;
+  models: Array<Record<string, unknown>>;
+  verified: boolean;
+};
+type LegacyPerson = {
+  name: string;
+  avatar: string;
+  role: string;
+  node: string;
+  modelConnectionId?: string;
+  modelId?: string;
+};
+declare const profiles: LegacyProfile[];
+declare const people: Record<string, LegacyPerson>;
+declare const devices: Record<string, { name: string; description: string; online: boolean }>;
+declare const profileCatalog: Array<{ id: string; label: string; billing: Array<{ id: string; label: string }> }>;
+declare const conversations: Array<{
+  id: string;
+  name: string;
+  kind: string;
+  leaderId: string;
+  node: string;
+  members: string[];
+  unread: number;
+  time: string;
+  messages: Array<{ id: string; who: string; text: string; time: string }>;
+}>;
+declare let current: string;
+declare function render(): voi

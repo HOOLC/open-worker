@@ -1,0 +1,46 @@
+node_modules/
+dist/
+apps/*/dist
+coverage/
+artifacts/
+target/
+target-linux/
+# A symlinked target directory is machine-local build cache, not repository state.
+/target
+.vite
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+.venv/
+
+.env
+.env.*
+!.env.example
+
+.data*/
+.backups/
+.tmp/
+logs/
+*.log
+
+.DS_Store
+.workbuddy/
+test/fixtures/
+
+# Local design captures and historical process notes
+crates/zork-gui/design-audit/
+crates/zork-gui/design-qa.md
+crates/zork-gui/*_ACCEPTANCE.md
+docs/zork-agent-architecture-original.md
+
+# Local workflow records and personal deployment helpers
+.hallmark/
+/design-qa.md
+/apps/android/design-qa.md
+/docs/repository-boundaries.md
+/scripts/update-mba.py
+/scripts/verify-mba-mesh.py
+
+# Reproducible experiments keep inputs; raw runs stay local.
+/benchmarks/gpu-lexer/results/
+/benchmarks/gpu-lexer/*REPORT.md

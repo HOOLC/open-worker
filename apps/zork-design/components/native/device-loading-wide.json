@@ -1,0 +1,253 @@
+{
+  "api_version": "v1",
+  "revision": 7,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 1280.0,
+    "height": 800.0
+  },
+  "elements": [
+    {
+      "id": "desktop-settings-column",
+      "role": "status",
+      "label": "设置内容列",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 365.0,
+        "y": 0.0,
+        "width": 790.0,
+        "height": 382.0
+      },
+      "visible_bounds": {
+        "x": 365.0,
+        "y": 0.0,
+        "width": 790.0,
+        "height": 382.0
+      },
+      "center": {
+        "x": 760.0,
+        "y": 191.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "device-check-update",
+      "role": "button",
+      "label": "检查更新",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 1038.0,
+        "y": 318.0,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 1038.0,
+        "y": 318.0,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 1079.5,
+        "y": 334.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "device-refresh",
+      "role": "button",
+      "label": "刷新设备状态",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 978.0,
+        "y": 63.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 978.0,
+        "y": 63.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 994.0,
+        "y": 79.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "device-rename",
+      "role": "button",
+      "label": "修改设备名称",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 521.0,
+        "y": 50.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 521.0,
+        "y": 50.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 537.0,
+        "y": 66.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "local-node-background",
+      "role": "button",
+      "label": "后台运行 · 已选中",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 761.0,
+        "y": 189.0,
+        "width": 356.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 761.0,
+        "y": 189.0,
+        "width": 356.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 939.0,
+        "y": 205.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "local-node-foreground",
+      "role": "button",
+      "label": "随客户端",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 403.0,
+        "y": 189.0,
+        "width": 356.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 403.0,
+        "y": 189.0,
+        "width": 356.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 581.0,
+        "y": 205.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "local-node-login",
+      "role": "option",
+      "label": "登录系统后自动启动：关闭",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 1073.0,
+        "y": 241.0,
+        "width": 48.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 1073.0,
+        "y": 241.0,
+        "width": 48.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 1097.0,
+        "y": 257.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "local-node-toggle",
+      "role": "button",
+      "label": "切换本机设备运行",
+      "enabled": false,
+      "visible": true,
+      "bounds": {
+        "x": 1018.0,
+        "y": 63.0,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 1018.0,
+        "y": 63.0,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 1059.5,
+        "y": 79.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 1280.0,
+        "height": 800.0
+      },
+      "center": {
+        "x": 640.0,
+        "y": 400.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

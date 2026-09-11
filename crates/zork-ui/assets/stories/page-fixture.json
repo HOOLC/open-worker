@@ -1,0 +1,233 @@
+{
+  "device": {
+    "id": "mini1",
+    "name": "mini1",
+    "sidebar_width": 240,
+    "version": "0.1.30",
+    "online": true,
+    "background": true,
+    "start_at_login": false
+  },
+  "profile": {
+    "profile_id": "fixture",
+    "provider": "openai",
+    "billing": "subscription",
+    "verified": false,
+    "models": [
+      {
+        "id": "fixture-model",
+        "api": "openai-responses",
+        "context_window": 32000,
+        "max_output_tokens": 4096,
+        "limits": {
+          "context_window_tokens": 32000,
+          "max_output_tokens": 4096
+        },
+        "default_thinking": "off",
+        "thinking": [
+          "off"
+        ]
+      }
+    ],
+    "account": {
+      "ok": true,
+      "account": {
+        "type": "openai",
+        "planType": "ChatGPT"
+      }
+    },
+    "checkedAt": "2026-09-08T00:00:00Z",
+    "rateLimits": {
+      "ok": true,
+      "rateLimits": {
+        "limitId": "openai_subscription",
+        "primary": {
+          "usedPercent": 28,
+          "windowDurationMins": 300,
+          "resetsAt": 1788843600
+        },
+        "secondary": {
+          "usedPercent": 62,
+          "windowDurationMins": 10080,
+          "resetsAt": 1789430400
+        }
+      },
+      "rateLimitsByLimitId": {}
+    }
+  },
+  "agents": [
+    {
+      "id": "leader",
+      "prototype_id": "product",
+      "name": "产品 Leader",
+      "role": "leader",
+      "avatar": "fox",
+      "profile_id": "fixture",
+      "model": "fixture-model",
+      "allowed_leaders": []
+    }
+  ],
+  "model_form": {
+    "id": "",
+    "api": "openai-codex-responses",
+    "context_window": 32000,
+    "max_output_tokens": 4096,
+    "thinking": "low, medium, high, xhigh, max",
+    "default_thinking": "medium"
+  },
+  "fonts": {
+    "latin": "Inter Variable",
+    "cjk": "Noto Sans SC",
+    "weights": [
+      400,
+      500,
+      600,
+      700
+    ]
+  },
+  "conversation": {
+    "id": "product",
+    "placeholder": "告诉 Leader 你想做什么…",
+    "messages": [
+      {
+        "id": "story-message-1",
+        "role": "assistant",
+        "who": "product",
+        "content": "请先统一图标与头像，并保留原生界面的紧凑感。",
+        "time": "09:42",
+        "created_at": "2026-09-06T09:42:00Z"
+      },
+      {
+        "id": "story-message-2",
+        "role": "user",
+        "who": "me",
+        "content": "收到，先把共同组件统一。",
+        "time": "09:43",
+        "created_at": "2026-09-06T09:43:00Z"
+      }
+    ]
+  },
+  "history": {
+    "now": 1788687730000,
+    "records": [
+      {
+        "event_id": "history-0",
+        "event": {
+          "kind": "session_created",
+          "selection": {
+            "model": "fixture-model"
+          }
+        }
+      },
+      {
+        "event_id": "history-1",
+        "event": {
+          "kind": "input_appended",
+          "input": {
+            "content": "检查项目配置并运行测试。",
+            "received_at_ms": 1788687720000
+          }
+        }
+      },
+      {
+        "event_id": "history-2",
+        "event": {
+          "kind": "step_started",
+          "step_id": "step-1",
+          "purpose": "conversation",
+          "started_at_ms": 1788687721000
+        }
+      },
+      {
+        "event_id": "history-3",
+        "event": {
+          "kind": "step_completed",
+          "step_id": "step-1",
+          "purpose": "conversation",
+          "completed_at_ms": 1788687723000,
+          "assistant_text": "先检查配置，再运行测试。",
+          "usage": {
+            "input_tokens": 1200,
+            "output_tokens": 180,
+            "cached_input_tokens": 600
+          },
+          "invocations": [
+            {
+              "invocation_id": "read-1",
+              "tool": "file.read",
+              "arguments": {
+                "path": "package.json"
+              },
+              "started_at_ms": 1788687723000
+            },
+            {
+              "invocation_id": "test-1",
+              "tool": "shell.run",
+              "arguments": {
+                "command": "pnpm test"
+              },
+              "started_at_ms": 1788687724000
+            }
+          ]
+        }
+      },
+      {
+        "event_id": "history-4",
+        "event": {
+          "kind": "tool_result",
+          "result": {
+            "invocation_id": "read-1",
+            "tool": "file.read",
+            "outcome": "succeeded",
+            "finished_at_ms": 1788687723500,
+            "data": {
+              "content": "配置文件读取成功。"
+            }
+          }
+        }
+      },
+      {
+        "event_id": "history-5",
+        "event": {
+          "kind": "tool_result",
+          "result": {
+            "invocation_id": "test-1",
+            "tool": "shell.run",
+            "outcome": "failed",
+            "finished_at_ms": 1788687727000,
+            "data": {
+              "error": "一个用例未通过，正在检查断言。"
+            }
+          }
+        }
+      },
+      {
+        "event_id": "history-6",
+        "event": {
+          "kind": "step_started",
+          "step_id": "step-2",
+          "purpose": "conversation",
+          "started_at_ms": 1788687727500
+        }
+      }
+    ]
+  },
+  "account": {
+    "name": "Zork 用户",
+    "email": "design@example.test",
+    "device_name": "mini1",
+    "identity": "device-demo-01"
+  },
+  "mesh": {
+    "peers": [
+      {
+        "id": "mini2",
+        "name": "mini2",
+        "online": true,
+        "can_manage": true
+      }
+    ],
+    "invitation": "zork mesh join <一次性加入码>",
+    "expires": "10 分钟后过期"
+  }
+}

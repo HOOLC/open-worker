@@ -1,0 +1,133 @@
+name: Native Release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - "scripts/build/native-release.py"
+      - "scripts/install*.sh"
+      - "scripts/test-native-installer.py"
+      - "scripts/test-native-upgrade.py"
+      - "scripts/test-gateway-upgrade.py"
+      - "crates/gateway/src/node.rs"
+      - "scripts/test-mesh-installer.py"
+      - "crates/zork/**"
+      - "crates/zork-config/**"
+      - "crates/zork-mesh/**"
+      - "crates/gateway/src/enrollment.rs"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_BUILD_JOBS: "4"
+  MACOSX_DEPLOYMENT_TARGET: "15.0"
+
+jobs:
+  native:
+    name: Package (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel, ubuntu-24.04, ubuntu-24.04-arm]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check release tag
+        if: github.ref_type == 'tag'
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: python3 scripts/build/native-release.py check-tag --tag "$RELEASE_TAG"
+      - name: Test installer failures and offline downloads
+        run: python3 scripts/test-native-installer.py
+      - name: Build optimized native components
+        run: cargo build --locked --release -p zork -p zork-gateway -p zork-agent-server -p zork-gh
+      - name: Test native installation dependencies
+        run: cargo test --locked --release -p zork -p zork-config -p zork-mesh
+      - name: Test complete native Gateway upgrade
+        env:
+          ZORK_TEST_BINARY: target/release/zork
+          ZORK_TEST_TARGET: target/release
+        run: |
+          python3 scripts/test-native-upgrade.py
+          python3 scripts/test-gateway-upgrade.py
+      - name: Package node with embedded Synch
+        run: python3 scripts/build/native-release.py stage
+      - name: Test real installation, reuse and mesh enrollment
+        if: runner.os == 'macOS'
+        run: python3 scripts/test-mesh-installer.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.runner }}
+          path: |
+            artifacts/native-release/*.tar.gz
+            artifacts/native-release/*.tsv
+          if-no-files-found: error
+
+  assemble:
+    name: Verify complete release
+    needs: native
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          merge-multiple: true
+          path: artifacts/native-release
+      - run: python3 scripts/build/native-release.py assemble
+      - uses: actions/upload-artifact@v4
+        with:
+          name: github-release
+          path: |
+            artifacts/native-release/*.tar.gz
+            artifacts/native-release/manifest.tsv
+            artifacts/native-release/VERSION
+            artifacts/native-release/install.sh
+            artifacts/native-release/SHA256SUMS
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    if: github.event_name != 'pull_request' && github.ref_type == 'tag'
+    needs: assemble
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-release
+          path: artifacts/native-release
+      - name: Create draft, upload all assets, then publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 scripts/build/native-release.py check-tag --tag "$RELEASE_TAG"
+          # Never replace an already published version. Failed uploads leave a draft.
+          if gh release view "$RELEASE_TAG" --json isDraft > /tmp/zork-release.json 2>/dev/null; then
+            python3 -c 'import json; assert json.load(open("/tmp/zork-release.json"))["isDraft"], "Release is already published; use a new version"'
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft --generate-notes
+          fi
+          gh release upload "$RELEASE_TAG" artifacts/native-release/* --clobber
+          case "$RELEASE_TAG" in
+            *-*) gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false ;;
+            *) gh release edit "$RELEASE_TAG" --draft=false --latest ;;
+          esac

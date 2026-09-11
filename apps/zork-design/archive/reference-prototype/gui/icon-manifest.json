@@ -1,0 +1,137 @@
+[
+  {
+    "name": "task-chat",
+    "label": "Task 群聊",
+    "path": "gui/glyphs/task-chat.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "632b56c9fadcba2d589b3f9f1c25720ec06974e9a8f726904eb05f058152abee"
+  },
+  {
+    "name": "search",
+    "label": "搜索",
+    "path": "gui/glyphs/search.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "114892454480fe75bd69e1bbf482f232b15e0b61270a5f688a8d6712dc0938aa"
+  },
+  {
+    "name": "plus",
+    "label": "添加",
+    "path": "gui/glyphs/plus.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "5d5fdd76aeb1f192526b3be5cdfa4410b7c3fa1bd7a0cadc87e4f37be2525a07"
+  },
+  {
+    "name": "chevron-down",
+    "label": "展开",
+    "path": "gui/glyphs/chevron-down.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "aebe154eeb4eec89e0f0f5e53fb86284ba268d03367f0357ea1c54e01d5398af"
+  },
+  {
+    "name": "arrow-left",
+    "label": "返回",
+    "path": "gui/glyphs/arrow-left.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "fe9a217542124779da5079a122089bc1421b67cfa5e5ba93ee7292478e6531e5"
+  },
+  {
+    "name": "arrow-up",
+    "label": "发送",
+    "path": "gui/glyphs/arrow-up.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "1b7e9d503f58061a4afe71e7d29c865cc7898339b4dd1ec3d1c721dc0035d850"
+  },
+  {
+    "name": "x",
+    "label": "关闭",
+    "path": "gui/glyphs/x.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "59254505e2fcf71d2919273d9bb4133545bc4dcd3ef099bc92c48b89029107c8"
+  },
+  {
+    "name": "settings",
+    "label": "设置",
+    "path": "gui/glyphs/settings.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "f5a1dc95de6ef92f8308a7258dace4d96b9497798a2efe2a50f6cb4bbad81625"
+  },
+  {
+    "name": "download",
+    "label": "下载",
+    "path": "gui/glyphs/download.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "d76482ac6eaab74bd996ce202fc35aaf44df2ed529bb334a48a42e6679a679e4"
+  },
+  {
+    "name": "inbox",
+    "label": "收件箱",
+    "path": "gui/glyphs/inbox.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "651892c9850f08365259153d035962ebb7c8db2fa4569ba222a55fd30de3d4a7"
+  },
+  {
+    "name": "bars-three",
+    "label": "导航",
+    "path": "gui/glyphs/bars-three.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "e48b6ee3dae99900bb73a9520b2eab6460bcdce59e4804f7eb89f77f192220ac"
+  },
+  {
+    "name": "panel-left",
+    "label": "侧栏",
+    "path": "gui/glyphs/panel-left.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "acabb3a28ead50c6c98c8f7f7d58ddd910665ebea3787c5f5713d3547c2074cf"
+  },
+  {
+    "name": "paperclip",
+    "label": "附件",
+    "path": "gui/glyphs/paperclip.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "33c215c7f9bfda87bffd4614242d4d40d87f54afe9bbd5df73169ef6da7e1f0b"
+  },
+  {
+    "name": "check",
+    "label": "确认",
+    "path": "gui/glyphs/check.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "f7f1260a7bc11625b9d160d25c4a69b7c8adcc2f3e49059c1c24a0ecaf514715"
+  },
+  {
+    "name": "mention",
+    "label": "提及成员",
+    "path": "gui/glyphs/mention.svg",
+    "viewBox": "0 0 24 24",
+    "strokeWidth": 1.7,
+    "origin": "original-svg",
+    "sha256": "e20381c83f773e881d0d3d46699927e9629b0818652627778b09a6833d01321c"
+  }
+]

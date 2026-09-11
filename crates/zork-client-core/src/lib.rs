@@ -1,0 +1,63 @@
+//! Client-owned identity, offline state and bounded Gateway operations.
+//! The platform serializes commands, and calls `pause` when leaving foreground.
+#[cfg(not(target_family = "wasm"))]
+pub mod activity;
+#[cfg(not(target_family = "wasm"))]
+pub mod api;
+#[cfg(not(target_family = "wasm"))]
+pub mod composer;
+#[cfg(not(target_family = "wasm"))]
+pub mod conversation;
+pub use zork_client_types::{comments, files};
+pub mod agent_edit;
+#[cfg(not(target_family = "wasm"))]
+mod catalog;
+#[cfg(not(target_family = "wasm"))]
+pub mod delivery;
+#[cfg(feature = "desktop")]
+#[cfg(not(target_family = "wasm"))]
+pub mod desktop;
+#[cfg(not(target_family = "wasm"))]
+mod device_metadata;
+#[cfg(not(target_family = "wasm"))]
+mod enrollment;
+#[cfg(not(target_family = "wasm"))]
+pub mod file_io;
+pub mod interactions;
+#[cfg(not(target_family = "wasm"))]
+pub mod live;
+pub mod locale;
+pub mod model_edit;
+#[cfg(not(target_family = "wasm"))]
+pub mod notifications;
+#[cfg(not(target_family = "wasm"))]
+pub mod pages;
+#[cfg(not(target_family = "wasm"))]
+pub mod preferences;
+#[cfg(not(target_family = "wasm"))]
+pub mod resources;
+#[cfg(not(target_family = "wasm"))]
+mod services;
+#[cfg(not(target_family = "wasm"))]
+mod settings;
+#[cfg(not(target_family = "wasm"))]
+pub mod settings_actions;
+pub mod state;
+pub use zork_observe as observe;
+#[cfg(not(target_family = "wasm"))]
+pub mod store;
+#[cfg(not(target_family = "wasm"))]
+pub mod subscriptions;
+#[cfg(not(target_family = "wasm"))]
+pub mod sync;
+#[cfg(not(target_family = "wasm"))]
+pub mod transcript;
+#[cfg(not(target_family = "wasm"))]
+pub mod transport;
+
+#[cfg(target_family = "wasm")]
+#[path = "api/portable.rs"]
+pub mod api;
+
+#[cfg(not(target_family = "wasm"))]
+include!("client.rs");

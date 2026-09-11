@@ -1,0 +1,442 @@
+[
+  {
+    "file": "sweep/rust-8.txt",
+    "language": "rs",
+    "bytes_target": 8,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "2ab67ffcf30f5d7227aee08abe4210656fac90da42e7fafb28c0bbc9fd81dd22"
+  },
+  {
+    "file": "sweep/typescript-8.txt",
+    "language": "ts",
+    "bytes_target": 8,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "8af29510129ffd39cf29959cc77dc0e4596e196eee144fa9277e857a1ed4c5e0"
+  },
+  {
+    "file": "sweep/json-8.txt",
+    "language": "json",
+    "bytes_target": 8,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "fc1ba16a2044924630f8236264a28e0af33243a3fb9c2fa60a568642ecceccba"
+  },
+  {
+    "file": "sweep/yaml-8.txt",
+    "language": "yaml",
+    "bytes_target": 8,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "8e7430f31889b761a2ccebd73080d82a3491aa7c565a2ea6583bd0f8788ccbd8"
+  },
+  {
+    "file": "sweep/python-8.txt",
+    "language": "py",
+    "bytes_target": 8,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "7e235326012c1c72ad734e4dfea825e401ae4a75bd8eeaeec66393aa6e7b541b"
+  },
+  {
+    "file": "sweep/rust-16.txt",
+    "language": "rs",
+    "bytes_target": 16,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "22eafd4cdb87dc737ba5a420be1c570bf3d6447d0be720b05c6f1cd6383d7944"
+  },
+  {
+    "file": "sweep/typescript-16.txt",
+    "language": "ts",
+    "bytes_target": 16,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "2166dd2b32f42c03aa75010fce2824344288a230183ef819bd1e3f54c3a68daa"
+  },
+  {
+    "file": "sweep/json-16.txt",
+    "language": "json",
+    "bytes_target": 16,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "33f6dbdc1c819708eb58464d6385f4d02c97c1a9a25afa43810d564594873e94"
+  },
+  {
+    "file": "sweep/yaml-16.txt",
+    "language": "yaml",
+    "bytes_target": 16,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "ab2a94b67d5d8ea6f3f6deb91bc389ce7ad9ce6e4355ccf0ce46c6bfd78b69dc"
+  },
+  {
+    "file": "sweep/python-16.txt",
+    "language": "py",
+    "bytes_target": 16,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "3bfc09236b090c459b98861a0fdf14e1e11b96d0856bd857499eb3afe61b002b"
+  },
+  {
+    "file": "sweep/rust-32.txt",
+    "language": "rs",
+    "bytes_target": 32,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "0004f69eefa599bfa9f5d504d9c78540f7933dd52c93fa03441b7dbe97ec9ee7"
+  },
+  {
+    "file": "sweep/typescript-32.txt",
+    "language": "ts",
+    "bytes_target": 32,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "1d3b65c974c4afd83730ed293baa5f1f230e77b01afec5e6fe5b9acda36d25e7"
+  },
+  {
+    "file": "sweep/json-32.txt",
+    "language": "json",
+    "bytes_target": 32,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "e6c9689859341779b015875728d3f0d69697efecbb334294c73026e4b2812329"
+  },
+  {
+    "file": "sweep/yaml-32.txt",
+    "language": "yaml",
+    "bytes_target": 32,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "a71580a6413726acc4f09107a4b0dc3dff853ab77df555aaf24fbb8837980ace"
+  },
+  {
+    "file": "sweep/python-32.txt",
+    "language": "py",
+    "bytes_target": 32,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "5a3f890454c108f7666d7533c8df9ed5e573a16690ca825a8c28f8c65106a4c6"
+  },
+  {
+    "file": "sweep/rust-64.txt",
+    "language": "rs",
+    "bytes_target": 64,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "86d7695795db6b1aad6fd968957b9fcb76fd96b6e003a826618ee9e0d8170817"
+  },
+  {
+    "file": "sweep/typescript-64.txt",
+    "language": "ts",
+    "bytes_target": 64,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "f50614b011e0fdba1f528e5d2bef7105e721a4990bd5d8b168dc3d20fe7e79be"
+  },
+  {
+    "file": "sweep/json-64.txt",
+    "language": "json",
+    "bytes_target": 64,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "8e30bf937842444dbd258417387c3308d1d3c2304b79b6a6592c807e980e96f0"
+  },
+  {
+    "file": "sweep/yaml-64.txt",
+    "language": "yaml",
+    "bytes_target": 64,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "9c36f70cb9554312218f8828ef225b52d2641bd36856882e9875fb921e3a3ded"
+  },
+  {
+    "file": "sweep/python-64.txt",
+    "language": "py",
+    "bytes_target": 64,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "5aeafde00f17dbf295fe45569e97c49d72df408b04845674fa6dd27d9db5135d"
+  },
+  {
+    "file": "sweep/rust-128.txt",
+    "language": "rs",
+    "bytes_target": 128,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "03895fff0ecf9097bab3330baf5a01f2476620eb1a816e9a88db866cd6989eec"
+  },
+  {
+    "file": "sweep/typescript-128.txt",
+    "language": "ts",
+    "bytes_target": 128,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "371b8454670136e2fb50e7d93c1f703be2715219325439f41569e8120aa88097"
+  },
+  {
+    "file": "sweep/json-128.txt",
+    "language": "json",
+    "bytes_target": 128,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "dc8ca89f24520d5d6296ae515a2fa19ecf5d5f6f0825db7cd31ec1ddabe942ab"
+  },
+  {
+    "file": "sweep/yaml-128.txt",
+    "language": "yaml",
+    "bytes_target": 128,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "1908e7d3ac4f861d2c0c4dbd97ac63b4166360ab04ebed0191b64b21685e37c2"
+  },
+  {
+    "file": "sweep/python-128.txt",
+    "language": "py",
+    "bytes_target": 128,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "9767645cb2001c50baf2ee3963b851b5de2e6ea76d512096093907a83054612f"
+  },
+  {
+    "file": "sweep/rust-256.txt",
+    "language": "rs",
+    "bytes_target": 256,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "52fb72943fcd4aa879e169f9d2c12ee6b93c054425801854f3950f72c9725d66"
+  },
+  {
+    "file": "sweep/typescript-256.txt",
+    "language": "ts",
+    "bytes_target": 256,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "e1462068ba5494c99407690ce7f713b8620ca715841246974a3e6bfb7aa6c9db"
+  },
+  {
+    "file": "sweep/json-256.txt",
+    "language": "json",
+    "bytes_target": 256,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "972ca79e00a9cf813e8ae31bfe0f7dbbf07e8c4ed41e041f7b0dcc19376536bf"
+  },
+  {
+    "file": "sweep/yaml-256.txt",
+    "language": "yaml",
+    "bytes_target": 256,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "d62294691d37ed5c9f49f0660b891592f33ec0661470ae703d04b7fb285d5ba7"
+  },
+  {
+    "file": "sweep/python-256.txt",
+    "language": "py",
+    "bytes_target": 256,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "6e2d9b49ad7ceb071c915f521f21335d1962edfcc43b73d9cffd1c706b803f03"
+  },
+  {
+    "file": "sweep/rust-512.txt",
+    "language": "rs",
+    "bytes_target": 512,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "dc0e0f94d798ec5f0b5f666eb9f23088b11ec81aba231d726a6459726df75825"
+  },
+  {
+    "file": "sweep/typescript-512.txt",
+    "language": "ts",
+    "bytes_target": 512,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "3fc2ade345f629e049f1503892a83541f43fd9f0bffe607a1fbe3dca9e69e02a"
+  },
+  {
+    "file": "sweep/json-512.txt",
+    "language": "json",
+    "bytes_target": 512,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "ab038dc66c26e9fb5fc2f2b257f1c73eb96e7d633423f7ac4573fa1d3d4230bd"
+  },
+  {
+    "file": "sweep/yaml-512.txt",
+    "language": "yaml",
+    "bytes_target": 512,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "3594e819092c517382ebb7b715d372477ccb0f31bfb0e1c22e7bfe80eb676c28"
+  },
+  {
+    "file": "sweep/python-512.txt",
+    "language": "py",
+    "bytes_target": 512,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "eb3c04894e66c17a5be35d885b61a01d4827e3ac10e0e86019f8f8c35f6ea095"
+  },
+  {
+    "file": "sweep/rust-1024.txt",
+    "language": "rs",
+    "bytes_target": 1024,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "4d6da0767d1d4b418fbd920d0908fc89872b3fe16dfe1acdf88323829658ddf2"
+  },
+  {
+    "file": "sweep/typescript-1024.txt",
+    "language": "ts",
+    "bytes_target": 1024,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "3539dd1f70a3f1f39bbd844b0e1cdc258b0b24fef622b4e5681d1688f545a9e0"
+  },
+  {
+    "file": "sweep/json-1024.txt",
+    "language": "json",
+    "bytes_target": 1024,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "78e509e4b1f41e1cb1a651f742f9b8b6985cdb53192bcda4d4174f0c3f736318"
+  },
+  {
+    "file": "sweep/yaml-1024.txt",
+    "language": "yaml",
+    "bytes_target": 1024,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "88d90071e540b8d64ed9c358281cd362bf0448ffb5752a913c7edc55afda52bb"
+  },
+  {
+    "file": "sweep/python-1024.txt",
+    "language": "py",
+    "bytes_target": 1024,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "479bebf0cb332c55281da064b291a66347005dfe79bcae3deb56a0aaff0d970a"
+  },
+  {
+    "file": "sweep/rust-2048.txt",
+    "language": "rs",
+    "bytes_target": 2048,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "e64e6e877e53d3025ff57077f37834ab53274dafe6332abf0952baac1b8bd207"
+  },
+  {
+    "file": "sweep/typescript-2048.txt",
+    "language": "ts",
+    "bytes_target": 2048,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "f28773ce21c9cc5576dbeebe78f817b3c835ddb91d97ab4d3dda294671b53d46"
+  },
+  {
+    "file": "sweep/json-2048.txt",
+    "language": "json",
+    "bytes_target": 2048,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "3afe6499ab78a8d6733a9101090f332592f1b5875298a2173026709b7747deb2"
+  },
+  {
+    "file": "sweep/yaml-2048.txt",
+    "language": "yaml",
+    "bytes_target": 2048,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "3457f0baf7d2a93a4c5564f068d7f4ea97668655825cb5cf54e9633e902408aa"
+  },
+  {
+    "file": "sweep/python-2048.txt",
+    "language": "py",
+    "bytes_target": 2048,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "4e927a0008b716f9a2ce2b4e40af347298f548d4a3b8f56c1f3f91c8915f5aa8"
+  },
+  {
+    "file": "sweep/rust-4096.txt",
+    "language": "rs",
+    "bytes_target": 4096,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "58a66a6f07d4b8ec40a010e5ad7bda9970eac84fd1d77cae102912a53ed21db8"
+  },
+  {
+    "file": "sweep/typescript-4096.txt",
+    "language": "ts",
+    "bytes_target": 4096,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "008a2992e4d496f5c690e0375f9d0b4d619b0bc30aefa3bf54a88c61b34954d3"
+  },
+  {
+    "file": "sweep/json-4096.txt",
+    "language": "json",
+    "bytes_target": 4096,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "3fc799313fdf4ecbb039dcc49645b683f55f2224e44f7829fe29655f2ad0079a"
+  },
+  {
+    "file": "sweep/yaml-4096.txt",
+    "language": "yaml",
+    "bytes_target": 4096,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "226d8459ac9ca0a503953ecb6df976b2f60077fc99df77b43b6da11b42b191fe"
+  },
+  {
+    "file": "sweep/python-4096.txt",
+    "language": "py",
+    "bytes_target": 4096,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "32b9470fc755b54db38b5b046066f04160edf8c6572c87d0938505c910c05f01"
+  },
+  {
+    "file": "sweep/rust-8192.txt",
+    "language": "rs",
+    "bytes_target": 8192,
+    "source_fixture": "rust-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "355e2d127ea80d33cf7050e8e0c04eba1055168afefff55f9c999e075b43853c"
+  },
+  {
+    "file": "sweep/typescript-8192.txt",
+    "language": "ts",
+    "bytes_target": 8192,
+    "source_fixture": "typescript-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "5831a9831c6df4d050a2f6c6899aa7551d6fedd8c4f8c3ae10b7b4f29fb1c224"
+  },
+  {
+    "file": "sweep/json-8192.txt",
+    "language": "json",
+    "bytes_target": 8192,
+    "source_fixture": "json-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "73300143f7d6579369af697123fff4acbb56fb7f1c63a5956ca138132c0b7bb3"
+  },
+  {
+    "file": "sweep/yaml-8192.txt",
+    "language": "yaml",
+    "bytes_target": 8192,
+    "source_fixture": "yaml-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "ddf36bb0ca0b233d49b9743c2a02814938ecb8555e0fbd4ae895bacfc2d81a05"
+  },
+  {
+    "file": "sweep/python-8192.txt",
+    "language": "py",
+    "bytes_target": 8192,
+    "source_fixture": "python-16384.txt",
+    "utf8_padding_bytes": 0,
+    "sha256": "3e985862236694e9d4a9434d1503307d0743d4e35be683371551ad53f1fa3430"
+  }
+]

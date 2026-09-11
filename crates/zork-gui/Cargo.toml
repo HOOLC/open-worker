@@ -1,0 +1,196 @@
+[package]
+name = "zork-gui"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "zork-gui"
+path = "src/main.rs"
+
+[[bin]]
+name = "zork-gui-render-bench"
+path = "src/bin/render-bench.rs"
+required-features = ["headless-bench"]
+
+[[bin]]
+name = "zork-gui-storybook"
+path = "src/bin/storybook.rs"
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_selection"
+path = "tests/headless_selection.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_modals"
+path = "tests/headless_modals.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_profile_quota"
+path = "tests/headless_profile_quota.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[dependencies]
+ulid.workspace = true
+zork-client-core = { path = "../zork-client-core", features = ["desktop"] }
+zork-ui = { path = "../zork-ui", features = ["native-screenshots"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+anyhow = "1"
+libc = "0.2"
+gpui = { package = "gpui-unofficial", version = "1.17.0-pre" }
+gpui-platform = { package = "gpui-platform-gpui-unofficial", version = "1.17.0-pre", features = ["font-kit", "test-support", "wayland", "x11"] }
+futures-util.workspace = true
+futures-channel = "0.3.31"
+tokio.workspace = true
+serde.workspace = true
+serde_json = "1.0.145"
+thiserror = "2.0.17"
+bytes = "1"
+unicode-segmentation = "1.12"
+markdown = "1.0.0"
+axum = "0.8"
+image = { version = "0.25", default-features = false, features = ["png"] }
+tempfile = { version = "3", optional = true }
+
+[features]
+native-blur-bench = ["headless-bench", "gpui/bench"]
+frame-profiler = ["gpui/profiler", "zork-ui/frame-profiler"]
+headless-bench = ["gpui/profiler", "gpui/test-support", "dep:tempfile", "zork-ui/headless-bench", "zork-ui/stories", "zork-client-core/headless-bench"]
+
+[dev-dependencies]
+rusqlite = { version = "0.31", features = ["bundled"] }
+reqwest.workspace = true
+zork-config = { path = "../zork-config" }
+zork-mesh = { path = "../zork-mesh" }
+tempfile = "3"
+
+
+[[test]]
+name = "headless_loading"
+path = "tests/headless_loading.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_isolation"
+path = "tests/headless_isolation.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_message_presentation"
+path = "tests/headless_message_presentation.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_presence"
+path = "tests/headless_presence.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_history"
+path = "tests/headless_history.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_interaction_states"
+path = "tests/headless_interaction_states.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_form_states"
+path = "tests/headless_form_states.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_navigation_states"
+path = "tests/headless_navigation_states.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_conversation_files"
+path = "tests/headless_conversation_files.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_attachment_preview"
+path = "tests/headless_attachment_preview.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_history_statistics"
+path = "tests/headless_history_statistics.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_composer_controls"
+path = "tests/headless_composer_controls.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[target.'cfg(target_os = "macos")'.dependencies.block2]
+version = "0.6"
+
+[target.'cfg(target_os = "macos")'.dependencies.objc2]
+version = "0.6"
+
+[target.'cfg(target_os = "macos")'.dependencies.objc2-foundation]
+version = "=0.3.2"
+features = [
+    "NSArray",
+    "NSAttributedString",
+    "NSBundle",
+    "NSCoder",
+    "NSData",
+    "NSDate",
+    "NSDictionary",
+    "NSEnumerator",
+    "NSError",
+    "NSGeometry",
+    "NSNotification",
+    "NSNull",
+    "NSObjCRuntime",
+    "NSObject",
+    "NSProcessInfo",
+    "NSRange",
+    "NSRunLoop",
+    "NSSet",
+    "NSString",
+    "NSURL",
+    "NSUndoManager",
+    "NSValue",
+    "objc2-core-foundation",
+    "std",
+]
+default-features = false
+
+[target.'cfg(target_os = "macos")'.dependencies.objc2-user-notifications]
+version = "0.3"
+
+[[test]]
+name = "headless_resources"
+path = "tests/headless_resources.rs"
+harness = false
+required-features = ["headless-bench"]
+
+[[test]]
+name = "headless_resource_concept"
+path = "tests/headless_resource_concept.rs"
+harness = false
+required-features = ["headless-bench"]

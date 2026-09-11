@@ -1,0 +1,28 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zork 移动端 HTML 原型 · Zork Design</title><link rel="icon" href="../../assets/brand/mark.svg"><link rel="stylesheet" href="../../handbook.css"></head><body><header><a class="home" href="../../index.html"><img src="../../assets/brand/mark.svg" alt=""><svg class="home-wordmark" xmlns="http://www.w3.org/2000/svg" width="136" height="44" viewBox="0 0 136 44" role="img" aria-label="Zork"><title>Zork · 折角 / Fold · 字标探索 v2</title><g fill="#24272B"><path class="wordmark-letter letter-z" fill-rule="evenodd" d="M3 4H31V10L11 33H31V40H18L21 35L10 40H0V33L21 11H0V7Z"/><path class="wordmark-letter letter-o" fill-rule="evenodd" d="M46 14H54L64 24V30Q64 40 54 40H46Q36 40 36 30V24Q36 14 46 14ZM47 21Q43 21 43 26V29Q43 33 47 33H53Q57 33 57 29V27L51 21Z"/><path class="wordmark-letter letter-r" fill-rule="evenodd" d="M71 40V15H78V20Q81 15 87 15H94L89 22H86Q78 22 78 30V40Z"/><path class="wordmark-letter letter-k" fill-rule="evenodd" d="M99 4H106V25L118 15H128L113 28L132 40H120L106 31V40H99Z"/></g></svg><span>Design</span></a><nav><a href="../../index.html#identity">品牌</a><a href="../../index.html#product">产品</a><a href="../../assets/index.html">素材</a><a href="../../mobile/index.html">移动端</a><a href="../../prototype/gui.html">交互样稿 ↗</a></nav></header><div class="reading-layout"><aside><a href="../../docs/01-concepts.html">01 产品概念</a><a href="../../docs/02-principles.html">02 设计原则</a><a href="../../docs/03-visual-system.html">03 视觉规范</a><a href="../../docs/04-components.html">04 组件与交互</a><a href="../../docs/05-assets.html">05 图形与素材</a><a href="../../docs/06-states-and-copy.html">06 状态与文案</a><a href="../../docs/07-motion.html">07 动效规范</a><a href="../../docs/08-decisions.html">08 决策与待定项</a><a href="../../docs/09-handoff.html">09 维护与交付</a><a href="../../docs/10-mobile.html" aria-current="page">10 移动端规范</a><a href="../../docs/11-avatars.html">11 动物头像生成规范</a><a href="../../docs/12-icons-and-scenes.html">12 功能图标与 SVG 状态</a><a href="../../docs/13-design-coverage.html">13 PC 设计覆盖与验证</a><a href="../../README.md">Markdown 目录 ↗</a></aside><main class="article"><h1 id="zork-html">Zork 移动端 HTML 原型</h1>
+<p>入口：<code>index.html</code>。HTML / CSS / 原生 JavaScript，无构建依赖。按照用户要求直接制作 HTML 原型，不再生成视觉概念图。所有品牌标识、头像与功能图标复用现有 SVG，未新增品牌图形。</p>
+<p>本地预览：http://localhost:49236/</p>
+<h2 id="_1">可操作流程</h2>
+<ul>
+<li>设备 → Leader → Task；整行点击进入对话，独立展开按钮收起任务。</li>
+<li>返回与浏览器后退保留阅读位置，各对话独立保留草稿、评论和附件。</li>
+<li>消息片段选中后显示评论入口，评论可编辑、移除，和正文/附件一次发送。</li>
+<li>文件说明可下载，选择的本地文件可在对话中下载；没有上传到外部服务。</li>
+<li>设备设置开关彼此隔离；Agent、模型连接、手动模型管理均属于当前设备。</li>
+<li>添加连接先选订阅 / API，再选供应商；不注入预设模型，不收集真实凭据。</li>
+<li>添加设备或选择 Leader 协助只准备草稿，不自动发送。</li>
+</ul>
+<h2 id="2026-09-06">移动端约束（用户反馈，2026-09-06）</h2>
+<p>移动端没有 hover；所有入口始终可见，无 hover CSS 或悬停才出现的操作。使用 <code>:active</code> 按压反馈。常用控制至少 44px 点击区域；底部添加设备、设置横向排列。独立滚动内容，页头与输入区固定在应用内；手机全屏显示，桌面仅提供 390px 宽的预览容器。输入框自动增高，Enter 换行；使用系统文本选择与原生文件选择。视口随键盘高度调整，评论入口根据输入区高度定位，底部弹层不超出可视高度。</p>
+<h2 id="_2">验证与限制</h2>
+<ul>
+<li>JavaScript 语法检查通过。</li>
+<li>JSDOM 实际 DOM 事件冒烟检查通过：导航折叠、独立草稿、评论编辑与一次发送、HTML 转义、设备配置隔离、添加连接/模型、重复模型校验、Agent 模型选择、添加设备仅准备草稿，无 DOM 运行异常。</li>
+<li>全部原型文件与图标通过 HTTP 200 检查，确认没有 hover 规则。</li>
+<li>内置浏览器不可用、Chrome 控制接口连续超时，未完成浏览器截图、实际触摸设备与系统键盘复核。详见 <code>design-qa.md</code>。</li>
+<li>所有消息与配置为页面内存中的演示数据，刷新页面会重置。不连接真实 Agent、设备或模型，不执行安装、登录或更新。新增 Agent 仅为配置记录，未模拟 Agent 自动创建 Task。</li>
+</ul>
+<p>截图反馈修正：Leader 行的按压、键盘焦点和选中背景统一由整行容器绘制；名称与展开按钮不再各自绘制局部背景。二者仍保留独立点击行为。</p>
+<p>导航状态统一修正（nav4）：重新核对原品牌任务的“所有 tab 背景不要因为缩进缩短、尺寸统一、active 不改变字重、相邻背景保留 2px”要求。设备、Leader、Task 使用同一 48px 触摸行高、6px 圆角、2px 行间距与 10px 外侧留白。直接复用桌面 hover 色为按压色、selected 色为选中色。名称与箭头的内部按钮始终透明；Leader 名称命中区域覆盖整行，箭头独立覆盖右侧 44px。按压状态在整行绘制，抬手、滑动、取消都会清除。底部两个并排入口保留移动端布局，采用相同尺寸与状态规则。</p>
+<p>移动端列表状态修订（nav5）：用户要求聊天列表没有持续 active / selected 状态。Leader 与 Task 不再高亮最近打开的对话，仅保留按压时的整行反馈与键盘焦点反馈；返回列表仍保留阅读位置与未读计数。此条覆盖前文聊天列表选中状态说明。</p>
+<p>设置列表点击修正（nav6）：设备、Agent、模型连接等设置行统一由完整按钮承载点击与按压背景。分组容器不再有横向 padding，14px 内容留白移入每行按钮；分隔线内缩但不缩小点击区域。设置行复用导航按压颜色、6px 圆角和 2px 间隔，滑动时清除反馈。</p>
+<p>聊天顶部设备入口修正（nav7）：使用与列表一致的按压色、6px 圆角、对称 10px 内容留白、44px 最小点击高度。设备设置记住来源；从聊天进入时显示“返回对话”，回到原 Task / Leader 对话并恢复草稿、评论、附件与阅读位置；从设置列表进入时返回设置列表。进入 Agent / 模型等设备子页不覆盖该来源。DOM 回归已验证两条路径及草稿、阅读位置恢复。</p></main></div><footer>2026.09.06 · 本地设计资料 · 未定稿内容均标记为提案</footer></body></html>

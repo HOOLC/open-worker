@@ -1,0 +1,12 @@
+# UI paths exercised by conversation navigation, partner motion and message scrolling.
+# Keep the app's own hot methods alongside the profiles supplied by Compose.
+HPLsurf/zork/android/WorkbenchKt**;->**(**)**
+HPLsurf/zork/android/WorkbenchActions**;->**(**)**
+HPLsurf/zork/android/WorkbenchState**;->**(**)**
+HPLsurf/zork/android/Composer**;->**(**)**
+HPLsurf/zork/android/ConversationBodySlot**;->**(**)**
+HPLsurf/zork/android/ConversationMessageState**;->**(**)**
+HPLsurf/zork/android/Message**;->**(**)**
+HPLsurf/zork/android/PageSlide**;->**(**)**
+HPLsurf/zork/android/MainActivity**;->**(**)**
+HPLsurf/zork/android/ThemeKt**;->**(**)**

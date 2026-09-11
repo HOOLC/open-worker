@@ -1,0 +1,797 @@
+{
+  "version": "2026-09-06",
+  "items": [
+    {
+      "path": "assets/brand/mark-micro.svg",
+      "category": "brand",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/mark-micro.svg",
+      "sha256": "eea294913af73409c98a32863435ff57ae816e31cfe45c06e86cafac6afd4d52"
+    },
+    {
+      "path": "assets/brand/mark.svg",
+      "category": "brand",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/mark.svg",
+      "sha256": "ea2cb61ddbfcae905ae75076fccbd52757b6d2c8e4e8d65a3aa1c13b1b2649b6"
+    },
+    {
+      "path": "assets/brand/mark-orange.svg",
+      "category": "brand",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/mark-orange.svg",
+      "sha256": "b7ac09ff1eae9376de005bfe42f0c0aa60caaf6f8c5c5246adeb2f509627d5e7"
+    },
+    {
+      "path": "assets/brand/mark-reverse.svg",
+      "category": "brand",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/mark-reverse.svg",
+      "sha256": "4304bc835a71368a3f30b18cbb960f520071869b00fc4e8b881317487fd7c2e1"
+    },
+    {
+      "path": "assets/brand/zork-wordmark-draft.svg",
+      "category": "wordmark",
+      "status": "current-adopted-v2",
+      "source": "wordmark/zork-fold-v2.svg",
+      "sha256": "ff943ba1b6e9b1579b33a26315be1048d1a237dfa3bab3673907fd581ca79473"
+    },
+    {
+      "path": "assets/avatars/owl.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/owl.svg",
+      "sha256": "ed7e75c79f7fa68ac3a9391d77ff5a7344dad26bec1d765abae77b2c08257b19"
+    },
+    {
+      "path": "assets/avatars/panda.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/panda.svg",
+      "sha256": "34e373f13b7c3ac1ab25de06b1956ae8eacd396b4e7b012d683096024b3d57b7"
+    },
+    {
+      "path": "assets/avatars/bunny.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/bunny.svg",
+      "sha256": "1045fad070bd2a0a415ad14ee16c8443132ebac8966559997831ea73806397fc"
+    },
+    {
+      "path": "assets/avatars/octopus.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/octopus.svg",
+      "sha256": "1b92b73c5c3292fb0ac8222108737572b75cbf25144db40a6201a6b13e3a6e6c"
+    },
+    {
+      "path": "assets/avatars/deer.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/deer.svg",
+      "sha256": "710f0541f2c27df5bb3775cd754fafcafc08daec2750b6367b7b07db6cb10edd"
+    },
+    {
+      "path": "assets/avatars/dog.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/dog.svg",
+      "sha256": "336727c0e3593d9f41a42932b4ebeccdc456ba8167fe62643289302625b693bb"
+    },
+    {
+      "path": "assets/avatars/chick.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/chick.svg",
+      "sha256": "46832f72b6f9b7c012b83ecfc1b4fc8fd44fb3ea530b1a37b195fdb0bfb86d21"
+    },
+    {
+      "path": "assets/avatars/bear.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/bear.svg",
+      "sha256": "e5935143ec4b830c31bae62b8a72ab79cf7cfa104a051b5c3627c712bff9d153"
+    },
+    {
+      "path": "assets/avatars/koala.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/koala.svg",
+      "sha256": "69b866a6b64dd6d0797d7d826f56e0ad2136ab5b29d5fae9b6d203289382f56a"
+    },
+    {
+      "path": "assets/avatars/fox.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/fox.svg",
+      "sha256": "7fc45f3e839c52ddf428039c5215238b917c980980ed98f7f5c42a63dafb9671"
+    },
+    {
+      "path": "assets/avatars/cat.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/cat.svg",
+      "sha256": "a7468d5c05984690b6c5cf3da381b27f691854e5989e6ef31fd861c554950385"
+    },
+    {
+      "path": "assets/avatars/penguin.svg",
+      "category": "svg/avatars",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/avatars/penguin.svg",
+      "sha256": "e7a19d72d2edfb682a3f131078c3c2a1dc05606c5408755d9bf760a15b80805a"
+    },
+    {
+      "path": "assets/icons/product/task.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/task.svg",
+      "sha256": "f4b20ac12426b1556e9b934c7bd7c06ed3cdb50d449598e9fb905e381308aaba",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/offline.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/offline.svg",
+      "sha256": "f00da63caccdfc3899468798614803fbe240fa6a171da7b7a38bc45442a99956",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/result.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/result.svg",
+      "sha256": "cb24a15cd8b7c61795e0836aa0f85c0e860bbeef9a0f972d0ee90b3f40f30577",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/cancelled.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/cancelled.svg",
+      "sha256": "42b8d55d263502a939bb82169e710e74320250f28f4ab70fd3c4e862ea0a0b96",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/review.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/review.svg",
+      "sha256": "4c58f08ad2580fcd7df2a80285014810068745b760a2add40a8be9b0a2cbb7e2",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/leader.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/leader.svg",
+      "sha256": "d9de5860698d8aa4cc2021038f244317cd8819d6191bbb344ea9d1599e73cbcd",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/working.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/working.svg",
+      "sha256": "f39feb48ca6c73309143eb07a933e1fb940e421bd4c33f07bcb2738f2e663105",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/attention.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/attention.svg",
+      "sha256": "8d2a19b03b8ccf624c9901bf3792e6d588bd16000ae9048e7c74fab383b04361",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/permission.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/permission.svg",
+      "sha256": "f231fcaaa34afdc12f40be94970d56a7e253b5e7446818addd3c4000aafb4e46",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/open.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/open.svg",
+      "sha256": "0982135364c28ceb0a766602dd698e49221c07855166d9150f8f022a187b4c3c",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/mesh.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/mesh.svg",
+      "sha256": "955dd1ffa4d3890a674d90f4267a600b827f181571e289ecfe3e157fc687a2bb",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/workspace.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/workspace.svg",
+      "sha256": "5530465312cfe4ac77f6bfeea6a33bee4455463a4ae1888a6ea6504a490fe74b",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/worker.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/worker.svg",
+      "sha256": "f7c52b624f93722b3428cd31220240f466c7a470db9e8407cf2fda0751abd247",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/handoff.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/handoff.svg",
+      "sha256": "b0447e16c20ca306f8d681c3465f7829406230684312a441cf04bea4c476efd3",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/queued.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/queued.svg",
+      "sha256": "d254210a5e842c9430a2f14e36634d9075dab6c37a6e7995da5e92fc9d6cff60",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/completed.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/completed.svg",
+      "sha256": "1ece38dbe1cafcbc968e012c433c0afd3174cf37e827b8e210d31966356fcba3",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/history.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/history.svg",
+      "sha256": "fb5c34b535b180a75e6c3eaacd573ea8142e8163ac9bbd26f322fe8d78d40bfa",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/product/node.svg",
+      "category": "svg/icons",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/svg/icons/node.svg",
+      "sha256": "d013d2579e720db10a37740af1b422d928100d4ebdc3d096c80d66fcecf9da86",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/search.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/search.svg",
+      "sha256": "71ca4b70716df19ca17924cfa87626b613f11b6db827704ce1570e314c475b8d",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/bars-three.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/bars-three.svg",
+      "sha256": "867d3e62db4d0272488c7ff85c89513ea6cc470942a3002f67632db0d3f4ab5e",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/chevron-down.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/chevron-down.svg",
+      "sha256": "60ec92e57696590cc7fddbafc772174e46c779f7a786cc22f24a4840d32c7842",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/task-chat.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/task-chat.svg",
+      "sha256": "3f7132290c3fa2bb4ee8674d52bfbc45091d24e7f92b809bda00fdc6c5f3ab1f",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/inbox.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/inbox.svg",
+      "sha256": "7988f307d207f59bcb394b40a3ba01e4edb4ea9e20f6bc8a037ad446a8134db7",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/x.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/x.svg",
+      "sha256": "7a982a8ea73b62fa6f7b5f21221d5c9547f4517f224dd1f4ea0752aca36f4877",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/settings.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/settings.svg",
+      "sha256": "a44c7fda1524c601cc316363b5afa372aa0f926139ce4b57d8f40d23de301f7e",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/download.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/download.svg",
+      "sha256": "e4486d2977ebf52811e1a90477088ef85fa180f6a3f08fd1a494a122dff11740",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/plus.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/plus.svg",
+      "sha256": "bbc7c41ea87238791377f387f770d3b45afaca7d75678387f144c45f8f31fd04",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/check.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/check.svg",
+      "sha256": "d2a0806269fcf8d2ad06ad6078ca9a3e2ce616a90190e10805c6d545b4af03ff",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/panel-left.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/panel-left.svg",
+      "sha256": "9f0d6cb7235e243da2b62959f6c9a9f6241c91849447d94f62cca1333017ef4a",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/paperclip.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/paperclip.svg",
+      "sha256": "615316ba4d85468f9a9cba68f65864767797d507f560f6bad2fd1b83dce606dd",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/arrow-up.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/arrow-up.svg",
+      "sha256": "6b51a08a6a7b0535169edfee1d2a7e0776f808469c66d8cff92c760e6675a75b",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/arrow-left.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/arrow-left.svg",
+      "sha256": "1bd5d81cb71f7b6d6c43c25e07a286d66d855960c9c5e4208c63c90a422e0f33",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/mention.svg",
+      "category": "gui/glyphs",
+      "status": "current-direction",
+      "source": "artifacts/brand-review-site/src/gui/glyphs/mention.svg",
+      "sha256": "e3f9062801a5f9d1752db0bce34a367e1d241d9616f5e80aabeaf8fefcb9b4c6",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/providers/githubcopilot.svg",
+      "category": "gui/provider-icons",
+      "status": "third-party-reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/githubcopilot.svg",
+      "sha256": "bbc7fddc13448236e5edea8c399d2072dc40aa5da5bca07f7a2f412405c500a3"
+    },
+    {
+      "path": "assets/providers/xai.svg",
+      "category": "gui/provider-icons",
+      "status": "third-party-reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/xai.svg",
+      "sha256": "89eb7de9f0d02a41cfecd9109e253d7fd3529e27467dee4254faa67f3ac21451"
+    },
+    {
+      "path": "assets/providers/compatible.svg",
+      "category": "gui/provider-icons",
+      "status": "third-party-reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/compatible.svg",
+      "sha256": "238d08df7ee5137369d0cedd7077809c33e84fb396a4926ff66ea87bd6d8948d"
+    },
+    {
+      "path": "assets/providers/openai.svg",
+      "category": "gui/provider-icons",
+      "status": "third-party-reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/openai.svg",
+      "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186"
+    },
+    {
+      "path": "assets/providers/kimi.svg",
+      "category": "gui/provider-icons",
+      "status": "third-party-reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/kimi.svg",
+      "sha256": "ed08131b46acf70e6e2144eceb775e74098b58ea65fa21eaee04be7b05cfe63b"
+    },
+    {
+      "path": "assets/providers/opencode.svg",
+      "category": "gui/provider-icons",
+      "status": "third-party-reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/opencode.svg",
+      "sha256": "7cfa6e9d6726f7c9fa26c7d9aef0dfec52d20a137380454340f30f12ccbfd302"
+    },
+    {
+      "path": "assets/providers/anthropic.svg",
+      "category": "gui/provider-icons",
+      "status": "third-party-reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/anthropic.svg",
+      "sha256": "e833fdfa7e7187a86a05b870925067556a506dcd4239089aed73e1e58c9366a3"
+    },
+    {
+      "path": "assets/providers/openrouter.svg",
+      "category": "gui/provider-icons",
+      "status": "third-party-reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/openrouter.svg",
+      "sha256": "ae671cc83de9bd45db97a47ed5e38a4e1bd9f93a12be495ba4b4f8b284026bca"
+    },
+    {
+      "path": "assets/concepts/illustrations/review-ready.svg",
+      "category": "state-symbol",
+      "status": "functional-svg-alias",
+      "source": "Existing 24×24 Zork functional SVG; replaces decorative scene v2",
+      "sha256": "ec951eed7ce3043f66f1029ce527778eeae94fede0a969ae6dab46825c987ded"
+    },
+    {
+      "path": "assets/concepts/illustrations/device-offline.svg",
+      "category": "state-symbol",
+      "status": "functional-svg-alias",
+      "source": "Existing 24×24 Zork functional SVG; replaces decorative scene v2",
+      "sha256": "1b5c97fff584f8c8a3aeea9c77f497b16d8f16b475be9826e770527bfbf417c2"
+    },
+    {
+      "path": "assets/concepts/illustrations/inbox-clear.svg",
+      "category": "state-symbol",
+      "status": "functional-svg-alias",
+      "source": "Existing 24×24 Zork functional SVG; replaces decorative scene v2",
+      "sha256": "140bd4108ec4a89e6792d24998988851e0b73d28073095a20662d58a36e840f9"
+    },
+    {
+      "path": "assets/concepts/illustrations/first-conversation.svg",
+      "category": "state-symbol",
+      "status": "functional-svg-alias",
+      "source": "Existing 24×24 Zork functional SVG; replaces decorative scene v2",
+      "sha256": "b37881a7297454b3c42e2bdce55cb8005e955c9c44d0b4731c816a1f8295f31c"
+    },
+    {
+      "path": "assets/concepts/illustrations/hero.svg",
+      "category": "state-symbol",
+      "status": "functional-svg-alias",
+      "source": "Existing 24×24 Zork functional SVG; replaces decorative scene v2",
+      "sha256": "975ca1f670c36a4057cd93f0a229e6a6ebc74c3b90131d39a5d0d5153d46abc4"
+    },
+    {
+      "path": "assets/concepts/illustrations/files-empty.svg",
+      "category": "state-symbol",
+      "status": "functional-svg-alias",
+      "source": "Existing 24×24 Zork functional SVG; replaces decorative scene v2",
+      "sha256": "9659bb05533c139cb102f451cc40b1711ee037ec0b42f84cbda6dd36c7d4baed"
+    },
+    {
+      "path": "assets/concepts/illustrations/task-accepted.svg",
+      "category": "state-symbol",
+      "status": "functional-svg-alias",
+      "source": "Existing 24×24 Zork functional SVG; replaces decorative scene v2",
+      "sha256": "7f432e5c839c17ec06a050df9e339e681ca6e48b9a1dd785ac532005d0663466"
+    },
+    {
+      "path": "assets/concepts/illustrations/node-setup.svg",
+      "category": "state-symbol",
+      "status": "functional-svg-alias",
+      "source": "Existing 24×24 Zork functional SVG; replaces decorative scene v2",
+      "sha256": "64e384f36d74d33611ea638e65b6f9588a494a4cbd850deacbfbfa0ebb51fe28"
+    },
+    {
+      "path": "assets/concepts/app-icon/app-icon-background.svg",
+      "category": "app-icon",
+      "status": "proposal",
+      "source": "artifacts/brand-review-site/src/svg/app-icon-background.svg",
+      "sha256": "e28235e33992d9197ff671c2beff6ced53296a59a50e5b43849c591052730958"
+    },
+    {
+      "path": "assets/concepts/app-icon/app-icon-foreground.svg",
+      "category": "app-icon",
+      "status": "proposal",
+      "source": "artifacts/brand-review-site/src/svg/app-icon-foreground.svg",
+      "sha256": "080479f00261ad44c8921119f4841f2bcfdd9ae610563604c27df84ecf394610"
+    },
+    {
+      "path": "assets/concepts/app-icon/app-icon-dark.svg",
+      "category": "app-icon",
+      "status": "proposal",
+      "source": "artifacts/brand-review-site/src/svg/app-icon-dark.svg",
+      "sha256": "a80838bdfcdc95ba660d23a84e1532484225c184bf561be5a977e7f3181c4626"
+    },
+    {
+      "path": "assets/concepts/app-icon/app-icon.svg",
+      "category": "app-icon",
+      "status": "proposal",
+      "source": "artifacts/brand-review-site/src/svg/app-icon.svg",
+      "sha256": "ab873f2b2a9319972e935743287e3fc9968c857a20c68334bd0c8d874a12b721"
+    },
+    {
+      "path": "archive/previous-wordmark/wordmark.svg",
+      "category": "previous-wordmark",
+      "status": "superseded",
+      "source": "artifacts/brand-review-site/src/svg/wordmark.svg",
+      "sha256": "9f85a3e6271388e754c6e53d5234a5519fb4b322c293133b7c7e89a5c0cd83cb"
+    },
+    {
+      "path": "archive/previous-wordmark/lockup.svg",
+      "category": "previous-wordmark",
+      "status": "superseded",
+      "source": "artifacts/brand-review-site/src/svg/lockup.svg",
+      "sha256": "cbab2081a7c05ecedfc30256e03a44bdf2660e8e879e3ce5fb67bc7c15d4baa4"
+    },
+    {
+      "path": "assets/fonts/InterVariable.ttf",
+      "category": "font",
+      "status": "third-party",
+      "source": "artifacts/brand-review-site/src/reference/InterVariable.ttf",
+      "sha256": "1d81bda8fcebb6593b05a670381198e64fe8861f6fc0d8fbe973e4fd56f1d831"
+    },
+    {
+      "path": "licenses/Inter-OFL.txt",
+      "category": "license",
+      "status": "required-attribution",
+      "source": "artifacts/brand-review-site/src/reference/Inter-LICENSE.txt",
+      "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a"
+    },
+    {
+      "path": "licenses/provider-icons-sources.json",
+      "category": "provenance",
+      "status": "reference",
+      "source": "artifacts/brand-review-site/src/gui/provider-icons/sources.json",
+      "sha256": "5ce7db740e1e31a9287f74915b1efd4a674640d53cb63d6ee5def46d08d3c1c8"
+    },
+    {
+      "path": "archive/initial-proposal/proposal.md",
+      "category": "historical-proposal",
+      "status": "historical-not-current",
+      "source": "artifacts/brand-review-site/src/proposal.md",
+      "sha256": "5b1db102f1e953806aef7dfffe120c1befac2cb405daafcb0a3aba2debe79325"
+    },
+    {
+      "path": "archive/initial-proposal/tokens.proposal.json",
+      "category": "historical-proposal",
+      "status": "historical-not-current",
+      "source": "artifacts/brand-review-site/src/tokens.proposal.json",
+      "sha256": "e0734ac4d1918c1f75fd983021b9aae56b29f9ce19d20de77397c6a71fdf7050"
+    },
+    {
+      "path": "archive/initial-proposal/asset-inventory.csv",
+      "category": "historical-proposal",
+      "status": "historical-not-current",
+      "source": "artifacts/brand-review-site/src/asset-inventory.csv",
+      "sha256": "7c22ad27cd3572fc55386bb2389f025b8c2d84e6d779d5e0e735b67031d62995"
+    },
+    {
+      "path": "archive/initial-proposal/asset-inventory.json",
+      "category": "historical-proposal",
+      "status": "historical-not-current",
+      "source": "artifacts/brand-review-site/src/asset-inventory.json",
+      "sha256": "85192117804584b0961764cf5184e1eb8f25fb76082ea98eeae2028b8a3d78f7"
+    },
+    {
+      "path": "archive/initial-proposal/icon-mapping.json",
+      "category": "historical-proposal",
+      "status": "historical-not-current",
+      "source": "artifacts/brand-review-site/src/icon-mapping.json",
+      "sha256": "5f6b731032616a0724d98436c20a97924296c2d389e7e0f0334bbb05068bc7a5"
+    },
+    {
+      "path": "archive/initial-proposal/avatars.json",
+      "category": "historical-proposal",
+      "status": "historical-not-current",
+      "source": "artifacts/brand-review-site/src/avatars.json",
+      "sha256": "295412e8bdeea5b12450731ca667dcba4a7cadb56a9ad3c99f82e3eee5e8db23"
+    },
+    {
+      "path": "tokens/ui-source.css",
+      "category": "tokens",
+      "status": "prototype-source",
+      "source": "artifacts/brand-review-site/src/gui/tokens.css",
+      "sha256": "585f29d3acdc5b1f22584054f32764d6e71a49f4ac7ede8d4e98eacf12b43195"
+    },
+    {
+      "path": "assets/icons/interface/home.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/home.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "9d9d3f0da7fb1c359afd7f532641a2461f987a41c62c0a298d0c5138fdd15022",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/arrow-right.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/arrow-right.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "bbc5a008f72fac3331c731e5a486d5d06f7b411dcb771c251dc907454b4d6828",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/clock.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/clock.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "18d241e4b895bd2f5f9d7623af62428ca74e5e9c800271df81601be160801474",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/panel-right.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/panel-right.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "befb8717a7e68fd63dc06d128961e0ead62666d684b92d8e1a3bd4fce821a08c",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/reload.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/reload.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "399530dc51ef97715d0328d1c6a63c6510ec6d69c195b919e90af1c0c44fce07",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/file.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/file.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "65c93b7c5e63ecdb7a088732f13c7b83acae6cb26896e04f115859305a1a3dfe",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/filter.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/filter2.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "68a6dedc1856c3bb2e47f33c59beaaae1b2b2c54249071cfa79ed1801de57d64",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/columns.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/layout-column.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "72db05a46afadb26fa7aefc7dbb62b41a876f96e5b5c7918f1634ec1ed5ec828",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/microphone.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/microphone-filled.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "2192b71bccba87bbdb322509b56b2a6beee62d3692361a459ca71a1c2367ba17",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/sparkles.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/sparkles.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "b6ab45b3604cf50adfbec8ac5e1fbcb57c989e3c91fdcd56dd36f1d47f00ee6f",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/checklist.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/list-checks.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "0f827bcb373f58d8f538d426a826bf857b2fda4da131ef56ebc0cd55fec75309",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/puzzle.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/puzzle.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "34165214275a5724d3564da40fa599f4a6d4b9fc63263fa5283b85095b71f239",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/shapes.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/shapes-plus-x-square-circle.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "591c74810bea580743a0e6f3cb255518e32da46b0ccf0ee9ad7865e6d3720707",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/settings-three.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/settings-slider-three.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "acf0ec74485b11b78977509da061d73ccc96b4185c4174d4ae6a88919a86be5c",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/loader.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/cue/loader.svg",
+      "origin": "Cue shared company resource / Central Icons; existing project authorization",
+      "sha256": "4e0e0e7e49a0fe7e6c76a1f8c37080bff566aab7eb67c487942b7af958b53d4d",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/terminal.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/icons/phosphor-terminal-window.svg",
+      "origin": "Phosphor / MIT",
+      "sha256": "1b38d8061794a5b3062624d05db05c50a7f02cfc25ac7554c5fc2a1548ceddb8",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/brain.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/icons/phosphor-brain.svg",
+      "origin": "Phosphor / MIT",
+      "sha256": "268b6118dbdb9689acc28170f630be07280bbc3cffe01bdcc7644bc662d5c961",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/cube.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/icons/phosphor-cube.svg",
+      "origin": "Phosphor / MIT",
+      "sha256": "dac385a4f3fea594c049bc5d5eec7712e91a26f5e617c964e0dd8837c4071eab",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/icons/interface/stop.svg",
+      "category": "interface-extension",
+      "status": "normalized-native-resource",
+      "source": "crates/zork-gui/assets/icons/phosphor-stop-fill.svg",
+      "origin": "Phosphor / MIT",
+      "sha256": "b4d2e3b582d09bc9efba323b8b3f1ccad088f0971944bc6fa002533f78d2e07a",
+      "normalization": "24px master; round caps and joins; approximately 1.7 visual stroke"
+    },
+    {
+      "path": "assets/brand/lockup.svg",
+      "category": "brand",
+      "status": "current-adopted-v2",
+      "source": "selected Fold v2 + unchanged mark",
+      "sha256": "dceaaf15fdf43f60463ecc02d45e7baad4e724564142ab66ca2097792177ad92"
+    },
+    {
+      "path": "licenses/Lobe-Icons-MIT.txt",
+      "category": "license",
+      "status": "required-attribution",
+      "source": "https://raw.githubusercontent.com/lobehub/lobe-icons/master/LICENSE",
+      "sha256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
+    }
+  ]
+}

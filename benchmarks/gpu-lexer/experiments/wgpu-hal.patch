@@ -1,0 +1,33 @@
+--- a/src/metal/device.rs
++++ b/src/metal/device.rs
+@@ -224,6 +224,13 @@
+                     &source
+                 );
+ 
++                // Match the pragma emitted by Dawn/Tint for this experiment.
++                let source = if std::env::var_os("ZORK_WGPU_METAL_RELAXED").is_some() {
++                    format!("#pragma METAL fp math_mode(relaxed)\n{source}")
++                } else { source };
++                if let Ok(directory) = std::env::var("ZORK_WGPU_DUMP_MSL") {
++                    std::fs::write(std::path::Path::new(&directory).join(format!("{}.metal", stage.entry_point)), &source).expect("write diagnostic MSL");
++                }
+                 let options = MTLCompileOptions::new();
+                 options.setLanguageVersion(self.shared.private_caps.msl_version);
+ 
+@@ -1710,6 +1717,16 @@
+             };
+ 
+             descriptor.setComputeFunction(Some(&cs.function));
++            // gpu-lexer experiment: Dawn emits this limit in generated MSL.
++            // wgpu already knows the exact workgroup size; exposing it lets the
++            // Metal compiler allocate registers for that size instead of its
++            // conservative default maximum. No shader arithmetic is changed.
++            if std::env::var_os("ZORK_WGPU_METAL_MAX_THREADS").is_some() {
++                descriptor.setMaxTotalThreadsPerThreadgroup(
++                    cs.wg_size.width * cs.wg_size.height * cs.wg_size.depth,
++                );
++            }
++
+ 
+             // https://developer.apple.com/documentation/metal/mtlpipelinebufferdescriptor/mutability
+             if available!(macos = 10.13, ios = 11.0, tvos = 11.0, visionos = 1.0) {

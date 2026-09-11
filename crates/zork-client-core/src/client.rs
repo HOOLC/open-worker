@@ -1,0 +1,1129 @@
+use anyhow::{ensure, Context, Result};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::{
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    time::{SystemTime, UNIX_EPOCH},
+};
+use store::{ClientStore, QueuedMessage, RemoteNode, SavedNode};
+use zork_config::{MeshConfig, MeshPeer};
+use zork_mesh::managed;
+
+#[derive(Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Network {
+    #[serde(default)]
+    pub direct_only: bool,
+    pub relay_urls: Option<Vec<String>>,
+    pub discovery_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+pub enum Command {
+    DiagnoseConnections,
+    SelectPeer {
+        peer: Option<String>,
+    },
+    RestoreNavigation {
+        peer: Option<String>,
+    },
+    DraftAction {
+        peer: String,
+        session: String,
+        operation: state::DraftAction,
+    },
+    SubmitDraft {
+        peer: String,
+        session: String,
+        text: String,
+    },
+    RespondToInteraction {
+        peer: String,
+        session: String,
+        operation: crate::interactions::Command,
+    },
+    CachedMessages {
+        peer: String,
+        session: String,
+    },
+    SettingsAction {
+        peer: String,
+        operation: settings_actions::SettingsAction,
+    },
+    OpenService {
+        view_id: String,
+        url: String,
+    },
+    CloseService {
+        view_id: String,
+    },
+    Resume,
+    Pause,
+    Snapshot,
+    Network {
+        network: Network,
+    },
+    BeginInvitation {
+        ticket: String,
+        name: String,
+    },
+    PollInvitation,
+    NextInvitation,
+    CancelInvitation,
+    SavePeer {
+        origin: String,
+        name: String,
+        address: Option<String>,
+    },
+    RemovePeer {
+        peer: String,
+    },
+    Read {
+        peer: String,
+        path: String,
+        #[serde(default)]
+        cached_only: bool,
+    },
+    Preferences {
+        message_preview_height: Option<u32>,
+    },
+    Settings {
+        peer: String,
+        #[serde(default)]
+        cached_only: bool,
+    },
+    Request {
+        peer: String,
+        method: String,
+        path: String,
+        body: Option<Value>,
+    },
+    Draft {
+        peer: String,
+        session: String,
+        content: String,
+    },
+    Compose {
+        peer: String,
+        session: String,
+        content: String,
+        comments: Vec<comments::DraftComment>,
+        #[serde(default)]
+        attachments: Vec<comments::TextAttachment>,
+        #[serde(default)]
+        files: Vec<zork_client_types::files::FileRef>,
+        #[serde(default)]
+        send: bool,
+    },
+    Conversation {
+        peer: String,
+        session: String,
+    },
+    Enqueue {
+        peer: String,
+        session: String,
+        content: String,
+    },
+    Withdraw {
+        peer: String,
+        request_id: String,
+    },
+    Retry {
+        peer: String,
+        request_id: String,
+    },
+    DeleteFailed {
+        peer: String,
+        request_id: String,
+    },
+    Flush {
+        peer: String,
+    },
+}
+
+impl Command {
+    /// Local edits must never queue behind a slow connection or request.
+    pub fn is_local(&self) -> bool {
+        matches!(
+            self,
+            Self::SelectPeer { .. }
+                | Self::RestoreNavigation { .. }
+                | Self::DraftAction { .. }
+                | Self::SubmitDraft { .. }
+                | Self::RespondToInteraction { .. }
+                | Self::CachedMessages { .. }
+                | Self::CloseService { .. }
+                | Self::Preferences { .. }
+                | Self::Draft { .. }
+                | Self::Compose { .. }
+                | Self::Conversation { .. }
+                | Self::Enqueue { .. }
+                | Self::Withdraw { .. }
+                | Self::Retry { .. }
+                | Self::DeleteFailed { .. }
+                | Self::Settings {
+                    cached_only: true,
+                    ..
+                }
+                | Self::Read {
+                    cached_only: true,
+                    ..
+                }
+        )
+    }
+}
+
+/// An independent store handle: no Tokio/transport lock is held during edits.
+#[derive(Clone)]
+pub struct LocalClient {
+    invitation: Arc<enrollment::InvitationState>,
+    services: Arc<services::Views>,
+    store: Arc<ClientStore>,
+}
+impl LocalClient {
+    /// Independent observation lane. Opening/reading/waiting never takes the
+    /// command executor lock or starts a second device controller.
+    pub fn observe(&self, key: subscriptions::Key) -> Result<subscriptions::WireSubscription> {
+        if matches!(key, subscriptions::Key::Invitation) {
+            return Ok(subscriptions::WireSubscription::from_invitation(
+                &self.invitation.source,
+            ));
+        }
+        self.peer(key.peer())?;
+        let device = self
+            .device_state(key.peer())
+            .context("客户端连接已暂停，请重新连接")?;
+        let conversation = match &key {
+            subscriptions::Key::Conversation {
+                session: Some(session),
+                ..
+            } => {
+                valid_session(session)?;
+                Some(device.conversation(session))
+            }
+            _ => None,
+        };
+        let delivery = matches!(key, subscriptions::Key::Conversation { .. });
+        let observer =
+            subscriptions::WireSubscription::from_device(key, device.clone(), self.store.clone())?;
+        if delivery {
+            device.start_delivery();
+        }
+        if let Some(conversation) = conversation {
+            conversation.start();
+        }
+        Ok(observer)
+    }
+    fn device_state(&self, peer: &str) -> Option<Arc<state::Device>> {
+        self.store
+            .1
+            .lock()
+            .unwrap()
+            .get(peer)
+            .and_then(std::sync::Weak::upgrade)
+    }
+
+    fn peer(&self, peer: &str) -> Result<SavedNode> {
+        find_peer(&self.store, peer)
+    }
+    pub fn execute(&self, command: Command) -> Result<Value> {
+        match command {
+            Command::SelectPeer { peer } => {
+                if let Some(peer) = &peer {
+                    self.peer(peer)?;
+                }
+                self.store.put("device", "last-node", &peer)?;
+                Ok(json!({}))
+            }
+            Command::RestoreNavigation { peer } => {
+                if self.store.get::<Value>("device", "last-node")?.is_none() {
+                    let nodes = self.store.nodes()?;
+                    let selected = peer.filter(|id| nodes.iter().any(|n| n.id == *id));
+                    self.store.put("device", "last-node", &selected)?;
+                }
+                Ok(json!({}))
+            }
+            Command::DraftAction {
+                peer,
+                session,
+                operation,
+            } => {
+                self.peer(&peer)?;
+                valid_session(&session)?;
+                let devices = self.store.1.lock().unwrap();
+                if let Some(device) = devices.get(&peer).and_then(std::sync::Weak::upgrade) {
+                    device.edit_draft_action(&session, operation)?;
+                } else {
+                    self.store.edit_draft(&peer, &session, operation)?;
+                }
+                Ok(json!({}))
+            }
+            Command::SubmitDraft {
+                peer,
+                session,
+                text,
+            } => {
+                self.peer(&peer)?;
+                valid_session(&session)?;
+                let devices = self.store.1.lock().unwrap();
+                if let Some(device) = devices.get(&peer).and_then(std::sync::Weak::upgrade) {
+                    return Ok(serde_json::to_value(device.submit_draft(&session, &text)?)?);
+                }
+                Ok(serde_json::to_value(
+                    self.store.submit_current_draft(&peer, &session, text)?,
+                )?)
+            }
+            Command::CachedMessages { peer, session } => {
+                self.peer(&peer)?;
+                valid_session(&session)?;
+                ensure!(!self.store.replica_revoked(&peer)?, "设备访问权限已撤销");
+                Ok(
+                    json!({"snapshot":cached_message_snapshot(&self.store, &peer, &session)?,"cached":true}),
+                )
+            }
+            Command::RespondToInteraction { peer, session, operation } => {
+                self.peer(&peer)?;
+                valid_session(&session)?;
+                let device = self.store.1.lock().unwrap().get(&peer).and_then(std::sync::Weak::upgrade)
+                    .context("Open the conversation before responding")?;
+                device.conversation(&session).respond_to_interaction(operation)?;
+                Ok(json!({}))
+            }
+            Command::CloseService { view_id } => {
+                self.services.close(&view_id);
+                Ok(json!({"ok":true}))
+            }
+            Command::Preferences {
+                message_preview_height,
+            } => {
+                let value = match message_preview_height {
+                    Some(height) => preferences::save_message_preview_height(&self.store, height)?,
+                    None => preferences::read(&self.store),
+                };
+                Ok(serde_json::to_value(value)?)
+            }
+
+            Command::Draft {
+                peer,
+                session,
+                content,
+            } => self.execute(Command::DraftAction {
+                peer,
+                session,
+                operation: state::DraftAction::Edit { text: content },
+            }),
+            Command::Compose {
+                peer,
+                session,
+                content,
+                comments,
+                attachments,
+                files,
+                send,
+            } => {
+                self.peer(&peer)?;
+                valid_session(&session)?;
+                let payload = if send {
+                    comments::compose_document(&content, &comments, &attachments)
+                } else {
+                    comments::draft_document(&content, &comments, &attachments)
+                };
+                let payload = zork_client_types::files::compose(&payload, &files);
+                ensure!(
+                    zork_client_types::files::valid(&files),
+                    "invalid attachments"
+                );
+                valid_content(&payload, !send)?;
+                if send {
+                    if let Some(device) = self.device_state(&peer) {
+                        return Ok(serde_json::to_value(device.enqueue(&session, payload)?)?);
+                    }
+                    let queued = QueuedMessage {
+                        request_id: ulid::Ulid::new().to_string(),
+                        session_id: session,
+                        content: payload,
+                        attempted: false,
+                        sent_at_ms: crate::store::delivery_now_ms(),
+                        ..Default::default()
+                    };
+                    self.store.enqueue_and_clear_draft(&peer, &queued)?;
+                    Ok(serde_json::to_value(queued)?)
+                } else {
+                    if let Some(device) = self.device_state(&peer) {
+                        device.edit_document(
+                            &session,
+                            state::Draft {
+                                text: content,
+                                comments,
+                                attachments,
+                                files,
+                            },
+                        )?;
+                        return Ok(json!({}));
+                    }
+                    self.store
+                        .put(&peer, &format!("draft:{session}"), &payload)?;
+                    Ok(json!({}))
+                }
+            }
+            Command::Conversation { peer, session } => {
+                self.peer(&peer)?;
+                valid_session(&session)?;
+                let raw = self
+                    .store
+                    .get::<String>(&peer, &format!("draft:{session}"))?
+                    .unwrap_or_default();
+                let (raw, files) = zork_client_types::files::decode(&raw).unwrap_or((raw, vec![]));
+                let (draft, comments, attachments) =
+                    comments::decode_document(&raw).unwrap_or((raw, vec![], vec![]));
+                let outbox: Vec<_> = self
+                    .store
+                    .outbox(&peer)?
+                    .into_iter()
+                    .filter(|m| m.session_id == session)
+                    .map(|m| {
+                        let mut value = serde_json::to_value(&m).expect("queued message");
+                        value["delivery_status"] = json!(m.delivery_status());
+                        conversation::project_payload(&mut value);
+                        value
+                    })
+                    .collect();
+                Ok(
+                    json!({"draft":draft,"comments":comments,"attachments":attachments,"files":files,"outbox":outbox}),
+                )
+            }
+            Command::Enqueue {
+                peer,
+                session,
+                content,
+            } => {
+                self.peer(&peer)?;
+                valid_session(&session)?;
+                valid_content(&content, false)?;
+                if let Some(device) = self.device_state(&peer) {
+                    return Ok(serde_json::to_value(device.enqueue(&session, content)?)?);
+                }
+                let queued = QueuedMessage {
+                    request_id: ulid::Ulid::new().to_string(),
+                    session_id: session,
+                    content,
+                    attempted: false,
+                    sent_at_ms: crate::store::delivery_now_ms(),
+                    ..Default::default()
+                };
+                self.store.enqueue_and_clear_draft(&peer, &queued)?;
+                Ok(serde_json::to_value(queued)?)
+            }
+            Command::Retry { peer, request_id } => {
+                self.peer(&peer)?;
+                if let Some(device) = self.device_state(&peer) {
+                    device.retry_delivery(&request_id)?;
+                } else {
+                    self.store.retry_delivery(&peer, &request_id)?;
+                }
+                Ok(json!({}))
+            }
+            Command::DeleteFailed { peer, request_id } => {
+                self.peer(&peer)?;
+                if let Some(device) = self.device_state(&peer) {
+                    device.delete_failed_delivery(&request_id)?;
+                } else {
+                    self.store.delete_failed(&peer, &request_id)?;
+                }
+                Ok(json!({}))
+            }
+            Command::Withdraw { peer, request_id } => {
+                self.peer(&peer)?;
+                let message = if let Some(device) = self.device_state(&peer) {
+                    device.withdraw_delivery(&request_id)?
+                } else {
+                    self.store.withdraw_to_draft(&peer, &request_id)?
+                };
+                Ok(json!({"withdrawn":message}))
+            }
+            Command::Settings {
+                peer,
+                cached_only: true,
+            } => {
+                self.peer(&peer)?;
+                settings::cached(&self.store, &peer)
+            }
+            Command::Read {
+                peer,
+                path,
+                cached_only: true,
+            } => {
+                self.peer(&peer)?;
+                ensure!(!self.store.replica_revoked(&peer)?, "设备访问权限已撤销");
+                if let Some(session) = message_session(&path) {
+                    return Ok(
+                        json!({"snapshot":cached_message_snapshot(&self.store, &peer, session)?,"cached":true}),
+                    );
+                }
+                if let Some(body) = catalog::read_response(&self.store, &peer, &path)? {
+                    return Ok(json!({"snapshot":{"body":body},"cached":true}));
+                }
+                let cached = self.store.get::<Value>(&peer, &format!("http:{path}"))?;
+                Ok(json!({"snapshot":cached,"cached":true}))
+            }
+            _ => anyhow::bail!("operation requires a network client"),
+        }
+    }
+}
+fn find_peer(store: &ClientStore, peer: &str) -> Result<SavedNode> {
+    store
+        .nodes()?
+        .into_iter()
+        .find(|node| node.id == peer)
+        .context("设备尚未添加")
+}
+
+pub struct Client {
+    invitation: Arc<enrollment::InvitationState>,
+    invitation_job: Option<zork_notify::Task<()>>,
+    services: Arc<services::Views>,
+    root: PathBuf,
+    store: Arc<ClientStore>,
+    runtime: Option<managed::Runtime>,
+    gateways: Mutex<std::collections::HashMap<String, Arc<api::GatewayClient>>>,
+    devices: std::collections::HashMap<String, Arc<state::Device>>,
+}
+
+impl Client {
+    pub fn local(&self) -> LocalClient {
+        LocalClient {
+            invitation: self.invitation.clone(),
+            services: self.services.clone(),
+            store: self.store.clone(),
+        }
+    }
+    pub fn open(root: &Path) -> Result<Self> {
+        ensure!(root.is_absolute(), "client data directory must be absolute");
+        let store = Arc::new(ClientStore::open(root)?);
+        settings_actions::recover_operations(&store)?;
+        Ok(Self {
+            invitation: Arc::new(enrollment::InvitationState::new(
+                enrollment::public_snapshot(&store, false)?,
+            )),
+            invitation_job: None,
+            root: root.to_owned(),
+            store,
+            runtime: None,
+            services: Default::default(),
+            gateways: Mutex::new(std::collections::HashMap::new()),
+            devices: Default::default(),
+        })
+    }
+
+    fn config(&self, network: &Network) -> Result<MeshConfig> {
+        let config = MeshConfig {
+            enabled: true,
+            offline: network.direct_only,
+            // Mobile peers must be reachable over LAN, including in direct-only mode.
+            bind: Some("0.0.0.0:0".into()),
+            relay_urls: network.relay_urls.clone(),
+            discovery_url: network.discovery_url.clone(),
+            peers: self
+                .store
+                .nodes()?
+                .into_iter()
+                .filter_map(|n| {
+                    n.mesh.map(|remote| MeshPeer {
+                        origin: remote.origin,
+                        name: n.name,
+                        addr: remote.addr,
+                        execute: vec![],
+                        client: false,
+                        collaborate: false,
+                    })
+                })
+                .collect(),
+            ..Default::default()
+        };
+        managed::validate(&config)?;
+        Ok(config)
+    }
+
+    async fn resume(&mut self) -> Result<()> {
+        if self.runtime.as_ref().is_some_and(|r| r.is_finished()) {
+            self.pause().await?;
+        }
+        if self.runtime.is_none() {
+            let network = self.enrollment_network()?;
+            let config = self.config(&network)?;
+            let (runtime, identity) = transport::start(&self.root, &config).await?;
+            self.store.put("device", "identity", &identity)?;
+            self.runtime = Some(runtime);
+        }
+        self.watch_devices()?;
+        self.watch_invitation()?;
+        Ok(())
+    }
+
+    fn watch_devices(&mut self) -> Result<()> {
+        if self.runtime.is_none() {
+            return Ok(());
+        }
+        for peer in self.store.nodes()? {
+            if self.devices.contains_key(&peer.id) {
+                continue;
+            }
+            let device = state::Device::open(
+                self.gateway(&peer.id)?,
+                Some((self.store.clone(), peer.id.clone())),
+                true,
+            );
+            device.start();
+            self.devices.insert(peer.id, device);
+        }
+        Ok(())
+    }
+
+    pub async fn pause(&mut self) -> Result<()> {
+        self.invitation_job.take();
+        self.invitation
+            .replace(enrollment::public_snapshot(&self.store, false)?);
+        self.services.clear();
+        for device in self.devices.values() {
+            device.stop_sync();
+        }
+        self.devices.clear();
+        self.gateways.lock().expect("Gateway clients").clear();
+        if let Some(mut runtime) = self.runtime.take() {
+            runtime.shutdown().await?;
+        }
+        Ok(())
+    }
+
+    fn node(&self) -> Result<zork_mesh::node::MeshNode> {
+        let runtime = self.runtime.as_ref().context("客户端连接已暂停")?;
+        ensure!(!runtime.is_finished(), "客户端连接已结束，请重新连接");
+        Ok(runtime.node())
+    }
+
+    fn peer(&self, peer: &str) -> Result<SavedNode> {
+        find_peer(&self.store, peer)
+    }
+
+    fn snapshot(&self) -> Result<Value> {
+        Ok(json!({
+            "invitation": self.invitation_snapshot()?,
+            "identity": self.store.get::<String>("device", "identity")?,
+            "running": self.runtime.as_ref().is_some_and(|r| !r.is_finished()),
+            "nodes": self.store.nodes()?,
+            "selected_peer": self.store.get::<String>("device","last-node").ok().flatten(),
+            "network": self.store.get::<Network>("device", "network")?.unwrap_or_default(),
+        }))
+    }
+
+    async fn request(
+        &self,
+        peer: &str,
+        method: &str,
+        path: &str,
+        body: Option<Value>,
+    ) -> Result<Value> {
+        self.peer(peer)?;
+        ensure!(
+            matches!(method, "GET" | "POST" | "PUT" | "PATCH" | "DELETE"),
+            "unsupported request method"
+        );
+        ensure!(
+            path.starts_with("/v1/") && !path.contains('#') && path.len() < 4096,
+            "invalid Gateway path"
+        );
+        let client = self.gateway(peer)?;
+        let device = state::Device::open(
+            client.clone(),
+            Some((self.store.clone(), peer.into())),
+            true,
+        );
+        if let Some(result) = device.mutate_request(method, path, body.as_ref()).await? {
+            return Ok(result);
+        }
+        let result = client
+            .node_request(
+                reqwest::Method::from_bytes(method.as_bytes())?,
+                path.into(),
+                body,
+            )
+            .await?;
+        device_metadata::record(&self.store, peer, path, &result)?;
+        if method != "GET"
+            && (path == "/v1/node/name"
+                || path.starts_with("/v1/node/profiles/")
+                || path.starts_with("/v1/node/agents")
+                || path.starts_with("/v1/tasks/"))
+        {
+            device.refresh(state::Domains::ALL).await;
+        }
+        Ok(result)
+    }
+
+    fn gateway(&self, peer: &str) -> Result<Arc<api::GatewayClient>> {
+        let node = self.node()?;
+        let mut clients = self.gateways.lock().expect("Gateway clients");
+        Ok(clients
+            .entry(peer.into())
+            .or_insert_with(|| {
+                Arc::new(api::GatewayClient::mesh_on(
+                    node,
+                    peer.into(),
+                    tokio::runtime::Handle::current(),
+                ))
+            })
+            .clone())
+    }
+
+    /// Every JNI operation has a bounded payload. Stable messages are committed
+    /// before network I/O and never acquire a new ID merely because of a retry.
+    pub async fn execute(&mut self, command: Command) -> Result<Value> {
+        match command {
+            Command::DiagnoseConnections => {
+                let connections = self
+                    .store
+                    .nodes()?
+                    .into_iter()
+                    .map(|node| {
+                        let gateway = self.gateway(&node.id);
+                        (node.name, gateway)
+                    })
+                    .collect::<Vec<_>>();
+                let items = futures_util::future::join_all(connections.into_iter().map(
+                    |(name, gateway)| async move {
+                        let reachable = match gateway {
+                            Ok(client) => client
+                                .node_request(http::Method::GET, "/v1/node/info".into(), None)
+                                .await
+                                .is_ok(),
+                            Err(_) => false,
+                        };
+                        json!({"name":name,"reachable":reachable})
+                    },
+                ))
+                .await;
+                Ok(json!({"items":items}))
+            }
+            Command::SettingsAction { peer, operation } => {
+                self.settings_action(peer, operation).await
+            }
+            Command::OpenService { view_id, url } => self.open_service(view_id, url).await,
+            Command::CloseService { view_id } => {
+                self.services.close(&view_id);
+                Ok(json!({"ok":true}))
+            }
+            Command::Resume => {
+                self.resume().await?;
+                self.snapshot()
+            }
+            Command::Pause => {
+                self.pause().await?;
+                self.snapshot()
+            }
+            Command::Snapshot => {
+                self.watch_devices()?;
+                self.snapshot()
+            }
+            Command::Network { network } => {
+                self.config(&network)?;
+                self.pause().await?;
+                self.store.put("device", "network", &network)?;
+                self.resume().await?;
+                self.snapshot()
+            }
+            Command::BeginInvitation { ticket, name } => {
+                self.begin_invitation(&ticket, &name).await
+            }
+            Command::PollInvitation => self.poll_invitation().await,
+            Command::NextInvitation => self.next_invitation().await,
+            Command::CancelInvitation => self.cancel_invitation().await,
+            Command::SavePeer {
+                origin,
+                name,
+                address,
+            } => {
+                let name = name.trim();
+                ensure!(!name.is_empty() && name.len() <= 128, "请输入设备名称");
+                let address = address.filter(|a| !a.trim().is_empty());
+                if let Some(addr) = &address {
+                    addr.parse::<std::net::SocketAddr>()
+                        .context("地址格式为 IP:端口")?;
+                }
+                let peer = MeshPeer {
+                    origin: origin.clone(),
+                    name: name.into(),
+                    addr: address.clone(),
+                    execute: vec![],
+                    client: false,
+                    collaborate: false,
+                };
+                managed::validate(&MeshConfig {
+                    peers: vec![peer],
+                    ..Default::default()
+                })?;
+                let nodes = self.store.nodes()?;
+                ensure!(
+                    nodes.len() < 16 || nodes.iter().any(|n| n.id == origin),
+                    "最多添加 16 台设备"
+                );
+                self.node()?
+                    .trust(&origin, name, address.as_deref())
+                    .await?;
+                self.store.save_node(&SavedNode {
+                    id: origin.clone(),
+                    name: name.into(),
+                    url: String::new(),
+                    token: None,
+                    local: false,
+                    mesh: Some(RemoteNode {
+                        origin,
+                        addr: address,
+                    }),
+                    group: None,
+                })?;
+                self.watch_devices()?;
+                self.snapshot()
+            }
+            Command::RemovePeer { peer } => {
+                let removed = self.peer(&peer)?;
+                if let Some(remote) = removed.mesh {
+                    self.services.remove_peer(&remote.origin);
+                }
+                if let Ok(node) = self.node() {
+                    node.untrust(&peer).await?;
+                }
+                if let Some(device) = self.devices.remove(&peer) {
+                    device.stop_sync();
+                    device.revoke_replica_access()?;
+                } else {
+                    self.store.revoke_replica(&peer)?;
+                }
+                self.store.remove_node(&peer)?;
+                self.gateways.lock().expect("Gateway clients").remove(&peer);
+                self.snapshot()
+            }
+            Command::Settings { peer, cached_only } => {
+                self.peer(&peer)?;
+                if cached_only {
+                    return settings::cached(&self.store, &peer);
+                }
+                settings::refresh(self.gateway(&peer)?, self.store.clone(), &peer).await
+            }
+            Command::Read {
+                peer,
+                path,
+                cached_only,
+            } => {
+                self.peer(&peer)?;
+                if let Some(session) = message_session(&path) {
+                    let page = self.store.cached_messages(&peer, session, None, 100)?;
+                    let anchor =
+                        page.as_ref()
+                            .and_then(|page| page.items.last())
+                            .and_then(|message| {
+                                let api::TranscriptMessage::Message { metadata, .. } = message;
+                                metadata.id.clone()
+                            });
+                    let cached = page.map(message_snapshot).transpose()?;
+                    if cached_only {
+                        return Ok(json!({"snapshot":cached,"cached":true}));
+                    }
+                    let generation = self.store.replica_generation(&peer)?;
+                    let result: Result<_> = async {
+                        let page = self
+                            .gateway(&peer)?
+                            .catch_up_messages(session, anchor.as_deref(), 100)
+                            .await?;
+                        self.store
+                            .cache_message_page_at(&peer, session, &page, None, generation)?;
+                        cached_message_snapshot(&self.store, &peer, session)
+                    }
+                    .await;
+                    return match result {
+                        Ok(snapshot) => Ok(json!({"snapshot":snapshot,"cached":false})),
+                        Err(error) => {
+                            Ok(json!({"snapshot":cached,"cached":true,"error":error.to_string()}))
+                        }
+                    };
+                }
+                if catalog::Catalog::supports(&path) {
+                    if cached_only {
+                        if let Some(body) = catalog::read_response(&self.store, &peer, &path)? {
+                            return Ok(json!({"snapshot":{"body":body},"cached":true}));
+                        }
+                    } else {
+                        let device = state::Device::open(
+                            self.gateway(&peer)?,
+                            Some((self.store.clone(), peer.clone())),
+                            true,
+                        );
+                        device.refresh(state::Domains::ALL).await;
+                        if let Some(body) = device.replica_response(&path)? {
+                            let status = device.snapshot();
+                            return Ok(
+                                json!({"snapshot":{"body":body,"fetched_at":status.confirmed_at_ms},"cached":status.connection_error.is_some(),"error":status.connection_error}),
+                            );
+                        }
+                    }
+                }
+                let key = format!("http:{path}");
+                let cached = self.store.get::<Value>(&peer, &key)?;
+                if cached_only {
+                    return Ok(json!({"snapshot":cached,"cached":true}));
+                }
+                match self.request(&peer, "GET", &path, None).await {
+                    Ok(body) => {
+                        let snapshot = json!({"body":body,"fetched_at":now()});
+                        self.store.put(&peer, &key, &snapshot)?;
+                        Ok(json!({"snapshot":snapshot,"cached":false}))
+                    }
+                    Err(error) => {
+                        Ok(json!({"snapshot":cached,"cached":true,"error":error.to_string()}))
+                    }
+                }
+            }
+            Command::Request {
+                peer,
+                method,
+                path,
+                body,
+            } => {
+                let result = self.request(&peer, &method, &path, body).await?;
+                if method == "POST" && path.ends_with("/cancel") {
+                    if let Some(id) = path
+                        .strip_prefix("/v1/im/sessions/")
+                        .and_then(|p| p.strip_suffix("/cancel"))
+                    {
+                        if let Some(device) = self.devices.get(&peer) {
+                            device.conversation(id).stopping();
+                        }
+                    }
+                }
+                Ok(result)
+            }
+            command @ (Command::SelectPeer { .. }
+            | Command::RestoreNavigation { .. }
+            | Command::DraftAction { .. }
+            | Command::SubmitDraft { .. }
+            | Command::RespondToInteraction { .. }
+            | Command::CachedMessages { .. }
+            | Command::Preferences { .. }
+            | Command::Compose { .. }
+            | Command::Draft { .. }
+            | Command::Conversation { .. }
+            | Command::Enqueue { .. }
+            | Command::Withdraw { .. }
+            | Command::Retry { .. }
+            | Command::DeleteFailed { .. }) => self.local().execute(command),
+            Command::Flush { peer } => {
+                self.peer(&peer)?;
+                let client = self.gateway(&peer)?;
+                let report = delivery::flush(&client, &self.store, &peer).await;
+                let mut result = serde_json::to_value(report)?;
+                result["outbox"] = serde_json::to_value(self.store.outbox(&peer)?)?;
+                Ok(result)
+            }
+        }
+    }
+}
+
+fn message_session(path: &str) -> Option<&str> {
+    let session = path
+        .strip_prefix("/v1/im/sessions/")?
+        .strip_suffix("/messages")?;
+    valid_session(session).ok()?;
+    Some(session)
+}
+
+fn message_snapshot(page: api::MessagePage) -> Result<Value> {
+    let mut body = serde_json::to_value(page)?;
+    for message in body["items"].as_array_mut().unwrap() {
+        conversation::project_payload(message);
+    }
+    Ok(json!({"body":body}))
+}
+
+fn cached_message_snapshot(
+    store: &store::ClientStore,
+    peer: &str,
+    session: &str,
+) -> Result<Option<Value>> {
+    store
+        .cached_messages(peer, session, None, 100)?
+        .map(message_snapshot)
+        .transpose()
+}
+
+fn valid_session(id: &str) -> Result<()> {
+    ensure!(
+        !id.is_empty()
+            && id.len() <= 160
+            && id
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"_-".contains(&b)),
+        "invalid conversation ID"
+    );
+    Ok(())
+}
+fn valid_content(content: &str, empty: bool) -> Result<()> {
+    ensure!(content.len() <= 64 * 1024, "消息超过 64 KiB，请拆分发送");
+    ensure!(empty || !content.trim().is_empty(), "消息不能为空");
+    Ok(())
+}
+fn now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn add_peer(client: &Client) -> String {
+        let peer = format!("key:{}", "y".repeat(52));
+        client
+            .store
+            .save_node(&SavedNode {
+                id: peer.clone(),
+                name: "test".into(),
+                url: String::new(),
+                token: None,
+                local: false,
+                group: None,
+                mesh: Some(RemoteNode {
+                    origin: peer.clone(),
+                    addr: None,
+                }),
+            })
+            .unwrap();
+        peer
+    }
+
+    #[tokio::test]
+    async fn crash_keeps_same_delivery_id_and_preserves_later_draft() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let mut client = Client::open(root.path())?;
+        let peer = add_peer(&client);
+        client
+            .execute(Command::Draft {
+                peer: peer.clone(),
+                session: "chat".into(),
+                content: "你好\nAndroid".into(),
+            })
+            .await?;
+        let queued = client
+            .execute(Command::Enqueue {
+                peer: peer.clone(),
+                session: "chat".into(),
+                content: "你好\nAndroid".into(),
+            })
+            .await?;
+        let id = queued["request_id"].as_str().unwrap().to_owned();
+        assert_eq!(
+            client.store.get::<String>(&peer, "draft:chat")?.unwrap(),
+            ""
+        );
+        client.store.begin_delivery(&peer, &id)?;
+        client
+            .execute(Command::Draft {
+                peer: peer.clone(),
+                session: "chat".into(),
+                content: "next".into(),
+            })
+            .await?;
+        drop(client);
+        let mut reopened = Client::open(root.path())?;
+        let state = reopened
+            .execute(Command::Conversation {
+                peer: peer.clone(),
+                session: "chat".into(),
+            })
+            .await?;
+        assert_eq!(state["draft"], "next");
+        assert_eq!(state["outbox"][0]["request_id"], id);
+        assert_eq!(state["outbox"][0]["attempted"], true);
+        assert!(reopened
+            .execute(Command::Withdraw {
+                peer: peer.clone(),
+                request_id: id
+            })
+            .await
+            .is_err());
+        assert!(reopened
+            .execute(Command::Enqueue {
+                peer,
+                session: "../escape".into(),
+                content: "x".into()
+            })
+            .await
+            .is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn disconnected_read_retains_cached_history_and_unsent_is_not_attempted() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let mut client = Client::open(root.path())?;
+        let peer = add_peer(&client);
+        client.store.put(
+            &peer,
+            "http:/v1/im/sessions/chat/messages",
+            &json!({"body":{"items":[{"type":"message","role":"user","id":"one","content":"cached"}],"older_cursor":null},"fetched_at":1}),
+        )?;
+        let read = client
+            .execute(Command::Read {
+                peer: peer.clone(),
+                path: "/v1/im/sessions/chat/messages".into(),
+                cached_only: false,
+            })
+            .await?;
+        assert_eq!(read["cached"], true);
+        assert_eq!(read["snapshot"]["body"]["items"][0]["id"], "one");
+        assert!(read["error"].is_string());
+        let queued = client
+            .execute(Command::Enqueue {
+                peer: peer.clone(),
+                session: "chat".into(),
+                content: "queued".into(),
+            })
+            .await?;
+        assert!(client
+            .execute(Command::Flush { peer: peer.clone() })
+            .await
+            .is_err());
+        assert!(!client.store.outbox(&peer)?[0].attempted);
+        client.store.put(&peer, "draft:chat", &"later draft")?;
+        client
+            .execute(Command::Withdraw {
+                peer: peer.clone(),
+                request_id: queued["request_id"].as_str().unwrap().into(),
+            })
+            .await?;
+        assert!(client.store.outbox(&peer)?.is_empty());
+        assert_eq!(
+            client.store.get::<String>(&peer, "draft:chat")?.as_deref(),
+            Some("later draft\n\nqueued")
+        );
+        // A repeated withdrawal must not append another copy.
+        client
+            .execute(Command::Withdraw {
+                peer: peer.clone(),
+                request_id: queued["request_id"].as_str().unwrap().into(),
+            })
+            .await?;
+        drop(client);
+        let reopened = Client::open(root.path())?;
+        assert_eq!(
+            reopened
+                .store
+                .get::<String>(&peer, "draft:chat")?
+                .as_deref(),
+            Some("later draft\n\nqueued")
+        );
+        Ok(())
+    }
+}

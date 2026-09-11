@@ -1,0 +1,51 @@
+import type { Catalog, PageFixture, Story } from "../workbench/types";
+type LegacyProfile = {
+  id: string;
+  profile_id: string;
+  name: string;
+  node: string;
+  provider: string;
+  billing: string;
+  models: Array<Record<string, unknown>>;
+  verified: boolean;
+};
+type LegacyPerson = {
+  name: string;
+  avatar: string;
+  role: string;
+  node: string;
+  modelConnectionId?: string;
+  modelId?: string;
+};
+declare const profiles: LegacyProfile[];
+declare const people: Record<string, LegacyPerson>;
+declare const devices: Record<string, { name: string; description: string; online: boolean }>;
+declare const profileCatalog: Array<{ id: string; label: string; billing: Array<{ id: string; label: string }> }>;
+declare const conversations: Array<{
+  id: string;
+  name: string;
+  kind: string;
+  leaderId: string;
+  node: string;
+  members: string[];
+  unread: number;
+  time: string;
+  messages: Array<{ id: string; who: string; text: string; time: string }>;
+}>;
+declare let current: string;
+declare function render(): void;
+declare function setSidebarWidth(width: number, save?: boolean): void;
+const one = <T extends Element = HTMLElement>(selector: string) => {
+  const element = document.querySelector<T>(selector);
+  if (!element) throw Error("HTML 参考缺少 " + selector);
+  return element;
+};
+const click = (selector: string) => one<HTMLElement>(selector).click();
+const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+async function setup(story: Story, fixture: PageFixture, providers: Catalog["providers"], base: string) {
+  const style = document.createElement("style");
+  style.textContent = `
+ @font-face{font-family:ZorkCompareInter;src:url(${base}assets/fonts/InterVariable.ttf);font-weight:100 900}
+ @font-face{font-family:ZorkCompareCJK;src:url(${base}comparison-fonts/NotoSansSC.ttf);font-weight:100 900}
+ :root{--font-body:ZorkCompareInter,ZorkCompareCJK,sans-serif;--sidebar-width:${fixture.device.sidebar_width}px}
+ body *{visibility:hidden!important}[data-reference-target],[data-refe

@@ -1,0 +1,98 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zork · Loading</title><style>
+@font-face{font-family:Inter;src:url('../fonts/InterVariable.ttf')}*{box-sizing:border-box}body{margin:0;background:#f6f5f1;color:#24272b;font:13px Inter,-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif}main{max-width:1184px;margin:0 auto;padding:52px 36px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:48px}.brand{font-size:22px;font-weight:650;letter-spacing:-1px}.edition{font-size:11px;color:#646970;letter-spacing:1px}.intro{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:32px}h1{font-size:32px;font-weight:550;letter-spacing:-1px;margin:0 0 12px}.intro p{color:#646970;line-height:1.8;margin:0}button{border:1px solid #dedfdf;background:transparent;border-radius:8px;padding:9px 12px;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}button:focus-visible,a:focus-visible{outline:2px solid #646970;outline-offset:4px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}article{background:white;border:1px solid #eeedea;border-radius:10px;padding:22px}.number{color:#73787d;font-size:10px;letter-spacing:1.2px}.sample{height:120px;display:flex;align-items:center;justify-content:center}.sample svg{width:32px;height:32px}article:nth-child(5) .sample svg{width:56px;height:56px}h2{font-size:14px;font-weight:550;margin:0 0 9px}article p{color:#646970;font-size:12px;margin:0;line-height:1.7}footer{border-top:1px solid #eeedea;margin-top:20px;padding-top:14px;display:flex;justify-content:space-between;color:#73787d;font-size:11px}a{color:#646970;text-decoration:none}.note{background:transparent;display:flex;flex-direction:column;justify-content:center;gap:16px}.note p{line-height:1.9}.contexts{margin-top:34px}.contexts h2{margin-bottom:16px}.rows{display:grid;grid-template-columns:repeat(3,1fr);background:white;border:1px solid #eeedea;border-radius:10px}.row{display:flex;gap:10px;align-items:center;padding:22px}.row+.row{border-left:1px solid #eeedea}.row svg{flex-shrink:0;width:20px;height:20px}.row span{color:#646970;font-size:12px}.end{margin-top:24px;font-size:11px;color:#73787d;line-height:1.8}body.paused .motion{animation-play-state:paused!important}@media(max-width:760px){main{padding:28px 20px}.grid{grid-template-columns:repeat(2,1fr)}.intro{align-items:start;flex-direction:column}.rows{grid-template-columns:1fr}.row+.row{border-left:0;border-top:1px solid #eeedea}}@media(max-width:440px){.grid{grid-template-columns:1fr}}
+</style><main><header><div class="brand">zork<span style="color:#73787d;font-weight:400"> / </span>loading</div><div class="edition">MOTION STUDIES · 01</div></header><div class="intro"><div><h1>等待，也保持安静。</h1><p>沿用 Zork 的石墨色、圆头细线和折角伙伴。<br>用轻微的运动表达工作仍在继续。</p></div><button id="toggle" aria-pressed="false">暂停动效</button></div><section class="grid"><article><div class="number">01 / RING</div><div class="sample"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="加载中">
+  <title>加载中</title>
+  <style>
+    @keyframes zork-ring { to { transform:rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7" opacity=".16"/>
+  <g class="motion" style="transform-origin:12px 12px;animation:zork-ring 1s linear infinite">
+    <path d="M12 4a8 8 0 0 1 8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </g>
+</svg>
+</div><h2>通用加载</h2><p>按钮、内容区的默认加载状态。</p><footer>24 px · 1.0 s<a href="ring.svg" download>下载 SVG ↗</a></footer></article><article><div class="number">02 / TICKS</div><div class="sample"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="正在处理">
+  <title>正在处理</title>
+  <style>
+    @keyframes zork-ticks { 0%,100% { opacity:1; } 75% { opacity:.2; } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <g transform="rotate(0 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="1.0" style="animation:zork-ticks 1s linear infinite;animation-delay:-1.0s"/></g>
+  <g transform="rotate(45 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.9" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.875s"/></g>
+  <g transform="rotate(90 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.8" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.75s"/></g>
+  <g transform="rotate(135 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.7" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.625s"/></g>
+  <g transform="rotate(180 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.6" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.5s"/></g>
+  <g transform="rotate(225 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.5" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.375s"/></g>
+  <g transform="rotate(270 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.4" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.25s"/></g>
+  <g transform="rotate(315 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.3" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.125s"/></g>
+</svg>
+</div><h2>紧凑处理</h2><p>沿用现有 loader 的八向刻度。</p><footer>16–20 px · 1.0 s<a href="ticks.svg" download>下载 SVG ↗</a></footer></article><article><div class="number">03 / DOTS</div><div class="sample"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="正在思考">
+  <title>正在思考</title>
+  <style>
+    @keyframes zork-dots { 0%,65%,100% { opacity:.3; } 32% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <circle class="motion" cx="6" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.0s"/>
+  <circle class="motion" cx="12" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.18s"/>
+  <circle class="motion" cx="18" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.36s"/>
+</svg>
+</div><h2>对话等待</h2><p>低幅度明暗交替，适合文本旁。</p><footer>24 px · 1.5 s<a href="dots.svg" download>下载 SVG ↗</a></footer></article><article><div class="number">04 / CONNECT</div><div class="sample"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="正在连接设备">
+  <title>正在连接设备</title>
+  <style>
+    @keyframes zork-connect { 0%,80%,100% { opacity:.35; } 35% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <g stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.8 5.9h8.4M6.7 8.4l4 7.2m6.6-7.2-4 7.2" opacity=".22"/>
+    <circle class="motion" cx="5.3" cy="5.8" r="2.65" style="animation:zork-connect 1.8s ease-in-out infinite"/>
+    <circle class="motion" cx="18.7" cy="5.8" r="2.65" style="animation:zork-connect 1.8s ease-in-out .3s infinite"/>
+    <circle class="motion" cx="12" cy="18" r="2.65" style="animation:zork-connect 1.8s ease-in-out .6s infinite"/>
+  </g>
+</svg>
+</div><h2>设备连接</h2><p>沿用 Mesh 图标，节点依次显现。</p><footer>24 px · 1.8 s<a href="connect.svg" download>下载 SVG ↗</a></footer></article><article><div class="number">05 / COMPANION</div><div class="sample"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 128 128" fill="none" role="img" aria-label="正在准备 Zork">
+  <title>正在准备 Zork</title>
+  <style>
+    @keyframes zork-companion { 0%,38%,62%,100% { opacity:0; } 48%,52% { opacity:.72; } } .zork-companion-eyes { opacity:0; }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <path fill="currentColor" fill-rule="evenodd" d="M25 20 Q21 17 20 23 L18 47 L12 71 Q10 80 16 87 L34 108 Q37 112 41 110 L72 96 L65 111 L88 114 Q93 114 96 110 L112 88 Q117 81 114 72 L108 47 L106 23 Q106 17 102 20 L84 37 L64 33 L44 37 Z M37 61 H49 A4 4 0 0 1 49 69 H37 A4 4 0 0 1 37 61 Z M78 61 H90 A4 4 0 0 1 90 69 H78 A4 4 0 0 1 78 61 Z"/>
+  <g class="motion zork-companion-eyes" fill="currentColor" style="animation:zork-companion 2.4s ease-in-out infinite">
+    <rect x="33" y="61" width="20" height="8" rx="4"/>
+    <rect x="74" y="61" width="20" height="8" rx="4"/>
+  </g>
+</svg>
+</div><h2>启动准备</h2><p>原有品牌轮廓，只轻轻合一次眼。</p><footer>40–64 px · 2.4 s<a href="companion.svg" download>下载 SVG ↗</a></footer></article><article class="note"><div class="number">DESIGN NOTES</div><h2>一套语言，五种等待。</h2><p>默认使用通用圆环；同一区域只保留一个加载信号。<br>不使用渐变、投影和弹跳。<br>遵循系统的“减少动态效果”设置。</p><p>石墨色 #24272B · 圆头线宽 1.7 / 24<br>透明底 · currentColor · 独立 SVG</p></article></section><section class="contexts"><h2>放回日常界面</h2><div class="rows"><div class="row"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="加载中">
+  <title>加载中</title>
+  <style>
+    @keyframes zork-ring { to { transform:rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7" opacity=".16"/>
+  <g class="motion" style="transform-origin:12px 12px;animation:zork-ring 1s linear infinite">
+    <path d="M12 4a8 8 0 0 1 8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </g>
+</svg>
+<span>正在加载文件…</span></div><div class="row"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="正在思考">
+  <title>正在思考</title>
+  <style>
+    @keyframes zork-dots { 0%,65%,100% { opacity:.3; } 32% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <circle class="motion" cx="6" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.0s"/>
+  <circle class="motion" cx="12" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.18s"/>
+  <circle class="motion" cx="18" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.36s"/>
+</svg>
+<span>正在思考…</span></div><div class="row"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="正在连接设备">
+  <title>正在连接设备</title>
+  <style>
+    @keyframes zork-connect { 0%,80%,100% { opacity:.35; } 35% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <g stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.8 5.9h8.4M6.7 8.4l4 7.2m6.6-7.2-4 7.2" opacity=".22"/>
+    <circle class="motion" cx="5.3" cy="5.8" r="2.65" style="animation:zork-connect 1.8s ease-in-out infinite"/>
+    <circle class="motion" cx="18.7" cy="5.8" r="2.65" style="animation:zork-connect 1.8s ease-in-out .3s infinite"/>
+    <circle class="motion" cx="12" cy="18" r="2.65" style="animation:zork-connect 1.8s ease-in-out .6s infinite"/>
+  </g>
+</svg>
+<span>正在连接设备…</span></div></div></section><div class="end">SVG 设计资源预览 · 通用圆环与对话三点已接入共享 GPUI 组件；其余为设计备选。此页展示 SVG，原生表现以实际组件验收为准。</div></main><script>document.querySelector('#toggle').onclick=function(){const paused=document.body.classList.toggle('paused');this.textContent=paused?'继续播放':'暂停动效';this.setAttribute('aria-pressed',String(paused))}</script></html>

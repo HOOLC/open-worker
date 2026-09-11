@@ -1,0 +1,470 @@
+{
+  "api_version": "v1",
+  "revision": 7,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 900.0,
+    "height": 600.0
+  },
+  "elements": [
+    {
+      "id": "copy-node-origin",
+      "role": "button",
+      "label": "复制节点身份",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 274.0,
+        "y": 182.0,
+        "width": 107.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 274.0,
+        "y": 182.0,
+        "width": 107.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 327.5,
+        "y": 198.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "desktop-settings-column",
+      "role": "status",
+      "label": "设置内容列",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 660.0,
+        "height": 530.0
+      },
+      "visible_bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 660.0,
+        "height": 530.0
+      },
+      "center": {
+        "x": 570.0,
+        "y": 265.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-client-grant",
+      "role": "option",
+      "label": "客户端权限：关闭",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 648.0,
+        "y": 392.5,
+        "width": 48.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 648.0,
+        "y": 392.5,
+        "width": 48.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 672.0,
+        "y": 408.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-connect-device-tab",
+      "role": "button",
+      "label": "连接其它设备 · 已选中",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 571.0,
+        "y": 380.0,
+        "width": 291.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 571.0,
+        "y": 380.0,
+        "width": 291.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 716.5,
+        "y": 396.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-connect-phone-tab",
+      "role": "button",
+      "label": "连接手机",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 278.0,
+        "y": 380.0,
+        "width": 291.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 278.0,
+        "y": 380.0,
+        "width": 291.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 423.5,
+        "y": 396.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-invite-create",
+      "role": "button",
+      "label": "生成加入命令",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 274.0,
+        "y": 466.0,
+        "width": 592.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 274.0,
+        "y": 466.0,
+        "width": 592.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 570.0,
+        "y": 482.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-new-peer",
+      "role": "button",
+      "label": "手动连接设备",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 773.0,
+        "y": 30.0,
+        "width": 93.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 773.0,
+        "y": 30.0,
+        "width": 93.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 819.5,
+        "y": 46.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-peer-addr",
+      "role": "text_input",
+      "label": "局域网地址 · 可选",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 327.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 327.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 343.0
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "mesh-peer-dialog",
+      "role": "status",
+      "label": "手动连接设备",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 180.0,
+        "y": 68.5,
+        "width": 540.0,
+        "height": 462.5
+      },
+      "visible_bounds": {
+        "x": 180.0,
+        "y": 68.5,
+        "width": 540.0,
+        "height": 462.5
+      },
+      "center": {
+        "x": 450.0,
+        "y": 299.75
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-peer-dialog-close",
+      "role": "button",
+      "label": "关闭手动连接设备",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 664.0,
+        "y": 90.5,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 664.0,
+        "y": 90.5,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 680.0,
+        "y": 106.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-peer-dialog-footer",
+      "role": "status",
+      "label": "弹窗操作区",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 180.0,
+        "y": 455.0,
+        "width": 540.0,
+        "height": 76.0
+      },
+      "visible_bounds": {
+        "x": 180.0,
+        "y": 455.0,
+        "width": 540.0,
+        "height": 76.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 493.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-peer-name",
+      "role": "text_input",
+      "label": "设备名称",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 176.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 176.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 192.0
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "mesh-peer-origin",
+      "role": "text_input",
+      "label": "设备身份",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 251.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 251.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 267.5
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "mesh-settings-refresh",
+      "role": "button",
+      "label": "刷新连接信息",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 389.0,
+        "y": 182.0,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 389.0,
+        "y": 182.0,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 418.5,
+        "y": 198.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "node-mesh-toggle",
+      "role": "option",
+      "label": "允许设备连接：开启",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 818.0,
+        "y": 115.5,
+        "width": 48.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 818.0,
+        "y": 115.5,
+        "width": 48.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 842.0,
+        "y": 131.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "revoke-peer-mini2",
+      "role": "button",
+      "label": "撤销配对",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 807.0,
+        "y": 280.5,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 807.0,
+        "y": 280.5,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 836.5,
+        "y": 296.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 300.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

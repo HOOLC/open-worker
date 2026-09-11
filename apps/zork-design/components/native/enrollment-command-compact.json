@@ -1,0 +1,277 @@
+{
+  "api_version": "v1",
+  "revision": 7,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 900.0,
+    "height": 600.0
+  },
+  "elements": [
+    {
+      "id": "add-device-dialog",
+      "role": "status",
+      "label": "连接设备",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 180.0,
+        "y": 119.0,
+        "width": 540.0,
+        "height": 361.5
+      },
+      "visible_bounds": {
+        "x": 180.0,
+        "y": 119.0,
+        "width": 540.0,
+        "height": 361.5
+      },
+      "center": {
+        "x": 450.0,
+        "y": 299.75
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "add-device-dialog-close",
+      "role": "button",
+      "label": "关闭连接设备",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 664.0,
+        "y": 141.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 664.0,
+        "y": 141.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 680.0,
+        "y": 157.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "desktop-settings-column",
+      "role": "status",
+      "label": "设置内容列",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 660.0,
+        "height": 94.0
+      },
+      "visible_bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 660.0,
+        "height": 94.0
+      },
+      "center": {
+        "x": 570.0,
+        "y": 47.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-connect-device-tab",
+      "role": "button",
+      "label": "连接其它设备 · 已选中",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 451.0,
+        "y": 203.0,
+        "width": 241.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 451.0,
+        "y": 203.0,
+        "width": 241.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 571.5,
+        "y": 219.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-connect-phone-tab",
+      "role": "button",
+      "label": "连接手机",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 208.0,
+        "y": 203.0,
+        "width": 241.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 208.0,
+        "y": 203.0,
+        "width": 241.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 328.5,
+        "y": 219.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-invite-command",
+      "role": "status",
+      "label": "zork mesh join <一次性加入码>",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 324.5,
+        "width": 492.0,
+        "height": 84.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 324.5,
+        "width": 492.0,
+        "height": 84.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 366.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-invite-copy",
+      "role": "button",
+      "label": "复制加入命令",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 613.0,
+        "y": 424.5,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 613.0,
+        "y": 424.5,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 654.5,
+        "y": 440.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-invite-revoke",
+      "role": "button",
+      "label": "撤销加入命令",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 522.0,
+        "y": 424.5,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 522.0,
+        "y": 424.5,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 563.5,
+        "y": 440.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "mesh-invite-status",
+      "role": "status",
+      "label": "等待目标设备执行 · 10 分 0 秒后过期",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 289.0,
+        "width": 492.0,
+        "height": 19.5
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 289.0,
+        "width": 492.0,
+        "height": 19.5
+      },
+      "center": {
+        "x": 450.0,
+        "y": 298.75
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 300.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

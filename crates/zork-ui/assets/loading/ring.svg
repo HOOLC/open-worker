@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="加载中">
+  <title>加载中</title>
+  <style>
+    @keyframes zork-ring { to { transform:rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7" opacity=".16"/>
+  <g class="motion" style="transform-origin:12px 12px;animation:zork-ring 1s linear infinite">
+    <path d="M12 4a8 8 0 0 1 8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </g>
+</svg>

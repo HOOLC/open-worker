@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="正在思考">
+  <title>正在思考</title>
+  <style>
+    @keyframes zork-dots { 0%,65%,100% { opacity:.3; } 32% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <circle class="motion" cx="6" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.0s"/>
+  <circle class="motion" cx="12" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.18s"/>
+  <circle class="motion" cx="18" cy="12" r="1.7" fill="currentColor" opacity=".5" style="animation:zork-dots 1.5s ease-in-out infinite;animation-delay:0.36s"/>
+</svg>

@@ -1,0 +1,37 @@
+[
+  {
+    "file": "globe.svg",
+    "source": "@central-icons-react/round-outlined-radius-2-stroke-2/IconGlobe",
+    "strokeNormalization": "2 to 1.5, matching Cue"
+  },
+  {
+    "file": "expand.svg",
+    "source": "@central-icons-react/round-outlined-radius-2-stroke-2/IconExpandSimple2",
+    "strokeNormalization": "2 to 1.5, matching Cue"
+  },
+  {
+    "file": "restore.svg",
+    "source": "@central-icons-react/round-outlined-radius-2-stroke-2/IconMinimize45",
+    "strokeNormalization": "2 to 1.5, matching Cue"
+  },
+  {
+    "file": "minimize.svg",
+    "source": "@central-icons-react/round-outlined-radius-2-stroke-2/IconSquareMinus",
+    "strokeNormalization": "2 to 1.5, matching Cue"
+  },
+  {
+    "file": "more.svg",
+    "source": "@central-icons-react/round-outlined-radius-2-stroke-2/IconDotGrid1x3Vertical",
+    "strokeNormalization": "2 to 1.5, matching Cue"
+  },
+  {
+    "file": "go.svg",
+    "source": "@central-icons-react/round-outlined-radius-2-stroke-2/IconArrowUpRight",
+    "strokeNormalization": "2 to 1.5, matching Cue"
+  },
+  {
+    "file": "download.svg",
+    "source": "@central-icons-react/round-outlined-radius-2-stroke-2/IconArrowInbox",
+    "strokeNormalization": "2 to 1.5, matching Cue"
+  }
+]

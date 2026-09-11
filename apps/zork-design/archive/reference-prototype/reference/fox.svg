@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 64 64" role="img" aria-label="小狐狸">
+<title>小狐狸</title>
+<circle cx="32" cy="32" r="32" fill="#F5DDD9"/>
+<path d="m11 33 1-20q0-3 3-1l14 12h6l14-12q3-2 3 1l1 20q-2 17-21 22Q13 50 11 33" fill="#DD8A58"/><path d="m16 17 9 10-10 2Zm32 0-9 10 10 2Z" fill="#754C45"/><path d="M12 34q12-4 20 7 8-11 20-7-3 15-20 20-17-5-20-20" fill="#FFF0DC"/><g fill="#4D403D"><ellipse cx="24" cy="33" rx="1.7" ry="2.2"/><ellipse cx="40" cy="33" rx="1.7" ry="2.2"/></g><g fill="#EA9F98" opacity=".65"><ellipse cx="19" cy="39" rx="4" ry="2.4"/><ellipse cx="45" cy="39" rx="4" ry="2.4"/></g><path d="M28 41q4-2 8 0l-4 4Z" fill="#4D403D"/><path d="M29 47q3 2 6 0" fill="none" stroke="#4D403D" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,272 @@
+{
+  "source": "apps/zork-design",
+  "icons": 52,
+  "mapping": {
+    "cue/task.svg": "icons/task.svg",
+    "cue/offline.svg": "icons/offline.svg",
+    "cue/result.svg": "icons/result.svg",
+    "cue/cancelled.svg": "icons/cancelled.svg",
+    "cue/review.svg": "icons/review.svg",
+    "cue/leader.svg": "icons/leader.svg",
+    "cue/working.svg": "icons/working.svg",
+    "cue/attention.svg": "icons/attention.svg",
+    "cue/permission.svg": "icons/permission.svg",
+    "cue/open.svg": "icons/open.svg",
+    "cue/mesh.svg": "icons/mesh.svg",
+    "cue/workspace.svg": "icons/workspace.svg",
+    "cue/worker.svg": "icons/worker.svg",
+    "cue/handoff.svg": "icons/handoff.svg",
+    "cue/queued.svg": "icons/queued.svg",
+    "cue/completed.svg": "icons/completed.svg",
+    "cue/history.svg": "icons/history.svg",
+    "cue/node.svg": "icons/node.svg",
+    "cue/columns.svg": "icons/columns.svg",
+    "cue/search.svg": "icons/search.svg",
+    "cue/bars-three.svg": "icons/bars-three.svg",
+    "cue/home.svg": "icons/home.svg",
+    "cue/chevron-down.svg": "icons/chevron-down.svg",
+    "cue/task-chat.svg": "icons/task-chat.svg",
+    "cue/inbox.svg": "icons/inbox.svg",
+    "cue/microphone.svg": "icons/microphone.svg",
+    "cue/file.svg": "icons/file.svg",
+    "cue/puzzle.svg": "icons/puzzle.svg",
+    "cue/brain.svg": "icons/brain.svg",
+    "cue/terminal.svg": "icons/terminal.svg",
+    "cue/sparkles.svg": "icons/sparkles.svg",
+    "cue/x.svg": "icons/x.svg",
+    "cue/arrow-right.svg": "icons/arrow-right.svg",
+    "cue/settings.svg": "icons/settings.svg",
+    "cue/download.svg": "icons/download.svg",
+    "cue/shapes.svg": "icons/shapes.svg",
+    "cue/stop.svg": "icons/stop.svg",
+    "cue/cube.svg": "icons/cube.svg",
+    "cue/plus.svg": "icons/plus.svg",
+    "cue/check.svg": "icons/check.svg",
+    "cue/loader.svg": "icons/loader.svg",
+    "cue/reload.svg": "icons/reload.svg",
+    "cue/panel-left.svg": "icons/panel-left.svg",
+    "cue/paperclip.svg": "icons/paperclip.svg",
+    "cue/settings-three.svg": "icons/settings-three.svg",
+    "cue/checklist.svg": "icons/checklist.svg",
+    "cue/clock.svg": "icons/clock.svg",
+    "cue/arrow-up.svg": "icons/arrow-up.svg",
+    "cue/panel-right.svg": "icons/panel-right.svg",
+    "cue/filter.svg": "icons/filter.svg",
+    "cue/arrow-left.svg": "icons/arrow-left.svg",
+    "cue/mention.svg": "icons/mention.svg",
+    "cue/folder1.svg": "icons/workspace.svg",
+    "cue/folder2.svg": "icons/workspace.svg",
+    "cue/list-checks.svg": "icons/checklist.svg",
+    "cue/settings-slider-horizontal.svg": "icons/settings.svg",
+    "cue/settings-slider-three.svg": "icons/settings-three.svg",
+    "cue/shapes-plus-x-square-circle.svg": "icons/shapes.svg",
+    "cue/layout-column.svg": "icons/columns.svg",
+    "cue/microphone-filled.svg": "icons/microphone.svg",
+    "cue/filter2.svg": "icons/filter.svg",
+    "cue/circle-x.svg": "icons/cancelled.svg",
+    "cue/circle-dashed.svg": "icons/queued.svg",
+    "cue/mascot.svg": "brand/mark.svg",
+    "cue/provider-logos.png": "providers/provider-logos.png",
+    "icons/phosphor-brain.svg": "icons/brain.svg",
+    "icons/phosphor-arrow-up.svg": "icons/arrow-up.svg",
+    "icons/phosphor-cube.svg": "icons/cube.svg",
+    "icons/phosphor-caret-down.svg": "icons/chevron-down.svg",
+    "icons/phosphor-terminal-window.svg": "icons/terminal.svg",
+    "icons/phosphor-stop-fill.svg": "icons/stop.svg",
+    "icons/phosphor-folder-simple.svg": "icons/workspace.svg"
+  },
+  "note": "Actual Rust references migrated; historical original files retained. Motion SVGs are provenance, native playback must use the GPUI Brand component.",
+  "native_icon_references": {
+    "arrow-left.svg": [
+      "src/views.rs",
+      "src/desktop/mod.rs"
+    ],
+    "arrow-right.svg": [
+      "src/desktop/navigation.rs"
+    ],
+    "arrow-up.svg": [
+      "src/views.rs"
+    ],
+    "attention.svg": [
+      "src/task_overview.rs"
+    ],
+    "bars-three.svg": [
+      "src/views.rs"
+    ],
+    "brain.svg": [],
+    "cancelled.svg": [
+      "src/task_overview.rs",
+      "src/components/activity.rs"
+    ],
+    "check.svg": [
+      "src/views.rs",
+      "src/desktop/agents.rs",
+      "src/desktop/mesh_settings.rs",
+      "src/views/agents.rs"
+    ],
+    "checklist.svg": [
+      "src/shell.rs",
+      "src/views.rs",
+      "src/desktop/agents.rs",
+      "src/views/agents.rs",
+      "src/views/drive.rs"
+    ],
+    "chevron-down.svg": [
+      "src/views.rs",
+      "src/desktop/profiles.rs",
+      "src/desktop/navigation.rs",
+      "src/views/history.rs"
+    ],
+    "clock.svg": [
+      "src/shell.rs",
+      "src/views.rs",
+      "src/views/inbox.rs"
+    ],
+    "columns.svg": [
+      "src/views.rs"
+    ],
+    "completed.svg": [
+      "src/task_overview.rs",
+      "src/views/task_controls.rs"
+    ],
+    "cube.svg": [],
+    "download.svg": [
+      "src/views/drive.rs"
+    ],
+    "file.svg": [
+      "src/views/drive.rs"
+    ],
+    "filter.svg": [
+      "src/views.rs"
+    ],
+    "handoff.svg": [],
+    "history.svg": [],
+    "home.svg": [
+      "src/shell.rs"
+    ],
+    "inbox.svg": [
+      "src/shell.rs",
+      "src/views/inbox.rs"
+    ],
+    "leader.svg": [],
+    "loader.svg": [],
+    "mention.svg": [],
+    "mesh.svg": [
+      "src/desktop/mesh_settings.rs"
+    ],
+    "microphone.svg": [
+      "src/views.rs"
+    ],
+    "node.svg": [
+      "src/views.rs",
+      "src/desktop/mesh_settings.rs",
+      "src/desktop/mod.rs",
+      "src/desktop/navigation.rs"
+    ],
+    "offline.svg": [
+      "src/views.rs"
+    ],
+    "open.svg": [
+      "src/task_overview.rs"
+    ],
+    "panel-left.svg": [
+      "src/views.rs"
+    ],
+    "panel-right.svg": [
+      "src/shell.rs",
+      "src/views.rs"
+    ],
+    "paperclip.svg": [
+      "src/views.rs"
+    ],
+    "permission.svg": [],
+    "plus.svg": [
+      "src/views.rs",
+      "src/desktop/agents.rs",
+      "src/desktop/mod.rs",
+      "src/desktop/navigation.rs",
+      "src/views/history.rs"
+    ],
+    "puzzle.svg": [
+      "src/shell.rs"
+    ],
+    "queued.svg": [],
+    "reload.svg": [
+      "src/views.rs"
+    ],
+    "result.svg": [],
+    "review.svg": [
+      "src/task_overview.rs",
+      "src/views/task_controls.rs"
+    ],
+    "search.svg": [
+      "src/shell.rs"
+    ],
+    "settings-three.svg": [
+      "src/views.rs"
+    ],
+    "settings.svg": [
+      "src/shell.rs",
+      "src/views.rs",
+      "src/desktop/navigation.rs"
+    ],
+    "shapes.svg": [],
+    "sparkles.svg": [
+      "src/views.rs",
+      "src/desktop/agents.rs"
+    ],
+    "stop.svg": [],
+    "task-chat.svg": [],
+    "task.svg": [],
+    "terminal.svg": [],
+    "worker.svg": [],
+    "working.svg": [
+      "src/task_overview.rs"
+    ],
+    "workspace.svg": [
+      "src/shell.rs",
+      "src/views.rs",
+      "src/views/drive.rs"
+    ],
+    "x.svg": [
+      "src/views.rs",
+      "src/desktop/modal.rs",
+      "src/views/drive.rs",
+      "src/views/history.rs",
+      "src/views/comments.rs"
+    ]
+  },
+  "native_motion": {
+    "linked": {
+      "slot": "main conversation sidebar",
+      "duration_ms": 805
+    },
+    "wordmark": {
+      "slot": "settings sidebar footer",
+      "duration_ms": 675
+    },
+    "icon": {
+      "slot": "choose the first Leader conversation",
+      "duration_ms": 680
+    },
+    "morph": {
+      "slot": "first Leader onboarding",
+      "duration_ms": 2000,
+      "geometry": "motion/morph-points.json",
+      "notch": "Lower mask becomes Z; right base/tip/left base remain vertices 0,12,36 and move with the crawling contour.",
+      "native_composition": "91 shared frames: 4 rounded body contours and 2 counters. Crouch/blink 0–240 ms, upper hop 240–740 ms, soft landing 740–990 ms, lower crawl 820–1700 ms, letter unfolding 1010–1850 ms, settle by 2000 ms. Body bounds stay centered at x=200. No adhesion or connecting strands.",
+      "interpolation": "linear between shared sampled frames"
+    }
+  },
+  "native_motion_behavior": "Hover-triggered, single-shot, no autoplay or loop. Native point interpolation for morph. NSWorkspace accessibilityDisplayShouldReduceMotion controls static endpoints.",
+  "native_scenes": {},
+  "unused_assets": "Historical illustration filenames contain compact SVG aliases; native UI uses functional icons directly. Conversation home uses its existing brand component without an extra illustration.",
+  "native_state_symbols": {
+    "icons/node.svg": "Add-device modal, 28 px",
+    "icons/offline.svg": "Disconnected device banner, 20 px",
+    "icons/workspace.svg": "Drive loaded empty state, 32 px",
+    "icons/inbox.svg": "Inbox loaded empty state, 32 px",
+    "icons/review.svg": "Persisted task Review, 32 px",
+    "icons/completed.svg": "Persisted task Completed, 32 px"
+  }
+}

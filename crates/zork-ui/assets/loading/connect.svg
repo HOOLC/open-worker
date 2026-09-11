@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="正在连接设备">
+  <title>正在连接设备</title>
+  <style>
+    @keyframes zork-connect { 0%,80%,100% { opacity:.35; } 35% { opacity:1; } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <g stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.8 5.9h8.4M6.7 8.4l4 7.2m6.6-7.2-4 7.2" opacity=".22"/>
+    <circle class="motion" cx="5.3" cy="5.8" r="2.65" style="animation:zork-connect 1.8s ease-in-out infinite"/>
+    <circle class="motion" cx="18.7" cy="5.8" r="2.65" style="animation:zork-connect 1.8s ease-in-out .3s infinite"/>
+    <circle class="motion" cx="12" cy="18" r="2.65" style="animation:zork-connect 1.8s ease-in-out .6s infinite"/>
+  </g>
+</svg>

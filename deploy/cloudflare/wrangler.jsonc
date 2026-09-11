@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "zork-network",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "vars": {
+    "ALLOWED_KEYS": "",
+  },
+  "containers": [
+    {
+      "class_name": "Relay",
+      "image": "./Dockerfile",
+      "max_instances": 1,
+      "instance_type": "lite",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "RELAY", "class_name": "Relay" },
+      { "name": "RECORDS", "class_name": "DiscoveryRecord" },
+    ],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Relay", "DiscoveryRecord"] }],
+}

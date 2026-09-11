@@ -1,0 +1,198 @@
+{
+  "api_version": "v1",
+  "revision": 8,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 560.0,
+    "height": 360.0
+  },
+  "elements": [
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 560.0,
+        "height": 360.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 560.0,
+        "height": 360.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 180.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-option-0",
+      "role": "option",
+      "label": "OpenAI",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 29.0,
+        "y": 71.0,
+        "width": 502.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 29.0,
+        "y": 71.0,
+        "width": 502.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 87.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-option-1",
+      "role": "option",
+      "label": "Anthropic",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 29.0,
+        "y": 105.0,
+        "width": 502.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 29.0,
+        "y": 105.0,
+        "width": 502.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 121.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-option-2",
+      "role": "option",
+      "label": "OpenAI Compatible",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 29.0,
+        "y": 139.0,
+        "width": 502.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 29.0,
+        "y": 139.0,
+        "width": 502.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 155.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-sample",
+      "role": "status",
+      "label": "下拉菜单",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 40.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-select",
+      "role": "button",
+      "label": "OpenAI",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 40.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "story-select-menu",
+      "role": "status",
+      "label": "下拉菜单",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 20.0,
+        "y": 62.0,
+        "width": 520.0,
+        "height": 118.0
+      },
+      "visible_bounds": {
+        "x": 20.0,
+        "y": 62.0,
+        "width": 520.0,
+        "height": 118.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 121.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

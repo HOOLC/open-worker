@@ -1,0 +1,3 @@
+//! Cached, pure-Rust syntax highlighting shared by native and WASM messages.
+use gpui::{HighlightStyle, rgb};
+use std::{cell::R

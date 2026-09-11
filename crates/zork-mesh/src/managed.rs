@@ -1,0 +1,739 @@
+//! Lifecycle tasks owned by the host's existing Tokio runtime.
+use crate::node::MeshNode;
+use anyhow::{ensure, Context, Result};
+use std::{
+    path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
+use tokio::{
+    sync::{broadcast, oneshot},
+    task::{JoinHandle, JoinSet},
+};
+use zork_config::MeshConfig;
+
+pub fn data_dir(root: &Path) -> PathBuf {
+    root.join("mesh/synch")
+}
+pub fn same_transport(a: &MeshConfig, b: &MeshConfig) -> bool {
+    a.enabled == b.enabled
+        && a.offline == b.offline
+        && a.bind == b.bind
+        && a.relay_urls == b.relay_urls
+        && a.discovery_url == b.discovery_url
+}
+pub fn validate(config: &MeshConfig) -> Result<()> {
+    if let Some(bind) = &config.bind {
+        bind.parse::<std::net::SocketAddr>()
+            .context("invalid Mesh bind address")?;
+    }
+    if let Some(group) = &config.group {
+        group.validate()?;
+    }
+    zork_config::services::ServicesConfig {
+        relay_urls: config.relay_urls.clone(),
+        discovery_url: config.discovery_url.clone(),
+        cue: None,
+    }
+    .validate()?;
+    ensure!(
+        config.peers.len() <= 32 && config.workspaces.len() <= 32,
+        "Mesh supports at most 32 peers and 32 workspaces"
+    );
+    let mut origins = std::collections::HashSet::new();
+    let mut ids = std::collections::HashSet::new();
+    for workspace in &config.workspaces {
+        ensure!(
+            !workspace.id.is_empty()
+                && workspace.id.len() <= 64
+                && workspace
+                    .id
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'),
+            "invalid Mesh workspace ID"
+        );
+        ensure!(ids.insert(&workspace.id), "duplicate Mesh workspace ID");
+        ensure!(
+            workspace.path.is_absolute() && workspace.path.is_dir(),
+            "Mesh workspace must be an existing absolute directory"
+        );
+        ensure!(
+            !workspace.profile_id.is_empty()
+                && !workspace.model.is_empty()
+                && !workspace.thinking.is_empty(),
+            "Mesh workspace needs a local model selection"
+        );
+    }
+    for peer in &config.peers {
+        ensure!(
+            peer.origin.starts_with("key:")
+                && peer.origin.len() == 56
+                && peer.origin[4..]
+                    .bytes()
+                    .all(|b| b"ybndrfg8ejkmcpqxot1uwisza345h769".contains(&b)),
+            "Mesh initially requires key origins"
+        );
+        ensure!(
+            peer.name.len() <= 128 && peer.execute.len() <= 32,
+            "Mesh peer metadata too large"
+        );
+        ensure!(origins.insert(&peer.origin), "duplicate Mesh peer");
+        ensure!(
+            peer.execute.iter().all(|id| ids.contains(id)),
+            "Mesh execute grant references an unknown local workspace"
+        );
+    }
+    Ok(())
+}
+
+/// The Gateway owns this task and awaits it on shutdown. Library handles are
+/// cloned into its services; none can start or address an independent daemon.
+pub struct Runtime {
+    node: MeshNode,
+    stop: Option<oneshot::Sender<()>>,
+    task: Option<JoinHandle<Result<()>>>,
+    #[cfg(test)]
+    shutdown_loops: broadcast::Sender<()>,
+}
+impl Runtime {
+    pub fn node(&self) -> MeshNode {
+        self.node.clone()
+    }
+    pub fn is_finished(&self) -> bool {
+        self.task.as_ref().is_none_or(|task| task.is_finished())
+    }
+    pub async fn wait(&mut self) -> Result<()> {
+        let Some(task) = self.task.as_mut() else {
+            return Ok(());
+        };
+        let result = task.await.context("Synch background task failed");
+        self.task.take();
+        result?
+    }
+    pub async fn shutdown(&mut self) -> Result<()> {
+        if let Some(stop) = self.stop.take() {
+            let _ = stop.send(());
+        }
+        self.wait().await
+    }
+}
+impl Drop for Runtime {
+    fn drop(&mut self) {
+        if let Some(stop) = self.stop.take() {
+            let _ = stop.send(());
+        }
+    }
+}
+
+pub async fn start(root: &Path, config: &MeshConfig) -> Result<Runtime> {
+    start_mode(root, config, false).await
+}
+
+/// A mobile/desktop access client owns an identity but never executes sockets
+/// or watches local workspaces. It still exchanges and verifies remote objects.
+pub async fn start_client(root: &Path, config: &MeshConfig) -> Result<Runtime> {
+    ensure!(
+        config.workspaces.is_empty(),
+        "client cannot host workspaces"
+    );
+    start_mode(root, config, true).await
+}
+
+async fn start_mode(root: &Path, config: &MeshConfig, client_only: bool) -> Result<Runtime> {
+    validate(config)?;
+    let (root, config) = (root.to_owned(), config.clone());
+    let (ready, started) = oneshot::channel();
+    // Node::open must finish its owned initialization even if the caller stops
+    // waiting. An undelivered Runtime is dropped here and shuts itself down;
+    // cancellation cannot drop a half-open engine while releasing its lock.
+    tokio::spawn(async move {
+        let result = start_owned(&root, &config, client_only).await;
+        let _ = ready.send(result);
+    });
+    started.await.context("Mesh startup task failed")?
+}
+
+async fn start_owned(root: &Path, config: &MeshConfig, client_only: bool) -> Result<Runtime> {
+    validate(config)?;
+    let data = data_dir(root);
+    let init_data = data.clone();
+    let lock = tokio::task::spawn_blocking(move || -> Result<_> {
+        let _scope = synch_core::BlockingScope::enter();
+        let lock = synch_engine::LifecycleLock::acquire(&init_data)?;
+        if !init_data.join("synchronicity.db").exists() {
+            synch_engine::Node::init(&init_data, None)?;
+        }
+        // Exclusive ownership excludes a live legacy daemon before its stale
+        // local control artifacts are removed during migration.
+        for name in ["control.sock", "control.token"] {
+            match std::fs::remove_file(init_data.join(name)) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.into()),
+            }
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(
+                init_data.parent().context("Mesh parent directory")?,
+                std::fs::Permissions::from_mode(0o700),
+            )?;
+        }
+        Ok(lock)
+    })
+    .await??;
+    synch_net::tls::install_crypto_provider();
+    let mut options = synch_engine::NodeConfig::new(data);
+    if client_only {
+        options.socket_workers = 0;
+    }
+    options.net.offline = config.offline;
+    options.dns.no_tuf = config.offline;
+    options.net.bind_addr = match &config.bind {
+        Some(bind) => Some(bind.parse()?),
+        None if config.offline => Some("127.0.0.1:0".parse()?),
+        None => None,
+    };
+    options.net.relay_urls = config.relay_urls.clone().unwrap_or_default();
+    options.net.discovery_url = config.discovery_url.clone();
+    let engine = synch_engine::Node::open(options).await?;
+    // Publish the bound loopback endpoint before readoption: two same-host
+    // peers must be able to find each other while both are still starting.
+    let local_registration = match crate::local_discovery::install(engine.net().endpoint()).await {
+        Ok(registration) => registration,
+        Err(error) => {
+            tracing::warn!(%error, "local Mesh address discovery unavailable; using normal discovery");
+            None
+        }
+    };
+    // Discover current LAN ports even after a peer restarts. These are only
+    // routing hints: QUIC still pins the key and Synch still checks membership.
+    if !config.offline && std::env::var_os("ZORK_MESH_LAN_DISCOVERY").is_none_or(|v| v != "0") {
+        match iroh_mdns_address_lookup::MdnsAddressLookup::builder()
+            .service_name("zork-mesh-v1")
+            .build(engine.net().endpoint().id())
+        {
+            Ok(mdns) => {
+                if let Ok(lookup) = engine.net().endpoint().address_lookup() {
+                    lookup.add(mdns);
+                }
+            }
+            Err(error) => {
+                tracing::warn!(%error, "LAN Mesh discovery unavailable; using configured discovery")
+            }
+        }
+    }
+    let alive = Arc::new(AtomicBool::new(true));
+    let (startup_publish, mut pending_publish) = tokio::sync::mpsc::channel(1);
+    let handle = MeshNode::from_engine(engine.clone(), alive.clone(), startup_publish);
+    let setup: Result<()> = async {
+        // Zork currently supports static key identities. Its own enrollment
+        // service owns membership; there is no CLI or cloud-tunnel lifecycle.
+        ensure!(
+            engine.origin().to_string().starts_with("key:"),
+            "Zork Mesh requires a key origin"
+        );
+        handle
+            .blocking(|node| {
+                node.disable_cloud()?;
+                node.reopen_interrupted_uploads()?;
+                Ok(())
+            })
+            .await?;
+        engine.readopt_self_on_startup().await?;
+        Ok(())
+    }
+    .await;
+    if let Err(error) = setup {
+        let _ = engine.shutdown().await;
+        return Err(error);
+    }
+    let (stop_loops, _) = broadcast::channel::<()>(1);
+    let mut loops = JoinSet::new();
+    let pushing = engine.clone();
+    let mut stop_push = stop_loops.subscribe();
+    loops.spawn(async move {
+        loop {
+            tokio::select! {
+                _ = stop_push.recv() => break,
+                request = pending_publish.recv() => {
+                    let Some(request) = request else { break; };
+                    tokio::select! {
+                        _ = stop_push.recv() => break,
+                        result = async {
+                            // Only the bridge source is needed for readiness;
+                            // normal background scanning owns user workspaces.
+                            pushing.scan_source_and_stage_async(&request.space).await?;
+                            pushing.flush_staged().await?;
+                            Ok::<_, synch_engine::EngineError>(())
+                        } => {
+                            let result = result.map_err(anyhow::Error::from);
+                            if let Err(error) = &result {
+                                tracing::warn!(%error, "startup Mesh publication failed");
+                            }
+                            let _ = request.done.send(result);
+                        }
+                    }
+                }
+            }
+        }
+        "startup-push"
+    });
+    macro_rules! run {
+        ($name:literal, $method:ident) => {{
+            let node = engine.clone();
+            let mut stop = stop_loops.subscribe();
+            loops.spawn(async move {
+                node.$method(async move {
+                    let _ = stop.recv().await;
+                })
+                .await;
+                $name
+            });
+        }};
+    }
+    run!("anti-entropy", run_anti_entropy);
+    run!("publisher", run_publisher);
+    run!("maintenance", run_maintenance);
+    if !client_only {
+        run!("scanner", run_scanner);
+        run!("watcher", run_watcher);
+        run!("replicas", run_replicas);
+        run!("checkouts", run_checkouts);
+    }
+    #[cfg(test)]
+    let shutdown_loops = stop_loops.clone();
+    let (stop, stopped) = oneshot::channel();
+    let closing = handle.clone();
+    let task = tokio::spawn(async move {
+        let failure = tokio::select! {
+            _ = stopped => None,
+            result = loops.join_next() => Some(format!("Synch background loop ended unexpectedly: {result:?}")),
+        };
+        alive.store(false, Ordering::Release);
+        let _ = stop_loops.send(());
+        let mut errors = Vec::new();
+        // Close transport while loops drain so a loop awaiting an unreachable
+        // peer can wake. Synch still flushes its local publisher on stop, and
+        // both completions precede releasing the engine and lifecycle lock.
+        let draining_started = std::time::Instant::now();
+        let (shutdown, ()) = tokio::join!(engine.shutdown(), async {
+            while let Some(result) = loops.join_next().await {
+                if let Err(error) = result {
+                    errors.push(error.to_string());
+                }
+            }
+        });
+        tracing::info!(
+            elapsed_ms = draining_started.elapsed().as_millis() as u64,
+            "Synch transport and loops drained"
+        );
+        drop(local_registration);
+        closing.release_engine();
+        drop(engine);
+        drop(lock);
+        shutdown?;
+        if let Some(error) = failure {
+            anyhow::bail!(error);
+        }
+        ensure!(
+            errors.is_empty(),
+            "Synch background tasks failed: {}",
+            errors.join(", ")
+        );
+        Ok(())
+    });
+    Ok(Runtime {
+        node: handle,
+        stop: Some(stop),
+        task: Some(task),
+        #[cfg(test)]
+        shutdown_loops,
+    })
+}
+
+pub async fn configure(root: &Path, config: &MeshConfig, node: &MeshNode) -> Result<()> {
+    let ledger = root.join("mesh/managed-peers.json");
+    let previous: Vec<String> = match tokio::fs::read(&ledger).await {
+        Ok(bytes) => serde_json::from_slice(&bytes)?,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => vec![],
+        Err(e) => return Err(e.into()),
+    };
+    for origin in previous
+        .iter()
+        .filter(|origin| !config.peers.iter().any(|p| &p.origin == *origin))
+    {
+        node.untrust(origin).await?;
+    }
+    for peer in &config.peers {
+        node.trust(&peer.origin, &peer.name, peer.addr.as_deref())
+            .await?;
+    }
+    let temp = ledger.with_extension("tmp");
+    tokio::fs::write(
+        &temp,
+        serde_json::to_vec(&config.peers.iter().map(|p| &p.origin).collect::<Vec<_>>())?,
+    )
+    .await?;
+    tokio::fs::rename(temp, ledger).await?;
+    Ok(())
+}
+
+/// The remote Synch socket protocol remains compatible with existing peers.
+/// Its fixed eBPF program forwards authenticated requests to the host's ingress.
+/// All local administration and publication below are direct library calls.
+#[cfg(feature = "server")]
+pub async fn deploy_bridge(root: &Path, node: &MeshNode, port: u16) -> Result<String> {
+    let dir = root.join("mesh/control-source");
+    tokio::fs::create_dir_all(&dir).await?;
+    let source = crate::bridge::source_for_port(port)?;
+    let bytes = tokio::task::spawn_blocking(move || {
+        synch_cc::compile(
+            &source,
+            "zork-bridge.c",
+            &[("synch.h", synch_sock::sdk::HEADER)],
+            &[],
+        )
+    })
+    .await?
+    .context("compile fixed Mesh bridge")?;
+    let content = blake3::hash(&bytes);
+    node.add_filesystem_source("zork-control", &dir).await?;
+    let temp = root.join("mesh/bridge.o");
+    tokio::fs::write(&temp, bytes).await?;
+    tokio::fs::rename(temp, dir.join("mesh.sock")).await?;
+    let token = zork_config::random_token();
+    node.activate_bridge(token.clone(), 128).await?;
+    node.publish_for_startup("zork-control", "mesh.sock", content)
+        .await?;
+    Ok(token)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    fn config() -> MeshConfig {
+        MeshConfig {
+            enabled: true,
+            offline: true,
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn access_client_preserves_identity_and_declines_socket_execution() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let mut first = start_client(root.path(), &config()).await?;
+        let id = first.node().identity().await?;
+        assert_eq!(
+            first
+                .node()
+                .blocking(|node| Ok(node.config().socket_workers))
+                .await?,
+            0
+        );
+        first.shutdown().await?;
+        let mut reopened = start_client(root.path(), &config()).await?;
+        assert_eq!(reopened.node().identity().await?, id);
+        assert!(!data_dir(root.path()).join("control.sock").exists());
+        reopened.shutdown().await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "server")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn startup_publication_does_not_wait_for_an_unresponsive_peer() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let peer_root = tempfile::tempdir()?;
+        let mut runtime = start(root.path(), &config()).await?;
+        let mut peer = start(peer_root.path(), &config()).await?;
+        let peer_id = peer.node().identity().await?;
+        peer.shutdown().await?;
+        // Keep the UDP port open but never answer the QUIC handshake. The
+        // ordinary push path waits its dial timeout; local readiness must not.
+        let blackhole = std::net::UdpSocket::bind("127.0.0.1:0")?;
+        let node = runtime.node();
+        node.trust(
+            &peer_id,
+            "unresponsive peer",
+            Some(&blackhole.local_addr()?.to_string()),
+        )
+        .await?;
+        let source = root.path().join("startup-source");
+        std::fs::create_dir(&source)?;
+        std::fs::write(source.join("entry"), b"ready locally")?;
+        node.add_filesystem_source("startup", &source).await?;
+        // A watcher may have already staged this file. Startup must flush that
+        // batch rather than skipping an indexed but still unpublished version.
+        let engine = node.blocking(|engine| Ok(engine)).await?;
+        engine.scan_source_and_stage_async("startup").await?;
+        drop(engine);
+        tokio::time::timeout(
+            Duration::from_secs(3),
+            node.publish_for_startup("startup", "entry", blake3::hash(b"ready locally")),
+        )
+        .await
+        .context("local readiness waited for remote peer")??;
+        node.blocking(|engine| {
+            engine.resolve("startup", "entry", &synch_engine::VersionPolicy::Newest)?;
+            Ok(())
+        })
+        .await?;
+        // Shutdown owns the publication task and drains Synch's other loops;
+        // reopening proves the lock and network lifetime were released.
+        tokio::time::timeout(Duration::from_secs(30), runtime.shutdown())
+            .await
+            .context("startup publisher did not stop")??;
+        let mut reopened = start(root.path(), &config()).await?;
+        reopened.shutdown().await?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn loopback_discovery_keeps_synch_authentication_and_recovers_after_restart() -> Result<()>
+    {
+        let a_root = tempfile::tempdir()?;
+        let b_root = tempfile::tempdir()?;
+        // No relay, DNS discovery, or manually exchanged UDP addresses.
+        let network = config();
+        let mut a = start_client(a_root.path(), &network).await?;
+        let mut b = start_client(b_root.path(), &network).await?;
+        let a_id = a.node().identity().await?;
+        let b_id = b.node().identity().await?;
+        a.node().add_api_source("local-test").await?;
+        let first = a
+            .node()
+            .put("local-test", "first", b"authenticated Synch bytes")
+            .await?;
+        ensure!(
+            b.node().read(&first).await.is_err(),
+            "address discovery granted trust"
+        );
+        a.node().trust(&b_id, "local B", None).await?;
+        b.node().trust(&a_id, "local A", None).await?;
+        let started = std::time::Instant::now();
+        let bytes = tokio::time::timeout(Duration::from_secs(3), b.node().read(&first)).await??;
+        ensure!(
+            bytes == b"authenticated Synch bytes",
+            "Synch transfer mismatch"
+        );
+        eprintln!("first loopback Synch transfer: {:?}", started.elapsed());
+        a.shutdown().await?;
+        b.shutdown().await?;
+
+        // Persisted peers start together with new ephemeral ports. Recovery
+        // must still run through Synch, using each other's newly leased hints.
+        let started = std::time::Instant::now();
+        let (mut a, mut b) = tokio::time::timeout(Duration::from_secs(3), async {
+            tokio::try_join!(
+                start_client(a_root.path(), &network),
+                start_client(b_root.path(), &network)
+            )
+        })
+        .await??;
+        ensure!(
+            a.node().identity().await? == a_id && b.node().identity().await? == b_id,
+            "restart replaced an identity"
+        );
+        eprintln!(
+            "simultaneous loopback Synch recovery: {:?}",
+            started.elapsed()
+        );
+        let started = std::time::Instant::now();
+        for index in 0..3 {
+            let payload = format!("new bytes after restart {index}");
+            let object = a
+                .node()
+                .put(
+                    "local-test",
+                    &format!("restarted-{index}"),
+                    payload.as_bytes(),
+                )
+                .await?;
+            let bytes =
+                tokio::time::timeout(Duration::from_secs(3), b.node().read(&object)).await??;
+            ensure!(
+                bytes == payload.as_bytes(),
+                "restarted Synch transfer mismatch"
+            );
+        }
+        eprintln!("three further Synch transfers: {:?}", started.elapsed());
+        a.shutdown().await?;
+        b.shutdown().await?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn concurrent_shutdown_flushes_staged_local_changes() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let mut runtime = start_client(root.path(), &config()).await?;
+        let source = root.path().join("source");
+        std::fs::create_dir(&source)?;
+        std::fs::write(source.join("pending"), b"must survive shutdown")?;
+        runtime
+            .node()
+            .add_filesystem_source("pending-test", &source)
+            .await?;
+        let engine = runtime.node().blocking(|engine| Ok(engine)).await?;
+        engine.scan_source_and_stage_async("pending-test").await?;
+        ensure!(engine.publisher().pending() > 0, "fixture was not staged");
+        drop(engine);
+        runtime.shutdown().await?;
+        let mut reopened = start_client(root.path(), &config()).await?;
+        reopened
+            .node()
+            .blocking(|engine| {
+                let entry = engine.resolve(
+                    "pending-test",
+                    "pending",
+                    &synch_engine::VersionPolicy::Newest,
+                )?;
+                ensure!(
+                    entry.content == Some(synch_core::Hash::new(b"must survive shutdown")),
+                    "staged data was lost"
+                );
+                Ok(())
+            })
+            .await?;
+        reopened.shutdown().await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "server")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn library_node_preserves_identity_without_a_control_service() -> Result<()> {
+        let root = tempfile::Builder::new()
+            .prefix("zlib-")
+            .tempdir_in("/tmp")?;
+        let mut config = config();
+        config.synch_binary = Some(root.path().join("missing-synch"));
+        let mut runtime = start(root.path(), &config).await?;
+        let node = runtime.node();
+        let origin = node.identity().await?;
+        ensure!(
+            !node.data_dir().join("control.sock").exists(),
+            "daemon control socket created"
+        );
+        ensure!(
+            !node.data_dir().join("control.token").exists(),
+            "daemon control token created"
+        );
+        ensure!(
+            start(root.path(), &config).await.is_err(),
+            "duplicate ownership accepted"
+        );
+        node.add_api_source("test-artifacts").await?;
+        let object = node
+            .put(
+                "test-artifacts",
+                "receipt",
+                b"persist across Gateway restart",
+            )
+            .await?;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+        deploy_bridge(root.path(), &node, listener.local_addr()?.port()).await?;
+        tokio::time::timeout(Duration::from_secs(30), runtime.shutdown()).await??;
+        ensure!(
+            node.identity().await.is_err(),
+            "closed handle remained active"
+        );
+        // A stopped legacy daemon may leave a Unix socket pathname/token.
+        #[cfg(unix)]
+        {
+            let socket =
+                std::os::unix::net::UnixListener::bind(node.data_dir().join("control.sock"))?;
+            drop(socket);
+        }
+        std::fs::write(node.data_dir().join("control.token"), [7u8; 32])?;
+        let mut reopened = start(root.path(), &config).await?;
+        ensure!(
+            !node.data_dir().join("control.sock").exists()
+                && !node.data_dir().join("control.token").exists(),
+            "legacy control artifacts were retained"
+        );
+        ensure!(
+            reopened.node().identity().await? == origin,
+            "identity replaced"
+        );
+        ensure!(
+            reopened.node().read(&object).await? == b"persist across Gateway restart",
+            "publication lost"
+        );
+        reopened.shutdown().await?;
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn dropping_owner_closes_tasks_and_releases_database() -> Result<()> {
+        let root = tempfile::Builder::new()
+            .prefix("zdrop-")
+            .tempdir_in("/tmp")?;
+        let runtime = start(root.path(), &config()).await?;
+        let node = runtime.node();
+        let task = runtime.task.as_ref().unwrap().abort_handle();
+        drop(runtime);
+        tokio::time::timeout(Duration::from_secs(30), async {
+            while !task.is_finished() {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await?;
+        ensure!(
+            node.identity().await.is_err(),
+            "dropped owner left an active node"
+        );
+        let mut next = start(root.path(), &config()).await?;
+        next.shutdown().await?;
+        Ok(())
+    }
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn unexpected_loop_exit_fails_the_host_and_closes_the_node() -> Result<()> {
+        let root = tempfile::Builder::new()
+            .prefix("zfail-")
+            .tempdir_in("/tmp")?;
+        let mut runtime = start(root.path(), &config()).await?;
+        let node = runtime.node();
+        runtime.shutdown_loops.send(())?;
+        let result = tokio::time::timeout(Duration::from_secs(30), runtime.wait()).await?;
+        ensure!(
+            result.is_err(),
+            "background loop exit was hidden from the Gateway"
+        );
+        ensure!(
+            node.identity().await.is_err(),
+            "failed tasks left an active engine"
+        );
+        runtime.shutdown().await?;
+        let mut next = start(root.path(), &config()).await?;
+        next.shutdown().await?;
+        Ok(())
+    }
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn cancelling_startup_does_not_leave_an_unowned_node() -> Result<()> {
+        let root = tempfile::Builder::new()
+            .prefix("zcancel-")
+            .tempdir_in("/tmp")?;
+        let data = root.path().to_owned();
+        let caller = tokio::spawn(async move { start(&data, &config()).await });
+        // Initialization is now running, but the original caller goes away.
+        tokio::task::yield_now().await;
+        caller.abort();
+        let _ = caller.await;
+        tokio::time::timeout(Duration::from_secs(30), async {
+            loop {
+                if let Ok(mut runtime) = start(root.path(), &config()).await {
+                    runtime.shutdown().await?;
+                    return Ok::<_, anyhow::Error>(());
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await??;
+        Ok(())
+    }
+}

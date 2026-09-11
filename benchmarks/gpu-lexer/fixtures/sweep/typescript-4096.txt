@@ -1,0 +1,106 @@
+import type { Catalog, PageFixture, Story } from "../workbench/types";
+type LegacyProfile = {
+  id: string;
+  profile_id: string;
+  name: string;
+  node: string;
+  provider: string;
+  billing: string;
+  models: Array<Record<string, unknown>>;
+  verified: boolean;
+};
+type LegacyPerson = {
+  name: string;
+  avatar: string;
+  role: string;
+  node: string;
+  modelConnectionId?: string;
+  modelId?: string;
+};
+declare const profiles: LegacyProfile[];
+declare const people: Record<string, LegacyPerson>;
+declare const devices: Record<string, { name: string; description: string; online: boolean }>;
+declare const profileCatalog: Array<{ id: string; label: string; billing: Array<{ id: string; label: string }> }>;
+declare const conversations: Array<{
+  id: string;
+  name: string;
+  kind: string;
+  leaderId: string;
+  node: string;
+  members: string[];
+  unread: number;
+  time: string;
+  messages: Array<{ id: string; who: string; text: string; time: string }>;
+}>;
+declare let current: string;
+declare function render(): void;
+declare function setSidebarWidth(width: number, save?: boolean): void;
+const one = <T extends Element = HTMLElement>(selector: string) => {
+  const element = document.querySelector<T>(selector);
+  if (!element) throw Error("HTML 参考缺少 " + selector);
+  return element;
+};
+const click = (selector: string) => one<HTMLElement>(selector).click();
+const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+async function setup(story: Story, fixture: PageFixture, providers: Catalog["providers"], base: string) {
+  const style = document.createElement("style");
+  style.textContent = `
+ @font-face{font-family:ZorkCompareInter;src:url(${base}assets/fonts/InterVariable.ttf);font-weight:100 900}
+ @font-face{font-family:ZorkCompareCJK;src:url(${base}comparison-fonts/NotoSansSC.ttf);font-weight:100 900}
+ :root{--font-body:ZorkCompareInter,ZorkCompareCJK,sans-serif;--sidebar-width:${fixture.device.sidebar_width}px}
+ body *{visibility:hidden!important}[data-reference-target],[data-reference-target] *{visibility:visible!important}dialog::backdrop{visibility:hidden!important}
+ `;
+  document.head.append(style);
+  const id = fixture.profile.profile_id;
+  profiles.splice(0, profiles.length, {
+    id,
+    profile_id: id,
+    name: id,
+    node: fixture.device.id,
+    provider: fixture.profile.provider,
+    billing: fixture.profile.billing,
+    models: structuredClone(fixture.profile.models),
+    verified: false,
+  });
+  for (const person of Object.values(people)) person.node = "mini2";
+  for (const agent of fixture.agents)
+    people[agent.prototype_id] = {
+      name: agent.name,
+      avatar: agent.avatar,
+      role: agent.role === "leader" ? "Leader" : "Worker",
+      node: fixture.device.id,
+      modelConnectionId: id,
+      modelId: agent.model,
+    };
+  devices[fixture.device.id].name = fixture.device.name;
+  setSidebarWidth(fixture.device.sidebar_width, false);
+  for (const provider of profileCatalog) {
+    const actual = providers.find((p) => p.id === provider.id);
+    if (!actual) continue;
+    provider.label = actual.label;
+    for (const billing of provider.billing) {
+      const actualBilling = actual.billing.find((b) => b.id === billing.id);
+      if (actualBilling) billing.label = actualBilling.label;
+    }
+  }
+  const settings = (section: string) => {
+    click('[data-action="settings"]');
+    click(`[data-action="device-settings-page"][data-device="${fixture.device.id}"][data-page="${section}"]`);
+  };
+  const connection = () => {
+    settings("models");
+    click('[data-action="add-profile"]');
+    click("#profile-provider-menu summary");
+    click(`[data-action="profile-provider"][data-provider="${fixture.profile.provider}"]`);
+  };
+  const state = story.state.replace(/-(compact|wide)$/, ""),
+    family = story.family;
+  let selector = ".settings-content";
+  if (family === "connection") {
+    if (state === "list") settings("models");
+    else {
+      connection();
+      selector = "#chat-dialog";
+      if (state === "provider") click("#profile-provider-menu summary");
+    }
+  } e

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="正在处理">
+  <title>正在处理</title>
+  <style>
+    @keyframes zork-ticks { 0%,100% { opacity:1; } 75% { opacity:.2; } }
+    @media (prefers-reduced-motion: reduce) { .motion { animation: none !important; } }
+  </style>
+  <g transform="rotate(0 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="1.0" style="animation:zork-ticks 1s linear infinite;animation-delay:-1.0s"/></g>
+  <g transform="rotate(45 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.9" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.875s"/></g>
+  <g transform="rotate(90 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.8" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.75s"/></g>
+  <g transform="rotate(135 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.7" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.625s"/></g>
+  <g transform="rotate(180 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.6" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.5s"/></g>
+  <g transform="rotate(225 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.5" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.375s"/></g>
+  <g transform="rotate(270 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.4" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.25s"/></g>
+  <g transform="rotate(315 12 12)"><path class="motion" d="M12 3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity="0.3" style="animation:zork-ticks 1s linear infinite;animation-delay:-0.125s"/></g>
+</svg>

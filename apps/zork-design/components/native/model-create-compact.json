@@ -1,0 +1,418 @@
+{
+  "api_version": "v1",
+  "revision": 31,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 900.0,
+    "height": 600.0
+  },
+  "elements": [
+    {
+      "id": "desktop-settings-column",
+      "role": "status",
+      "label": "设置内容列",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 660.0,
+        "height": 204.5
+      },
+      "visible_bounds": {
+        "x": 240.0,
+        "y": 0.0,
+        "width": 660.0,
+        "height": 204.5
+      },
+      "center": {
+        "x": 570.0,
+        "y": 102.25
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "model-api-select",
+      "role": "button",
+      "label": "Codex Responses",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 239.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 239.0,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 255.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "model-editor-dialog",
+      "role": "status",
+      "label": "添加模型",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 180.0,
+        "y": 56.0,
+        "width": 540.0,
+        "height": 488.0
+      },
+      "visible_bounds": {
+        "x": 180.0,
+        "y": 56.0,
+        "width": 540.0,
+        "height": 488.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 300.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "model-editor-dialog-close",
+      "role": "button",
+      "label": "关闭添加模型",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 664.0,
+        "y": 78.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 664.0,
+        "y": 78.0,
+        "width": 32.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 680.0,
+        "y": 94.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "model-editor-dialog-footer",
+      "role": "status",
+      "label": "弹窗操作区",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 180.0,
+        "y": 468.0,
+        "width": 540.0,
+        "height": 76.0
+      },
+      "visible_bounds": {
+        "x": 180.0,
+        "y": 468.0,
+        "width": 540.0,
+        "height": 76.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 506.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "profile-add",
+      "role": "button",
+      "label": "添加连接",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 773.0,
+        "y": 40.0,
+        "width": 93.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 773.0,
+        "y": 40.0,
+        "width": 93.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 819.5,
+        "y": 56.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-context-limit",
+      "role": "text_input",
+      "label": "上下文 token 上限",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 314.5,
+        "width": 240.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 314.5,
+        "width": 240.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 324.0,
+        "y": 330.5
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "profile-default-thinking",
+      "role": "text_input",
+      "label": "默认推理级别",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 456.0,
+        "y": 390.0,
+        "width": 240.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 456.0,
+        "y": 390.0,
+        "width": 240.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 576.0,
+        "y": 406.0
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "profile-detail-fixture",
+      "role": "button",
+      "label": "fixture",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 274.0,
+        "y": 100.5,
+        "width": 592.0,
+        "height": 72.0
+      },
+      "visible_bounds": {
+        "x": 274.0,
+        "y": 100.5,
+        "width": 592.0,
+        "height": 72.0
+      },
+      "center": {
+        "x": 570.0,
+        "y": 136.5
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-model",
+      "role": "text_input",
+      "label": "模型 ID",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 163.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 163.5,
+        "width": 492.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 179.5
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "profile-model-cancel",
+      "role": "button",
+      "label": "取消编辑模型",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 546.0,
+        "y": 488.0,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 546.0,
+        "y": 488.0,
+        "width": 59.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 575.5,
+        "y": 504.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-model-save",
+      "role": "button",
+      "label": "保存模型",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 613.0,
+        "y": 488.0,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 613.0,
+        "y": 488.0,
+        "width": 83.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 654.5,
+        "y": 504.0
+      },
+      "actions": [
+        "click",
+        "move"
+      ]
+    },
+    {
+      "id": "profile-output-limit",
+      "role": "text_input",
+      "label": "输出 token 上限",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 456.0,
+        "y": 314.5,
+        "width": 240.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 456.0,
+        "y": 314.5,
+        "width": 240.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 576.0,
+        "y": 330.5
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "profile-thinking-levels",
+      "role": "text_input",
+      "label": "推理级别，用逗号分隔",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 204.0,
+        "y": 390.0,
+        "width": 240.0,
+        "height": 32.0
+      },
+      "visible_bounds": {
+        "x": 204.0,
+        "y": 390.0,
+        "width": 240.0,
+        "height": 32.0
+      },
+      "center": {
+        "x": 324.0,
+        "y": 406.0
+      },
+      "actions": [
+        "click",
+        "move",
+        "type_text"
+      ]
+    },
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 900.0,
+        "height": 600.0
+      },
+      "center": {
+        "x": 450.0,
+        "y": 300.0
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

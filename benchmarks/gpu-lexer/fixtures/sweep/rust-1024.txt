@@ -1,0 +1,32 @@
+//! Cached, pure-Rust syntax highlighting shared by native and WASM messages.
+use gpui::{HighlightStyle, rgb};
+use std::{cell::RefCell, collections::VecDeque, ops::Range};
+use syntect::{
+    easy::HighlightLines, highlighting::ThemeSet, parsing::SyntaxSet, util::LinesWithEndings,
+};
+
+pub(super) type Runs = Vec<(Range<usize>, HighlightStyle)>;
+#[derive(Clone, Debug)]
+pub(super) struct Presentation {
+    pub text: gpui::SharedString,
+    pub highlights: Runs,
+    pub layout_cache: super::text_cache::TextCache,
+}
+pub(super) fn prepare(language: Option<&str>, code: &str) -> Presentation {
+    Presentation {
+        text: code.to_owned().into(),
+        highlights: highlights(language, code),
+        layout_cache: Default::default(),
+    }
+}
+#[cfg(test)]
+thread_local! { static PARSES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+#[cfg(test)]
+pub(super) fn parse_count() -> usize {
+    PARSES.with(|count| count.get())
+}
+
+struct Highlighter {
+    syntaxes: SyntaxSet,
+    themes: ThemeSet,
+    cache: 

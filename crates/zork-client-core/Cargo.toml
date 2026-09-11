@@ -1,0 +1,68 @@
+[package]
+name = "zork-client-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ulid.workspace = true
+zork-client-types = { path = "../zork-client-types" }
+anyhow = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+futures-channel = "0.3.31"
+futures-util.workspace = true
+http = "1"
+serde.workspace = true
+serde_json = "1"
+zork-observe = { path = "../zork-observe" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+zork-agent-api = { path = "../agent-api" }
+bytes = "1"
+reqwest.workspace = true
+thiserror = "2.0.17"
+tokio.workspace = true
+rusqlite = { version = "0.31", features = ["bundled"] }
+zork-config = { path = "../zork-config" }
+zork-mesh = { path = "../zork-mesh", default-features = false }
+zork-notify = { path = "../zork-notify" }
+imbl.workspace = true
+openidconnect = { version = "=4.0.1", features = ["reqwest-blocking"], optional = true }
+zork-browser = { path = "../zork-browser", optional = true }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+tokio = { version = "1.48.0", default-features = false, features = ["sync"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "wasmbind"] }
+
+[dev-dependencies]
+axum = "0.8"
+tempfile = "3"
+libc = "0.2"
+
+[features]
+headless-bench = []
+desktop = ["dep:openidconnect", "dep:zork-browser"]
+
+[[bench]]
+name = "replica"
+harness = false
+
+[[bench]]
+name = "messages"
+harness = false
+
+[[bench]]
+name = "subscriptions"
+harness = false
+required-features = ["headless-bench"]
+
+[[bench]]
+name = "subscriptions_alloc"
+harness = false
+required-features = ["headless-bench"]
+
+[[bench]]
+name = "history"
+harness = false
+required-features = ["headless-bench"]

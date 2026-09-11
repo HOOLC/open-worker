@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 64 64" role="img" aria-label="小猫">
+<title>小猫</title>
+<circle cx="32" cy="32" r="32" fill="#F6E4D4"/>
+<path d="M13 30 14 13q1-3 4 0l10 8h8l10-8q3-3 4 0l1 17v10q-1 14-19 14T13 40Z" fill="#EBAE79"/><path d="m17 17 8 7-8 3Zm30 0-8 7 8 3Z" fill="#F5C2AD"/><ellipse cx="32" cy="40" rx="17" ry="12" fill="#FFF4DF"/><path d="m28 22 1 6m6-6-1 6" stroke="#BE794E" stroke-width="2.8" stroke-linecap="round"/><g fill="#4D403D"><ellipse cx="24" cy="34" rx="1.7" ry="2.2"/><ellipse cx="40" cy="34" rx="1.7" ry="2.2"/></g><g fill="#EA9F98" opacity=".65"><ellipse cx="19" cy="39" rx="4" ry="2.4"/><ellipse cx="45" cy="39" rx="4" ry="2.4"/></g><path d="m29 38 3 3 3-3Z" fill="#4D403D"/><path d="M26 43q3 3 6-2 3 5 6 2" fill="none" stroke="#4D403D" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

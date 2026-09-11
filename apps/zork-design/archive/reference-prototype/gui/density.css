@@ -1,0 +1,142 @@
+/* Compact workspace: reclaim space while keeping message text readable. */
+.conversations{width:262px}
+.sidebar-head{height:60px;padding:15px 19px}
+.brand img{width:24px;height:24px}
+.brand strong{font-size:22px}
+.search{height:29px;margin:0 14px;padding:0 8px}
+.conversation-list{padding:10px 7px 0}
+.device-group{padding:3px 0 7px}
+.device-group-header{padding:0 0 3px}
+.device-heading{height:28px;gap:8px;padding:0 7px}
+.device-heading>.icon{width:20px;height:20px}
+.device-heading>strong{font-size:12px}
+.device-conversations{padding:0}
+.leader-scope{margin-bottom:2px}
+.leader-scope-heading{gap:0;padding-right:4px;border-radius:6px}
+.leader-scope-heading:hover,.leader-scope-heading:focus-within{background:var(--color-hover)}
+.leader-scope-heading.selected{background:var(--color-selected)}
+.leader-scope-heading>.conversation-row{min-height:28px;padding:4px 7px;gap:8px;border-radius:6px}
+.leader-scope-heading>.conversation-row:hover,.leader-scope-heading>.conversation-row.selected{background:transparent}
+.leader-scope-heading>.conversation-row.selected:before{top:7px;height:14px}
+.leader-scope-heading .scope-toggle{opacity:0;border-radius:4px}
+.leader-scope-heading:hover .scope-toggle,.leader-scope-heading:focus-within .scope-toggle,.leader-scope-heading .scope-toggle.collapsed{opacity:1}
+@media(hover:none){.leader-scope-heading .scope-toggle{opacity:1}}
+.conversation-row .single-avatar{width:20px;height:20px;border-radius:6px}
+.leader-conversation .conversation-title b{font-size:12px}
+.leader-scope-heading .scope-toggle{height:22px;width:20px}
+.leader-tasks{margin:2px 0 4px;padding-left:0;border-left:0}
+.leader-tasks .conversation-row+.conversation-row{margin-top:2px}
+.leader-tasks .conversation-row{min-height:29px;padding:4px 6px;gap:6px;border-radius:5px}
+.leader-tasks .task-chat-symbol{width:19px;height:19px}
+.leader-tasks .task-chat-symbol>.icon{width:16px;height:16px}
+.leader-tasks .conversation-title b{font-size:12px}
+.conversation-row.selected:before{top:10px;height:17px}
+.leader-tasks .conversation-row.selected:before{top:7px;height:15px}
+.sidebar-footer{padding:10px 15px}
+.footer-link{padding:5px 3px;font-size:11px}
+.demo-note{margin-top:7px}
+.conversation-header{height:58px;padding:0 25px;gap:12px}
+.chat-title-group{gap:9px}
+.chat-title{font-size:16px}
+.chat-subtitle{margin-top:1px;font-size:10px;gap:6px}
+.chat-title-group>.task-chat-symbol{width:30px;height:30px;border-radius:8px}
+.chat-title-group>.task-chat-symbol>.icon{width:20px;height:20px}
+.chat-title-group>.single-avatar{width:30px;height:30px;border-radius:9px}
+.chat-toolbar{gap:4px}
+.chat-toolbar .icon-button{width:28px;height:28px}
+.messages{max-width:1000px;padding:18px 26px 12px}
+.date-divider{margin:0 0 15px}
+.chat-message{gap:9px;margin-bottom:12px}
+.message-avatar{width:26px;height:26px;border-radius:8px}
+.message-byline{margin-bottom:3px;gap:6px;font-size:11px;line-height:1.45}
+.message-text{font-size:13px;line-height:1.65;max-width:74ch}
+.message-actions{margin-top:3px;line-height:1.2}
+.chat-message.mine{padding-left:44px}
+.chat-message.mine .message-body{padding:8px 12px;border-radius:10px 10px 4px 10px}
+.chat-message.mine .message-byline{margin-bottom:2px}
+.chat-message.mine .message-text{font-size:13px}
+.system-line{margin-bottom:13px;line-height:1.5}
+.attachments{gap:8px;margin-top:8px;max-width:490px}
+.attachment{padding:9px 11px;border-radius:8px;min-width:180px}
+.attachment-top{gap:8px}
+.attachment-top>.icon{width:18px;height:18px}
+.attachment-sample{margin-top:8px;height:23px;gap:5px}
+.attachment-sample img{width:22px;height:22px;border-radius:6px}
+.attachment-sample>.icon{width:18px;height:18px;margin-right:4px}
+.composer-dock{max-width:1000px;padding:3px 25px 12px}
+.participant-activity:empty{display:none}
+.composer{padding:9px 11px 8px;border-radius:10px;box-shadow:none}
+.composer textarea{font-size:13px;line-height:1.6;min-height:34px;height:34px;max-height:128px}
+.composer-bottom{margin-top:6px;gap:10px}
+.composer-tools .icon-button{height:24px;width:24px}
+.send-button{width:26px;height:26px;border-radius:8px}
+.reply-preview{padding:5px 8px;margin-bottom:8px}
+.context-panel{width:250px}
+.panel-head{height:58px;padding:0 17px}
+.panel-body{padding:17px}
+.panel-label{margin-bottom:8px}
+.member{padding:7px 0;gap:8px}
+.member img,.person-placeholder{height:26px;width:26px;border-radius:8px}
+.panel-action{padding:10px 0}
+.panel-file{padding:9px 0}
+.panel-note{margin-top:18px}
+@media(min-width:1550px){.conversations{width:280px}.messages{max-width:1040px}.composer-dock{max-width:1040px}}
+@media(max-width:1120px){.conversations{width:240px}.conversation-header{padding:0 21px}.messages{padding-left:22px;padding-right:22px}.composer-dock{padding-left:21px;padding-right:21px}}
+@media(max-width:760px){
+ .mobile-list .conversations{width:100%}
+ .sidebar-head{height:58px;padding:15px 20px}
+ .search{margin:0 18px;height:31px}
+ .conversation-list{padding:10px 12px 0}
+ .leader-scope-heading>.conversation-row{min-height:30px;padding:5px 7px}
+ .leader-tasks .conversation-row{min-height:34px;padding:5px 7px}
+ .leader-conversation .conversation-title b,.leader-tasks .conversation-title b{font-size:13px}
+ .leader-tasks .conversation-row.selected:before{top:9px;height:16px}
+ .conversation-header{height:56px;padding:0 14px}
+ .messages{padding:16px 18px 10px}
+ .composer-dock{padding:3px 16px 11px}
+ .chat-toolbar .icon-button{width:29px;height:29px}
+ .context-panel{width:250px}
+}
+@media(max-width:480px){
+ .conversation-header{padding:0 9px;height:54px}
+ .chat-title{font-size:15px}
+ .chat-subtitle{font-size:9px}
+ .chat-toolbar{gap:0}
+ .chat-toolbar .icon-button{width:27px;height:28px}
+ .messages{padding:14px 12px 9px}
+ .chat-message{gap:8px;margin-bottom:11px}
+ .message-avatar{width:24px;height:24px;border-radius:7px}
+ .message-byline{font-size:10px}
+ .message-text{font-size:13px;line-height:1.6}
+ .chat-message.mine{padding-left:25px}
+ .chat-message.mine .message-body{padding:7px 10px}
+ .attachment{min-width:164px;padding:9px}
+ .attachment-name{font-size:11px}
+ .attachment-meta{font-size:10px}
+ .composer-dock{padding:2px 11px 10px}
+ .composer{padding:8px 10px 7px}
+ .composer textarea{min-height:32px;height:32px}
+ .composer-bottom{margin-top:5px}
+ .context-panel{max-width:90%}
+}
+
+/* People are the conversation header; files remain in the message stream. */
+.header-roster{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.member-avatars{display:flex;align-items:center;gap:7px;min-width:0;overflow-x:auto;padding:4px;scrollbar-width:none}
+.member-avatars::-webkit-scrollbar{display:none}
+.header-member{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;flex-shrink:0}
+.header-member img{width:28px;height:28px;border-radius:8px}
+.header-member:hover,.header-member:focus-visible{filter:brightness(.94)}
+.self-member{background:var(--color-selected);font-size:11px;color:var(--color-muted)}
+.header-device{font-size:11px;color:var(--color-muted);flex-shrink:0;gap:5px}
+.header-device:hover{color:var(--color-text)}
+
+/* Own messages: a close-fitting bubble, with metadata outside the border. */
+.chat-message.mine{flex-direction:column;align-items:flex-end;gap:3px}
+.chat-message.mine .message-body{flex:none;width:fit-content;padding:6px 10px;border-radius:8px 8px 3px 8px}
+.own-message-meta{display:flex;align-items:center;gap:8px;padding:0 2px;font-size:9px;line-height:1.4;color:var(--color-subtle)}
+
+/* Task names carry identity; align them with the Leader name above. */
+.leader-tasks .conversation-row{padding-left:35px}
+
+.device-chat-link.task-link{margin-left:0;padding-left:32px;width:100%}

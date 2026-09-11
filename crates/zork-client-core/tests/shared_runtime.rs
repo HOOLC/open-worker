@@ -1,0 +1,448 @@
+use axum::{
+    http::StatusCode,
+    response::{sse::Event, IntoResponse, Sse},
+    routing::{get, post},
+    Json, Router,
+};
+use futures_util::{stream, StreamExt};
+use serde_json::{json, Value};
+use std::{
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
+use zork_client_core::{
+    api::*,
+    delivery::{self, DeliveryPump},
+    live::LiveEvent,
+    store::{ClientStore, QueuedMessage},
+};
+
+async fn server(router: Router) -> (String, tokio::task::JoinHandle<()>) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    (
+        url,
+        tokio::spawn(async move {
+            axum::serve(listener, router).await.unwrap();
+        }),
+    )
+}
+fn message(id: &str) -> Value {
+    json!({"type":"message","role":"assistant","id":id,"content":id})
+}
+
+#[tokio::test]
+async fn snapshot_precedes_chat_catchup_and_only_explicit_detail_reads_fetch_history() {
+    let overview = |input| {
+        json!({
+            "session_id":"chat","cursor":"10","runtime":{"model":"test-model"},
+            "aggregates":{"complete":true,"usage":{"input":input,"output":1,"cached":0,"reported_steps":100,"cache_reported_steps":0,"cache_input":0},"recent":[]}
+        })
+    };
+    let initial = json!({"session_id":"chat","execution":overview(1000)});
+    let (events, _) = tokio::sync::broadcast::channel::<Value>(8);
+    let publisher = events.clone();
+    let gate = Arc::new(tokio::sync::Notify::new());
+    let message_gate = gate.clone();
+    let reads = Arc::new(AtomicUsize::new(0));
+    let history_reads = reads.clone();
+    let (url, server) = server(Router::new()
+        .route("/v1/im/sessions/chat/events", get(move || {
+            let initial = initial.clone();
+            let receiver = publisher.subscribe();
+            async move {
+                Sse::new(stream::once(async move {
+                    Ok::<_, std::convert::Infallible>(Event::default().event("snapshot").data(initial.to_string()))
+                }).chain(stream::unfold(receiver, |mut receiver| async move {
+                    let value = receiver.recv().await.ok()?;
+                    Some((Ok::<_, std::convert::Infallible>(Event::default().event("session_updated").data(value.to_string())), receiver))
+                })))
+            }
+        }))
+        .route("/v1/im/sessions/chat/messages", get(move || {
+            let gate = message_gate.clone();
+            async move { gate.notified().await; Json(json!({"items":[],"older_cursor":null})) }
+        }))
+        .route("/v1/im/sessions/chat/history", get(move || {
+            history_reads.fetch_add(1, Ordering::SeqCst);
+            async { Json(json!({"items":[
+                {"event_id":"1","event":{"kind":"step_started","step_id":"old","started_at_ms":1}},
+                {"event_id":"2","event":{"kind":"step_completed","step_id":"old","completed_at_ms":2,"usage":{"input_tokens":999999,"output_tokens":100}}}
+            ],"older_cursor":null,"latest_cursor":"2","server_time_ms":3,"has_more":false})) }
+        }))
+    ).await;
+    let device =
+        zork_client_core::state::Device::open(Arc::new(GatewayClient::new(url, None)), None, false);
+    let chat = device.conversation("chat");
+    chat.start();
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while !chat.snapshot().overview.loaded {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    assert!(
+        !chat.snapshot().loaded,
+        "the snapshot must be available while chat catch-up is blocked"
+    );
+    assert_eq!(chat.snapshot().overview.usage().input, 1000);
+    assert_eq!(reads.load(Ordering::SeqCst), 0);
+    gate.notify_one();
+    let details = chat.history();
+    let mut reader = details.subscribe();
+    details.load(false);
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while !reader.snapshot().state.loaded {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(reads.load(Ordering::SeqCst), 1);
+    assert!(!reader.snapshot().state.entries.is_empty());
+    assert_eq!(chat.snapshot().overview.usage().input, 1000);
+    events.send(overview(1100)).unwrap();
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while chat.snapshot().overview.usage().input != 1100 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        reads.load(Ordering::SeqCst),
+        1,
+        "aggregate updates must not refresh detail history"
+    );
+    server.abort();
+}
+
+#[tokio::test]
+async fn device_feed_observes_each_new_connection_route() {
+    let connections = Arc::new(AtomicUsize::new(0));
+    let count = connections.clone();
+    let (url, server) = server(Router::new().route(
+        "/v1/im/events",
+        get(move || {
+            let index = count.fetch_add(1, Ordering::SeqCst);
+            async move {
+                if index >= 2 {
+                    return (
+                        StatusCode::FORBIDDEN,
+                        Json(json!({"error":"mesh_client_not_granted"})),
+                    )
+                        .into_response();
+                }
+                Sse::new(stream::iter(vec![Ok::<_, std::convert::Infallible>(
+                    Event::default().event("changed").data("{}"),
+                )]))
+                .into_response()
+            }
+        }),
+    ))
+    .await;
+    let client = Arc::new(GatewayClient::new(url, None));
+    let mut feed = client.live(None, 100);
+    let mut routes = vec![];
+    let mut connected = false;
+    tokio::time::timeout(Duration::from_secs(8), async {
+        while let Some(event) = feed.next().await {
+            match event {
+                LiveEvent::Connected => connected = true,
+                LiveEvent::Route(route) => {
+                    assert!(connected, "route escaped its connection lifetime");
+                    routes.push(route);
+                }
+                LiveEvent::Disconnected { .. } => connected = false,
+                _ => {}
+            }
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        routes,
+        vec![
+            ConnectionRoute {
+                scope: ConnectionScope::Local,
+                direct: true
+            };
+            2
+        ]
+    );
+    server.abort();
+}
+
+#[tokio::test]
+async fn reconnect_subscribes_before_catchup_and_revocation_ends_feed() {
+    let connections = Arc::new(AtomicUsize::new(0));
+    let reads = Arc::new(AtomicUsize::new(0));
+    let count = connections.clone();
+    let stream_route = get(move || {
+        let index = count.fetch_add(1, Ordering::SeqCst);
+        async move {
+            if index >= 2 {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(json!({"error":"mesh_client_not_granted"})),
+                )
+                    .into_response();
+            }
+            Sse::new(stream::iter(vec![Ok::<_, std::convert::Infallible>(
+                Event::default()
+                    .event("message")
+                    .data(message("echo").to_string()),
+            )]))
+            .into_response()
+        }
+    });
+    let count = connections.clone();
+    let read_count = reads.clone();
+    let (url, server) = server(Router::new().route("/v1/im/sessions/chat/events", stream_route).route("/v1/im/sessions/chat/messages", get(move || {
+        let subscribed = count.load(Ordering::SeqCst);
+        let page = read_count.fetch_add(1, Ordering::SeqCst);
+        async move {
+            assert!(subscribed > page, "read raced ahead of subscription");
+            Json(json!({"items":[message(if page == 0 { "first" } else { "missed-while-offline" })],"older_cursor":null}))
+        }
+    }))).await;
+    let client = Arc::new(GatewayClient::new(url, None));
+    let mut feed = client.live(Some("chat".into()), 100);
+    let mut pages = vec![];
+    let mut revoked = false;
+    tokio::time::timeout(Duration::from_secs(8), async {
+        while let Some(event) = feed.next().await {
+            match event {
+                LiveEvent::Page(page) => pages.push(page),
+                LiveEvent::Disconnected { revoked: true, .. } => revoked = true,
+                _ => {}
+            }
+        }
+    })
+    .await
+    .unwrap();
+    assert!(revoked);
+    assert_eq!(connections.load(Ordering::SeqCst), 3);
+    assert_eq!(pages.len(), 2);
+    assert!(serde_json::to_string(&pages[1])
+        .unwrap()
+        .contains("missed-while-offline"));
+    drop(client); // dropping the owned reactor inside Tokio must be safe
+    server.abort();
+}
+
+#[tokio::test]
+async fn feed_distinguishes_live_imports_from_history_recovery() {
+    let (url, server) = server(
+        Router::new()
+            .route(
+                "/v1/im/sessions/chat/events",
+                get(|| async {
+                    Sse::new(
+                        stream::iter(["messages_changed", "resync"].map(|name| {
+                            Ok::<_, std::convert::Infallible>(
+                                Event::default().event(name).data("{}"),
+                            )
+                        }))
+                        .chain(stream::pending()),
+                    )
+                }),
+            )
+            .route(
+                "/v1/im/sessions/chat/messages",
+                get(|| async { Json(json!({"items":[message("same-id")],"older_cursor":null})) }),
+            ),
+    )
+    .await;
+    let client = Arc::new(GatewayClient::new(url, None));
+    let mut feed = client.live(Some("chat".into()), 100);
+    let mut sources = vec![];
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while let Some(event) = feed.next().await {
+            match event {
+                LiveEvent::Page(_) => sources.push("history"),
+                LiveEvent::Messages(_) => sources.push("delivery"),
+                _ => {}
+            }
+            if sources.len() == 3 {
+                break;
+            }
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(sources, ["history", "delivery", "history"]);
+    server.abort();
+}
+
+#[tokio::test]
+async fn shared_delivery_requires_manual_retry_and_retains_identity() {
+    let attempts = Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+    let recorded = attempts.clone();
+    let (url, server) = server(Router::new().route(
+        "/v1/im/sessions/chat/messages",
+        post(move |Json(body): Json<Value>| {
+            let mut ids = recorded.lock().unwrap();
+            ids.push(body["request_id"].as_str().unwrap().into());
+            let attempt = ids.len();
+            async move {
+                if attempt == 1 {
+                    (
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        Json(json!({"error":"retry"})),
+                    )
+                } else {
+                    (StatusCode::OK, Json(json!({})))
+                }
+            }
+        }),
+    ))
+    .await;
+    let client = Arc::new(GatewayClient::new(url, None));
+    let root = tempfile::tempdir().unwrap();
+    let store = Arc::new(ClientStore::open(root.path()).unwrap());
+    let queued = QueuedMessage {
+        request_id: "stable-id".into(),
+        session_id: "chat".into(),
+        content: "hello".into(),
+        attempted: false,
+        sent_at_ms: zork_client_core::store::delivery_now_ms(),
+        ..Default::default()
+    };
+    store.enqueue_and_clear_draft("node", &queued).unwrap();
+    let first = delivery::flush(&client, &store, "node").await;
+    assert!(first.error.is_some());
+    assert_eq!(store.outbox("node").unwrap()[0].delivery_status(), "failed");
+    let pump = DeliveryPump::start(client.clone(), store.clone(), "node".into());
+    pump.set_connected(true);
+    tokio::time::sleep(Duration::from_millis(1200)).await;
+    pump.set_connected(false);
+    pump.set_connected(true);
+    assert_eq!(*attempts.lock().unwrap(), ["stable-id"]);
+    assert!(delivery::flush(&client, &store, "node")
+        .await
+        .delivered
+        .is_empty());
+    store.retry_delivery("node", "stable-id").unwrap();
+    let mut reports = pump.reports();
+    tokio::time::timeout(Duration::from_secs(5), reports.changed())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(store.outbox("node").unwrap().is_empty());
+    assert_eq!(*attempts.lock().unwrap(), ["stable-id", "stable-id"]);
+    drop(pump);
+    server.abort();
+}
+
+#[tokio::test]
+async fn catchup_crosses_multiple_pages_and_merge_preserves_loaded_history() {
+    use axum::extract::Query;
+    let (url, server) = server(Router::new().route("/v1/im/sessions/chat/messages", get(|Query(query): Query<std::collections::HashMap<String,String>>| async move {
+        let end = query.get("before").and_then(|v| v.parse::<usize>().ok()).unwrap_or(351);
+        let start = end.saturating_sub(100).max(1);
+        Json(json!({"items":(start..end).map(|id| message(&id.to_string())).collect::<Vec<_>>(),"older_cursor":if start > 1 { Some(start.to_string()) } else { None }}))
+    }))).await;
+    let client = GatewayClient::new(url, None);
+    let page = client
+        .catch_up_messages("chat", Some("90"), 100)
+        .await
+        .unwrap();
+    assert_eq!(page.items.len(), 300);
+    let earlier: Vec<TranscriptMessage> = (1..=90)
+        .map(|id| serde_json::from_value(message(&id.to_string())).unwrap())
+        .collect();
+    let mut lines = zork_client_core::transcript::project_page_with_pending(&earlier, &mut vec![]);
+    zork_client_core::transcript::merge_history_page(&mut lines, &page.items);
+    zork_client_core::transcript::merge_history_page(&mut lines, &page.items);
+    assert_eq!(lines.len(), 350);
+    for (i, line) in lines.iter().enumerate() {
+        let zork_client_core::transcript::TranscriptLine::Message { metadata, .. } = line;
+        assert_eq!(metadata.id.as_deref(), Some((i + 1).to_string().as_str()));
+    }
+    server.abort();
+}
+
+#[tokio::test]
+async fn slow_ack_shows_sending_only_after_one_second_and_abort_becomes_manual_failure() {
+    let (url, server) = server(Router::new().route(
+        "/v1/im/sessions/chat/messages",
+        post(|| async {
+            tokio::time::sleep(Duration::from_secs(20)).await;
+            Json(json!({}))
+        }),
+    ))
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let store = Arc::new(ClientStore::open(root.path()).unwrap());
+    store
+        .enqueue(
+            "node",
+            &QueuedMessage {
+                request_id: "slow".into(),
+                session_id: "chat".into(),
+                content: "hello".into(),
+                sent_at_ms: zork_client_core::store::delivery_now_ms(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let client = Arc::new(GatewayClient::new(url, None));
+    let pump = DeliveryPump::start(client, store.clone(), "node".into());
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(store.outbox("node").unwrap()[0].delivery_status(), "");
+    tokio::time::sleep(Duration::from_millis(800)).await;
+    assert_eq!(
+        store.outbox("node").unwrap()[0].delivery_status(),
+        "sending"
+    );
+    drop(pump);
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert_eq!(store.outbox("node").unwrap()[0].delivery_status(), "failed");
+    store.delete_failed("node", "slow").unwrap();
+    assert!(store.outbox("node").unwrap().is_empty());
+    server.abort();
+}
+
+#[tokio::test]
+async fn transcript_ack_settles_a_lost_post_response_without_retry() {
+    let (url, server) = server(Router::new().route(
+        "/v1/im/sessions/chat/messages",
+        post(|| async {
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error":"response lost"})),
+            )
+        }),
+    ))
+    .await;
+    let root = tempfile::tempdir().unwrap();
+    let store = Arc::new(ClientStore::open(root.path()).unwrap());
+    store
+        .enqueue(
+            "node",
+            &QueuedMessage {
+                request_id: "ack".into(),
+                session_id: "chat".into(),
+                content: "hello".into(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    let client = Arc::new(GatewayClient::new(url, None));
+    let tx_store = store.clone();
+    let sending = tokio::spawn(async move { delivery::flush(&client, &tx_store, "node").await });
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let confirmed = serde_json::from_value(message("client-chat-ack")).unwrap();
+    store.acknowledge_transcript("node", &[confirmed]).unwrap();
+    let report = sending.await.unwrap();
+    assert!(report.error.is_none());
+    assert_eq!(report.delivered, ["ack"]);
+    assert!(store.outbox("node").unwrap().is_empty());
+    server.abort();
+}

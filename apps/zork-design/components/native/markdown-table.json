@@ -1,0 +1,220 @@
+{
+  "api_version": "v1",
+  "revision": 8,
+  "coordinate_space": "window_content_logical_pixels",
+  "scale_factor": 2.0,
+  "viewport": {
+    "width": 560.0,
+    "height": 360.0
+  },
+  "elements": [
+    {
+      "id": "story-component",
+      "role": "status",
+      "label": "组件画布",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 560.0,
+        "height": 360.0
+      },
+      "visible_bounds": {
+        "x": 0.0,
+        "y": 0.0,
+        "width": 560.0,
+        "height": 360.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 180.0
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-sample",
+      "role": "status",
+      "label": "消息正文",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 91.0
+      },
+      "visible_bounds": {
+        "x": 24.0,
+        "y": 24.0,
+        "width": 512.0,
+        "height": 91.0
+      },
+      "center": {
+        "x": 280.0,
+        "y": 69.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-table-0-row-0-cell-0-selection",
+      "role": "status",
+      "label": "组件",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 33.0,
+        "y": 29.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "visible_bounds": {
+        "x": 33.0,
+        "y": 29.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "center": {
+        "x": 152.25,
+        "y": 39.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-table-0-row-0-cell-1-selection",
+      "role": "status",
+      "label": "状态",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 288.5,
+        "y": 29.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "visible_bounds": {
+        "x": 288.5,
+        "y": 29.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "center": {
+        "x": 407.75,
+        "y": 39.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-table-0-row-1-cell-0-selection",
+      "role": "status",
+      "label": "导航",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 33.0,
+        "y": 59.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "visible_bounds": {
+        "x": 33.0,
+        "y": 59.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "center": {
+        "x": 152.25,
+        "y": 69.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-table-0-row-1-cell-1-selection",
+      "role": "status",
+      "label": "已检查",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 288.5,
+        "y": 59.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "visible_bounds": {
+        "x": 288.5,
+        "y": 59.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "center": {
+        "x": 407.75,
+        "y": 69.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-table-0-row-2-cell-0-selection",
+      "role": "status",
+      "label": "弹窗",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 33.0,
+        "y": 89.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "visible_bounds": {
+        "x": 33.0,
+        "y": 89.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "center": {
+        "x": 152.25,
+        "y": 99.5
+      },
+      "actions": [
+        "move"
+      ]
+    },
+    {
+      "id": "story-table-0-row-2-cell-1-selection",
+      "role": "status",
+      "label": "待复查",
+      "enabled": true,
+      "visible": true,
+      "bounds": {
+        "x": 288.5,
+        "y": 89.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "visible_bounds": {
+        "x": 288.5,
+        "y": 89.0,
+        "width": 238.5,
+        "height": 21.0
+      },
+      "center": {
+        "x": 407.75,
+        "y": 99.5
+      },
+      "actions": [
+        "move"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5634 @@
+{
+  "version": 1,
+  "stories": [
+    {
+      "id": "button-primary",
+      "family": "button",
+      "title": "按钮",
+      "state": "primary",
+      "source": "crates/zork-ui/src/controls.rs::button",
+      "reference": "button",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-button",
+      "actions": [],
+      "native": {
+        "image": "native/button-primary.png",
+        "window": "native/button-primary-window.png",
+        "geometry": "native/button-primary.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 59.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "button-secondary",
+      "family": "button",
+      "title": "按钮",
+      "state": "secondary",
+      "source": "crates/zork-ui/src/controls.rs::button",
+      "reference": "button",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-button",
+      "actions": [],
+      "native": {
+        "image": "native/button-secondary.png",
+        "window": "native/button-secondary-window.png",
+        "geometry": "native/button-secondary.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 59.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "button-disabled",
+      "family": "button",
+      "title": "按钮",
+      "state": "disabled",
+      "source": "crates/zork-ui/src/controls.rs::button",
+      "reference": "button",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-button",
+      "actions": [],
+      "native": {
+        "image": "native/button-disabled.png",
+        "window": "native/button-disabled-window.png",
+        "geometry": "native/button-disabled.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 59.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "button-hover",
+      "family": "button",
+      "title": "按钮",
+      "state": "hover",
+      "source": "crates/zork-ui/src/controls.rs::button",
+      "reference": "button",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-button",
+      "actions": [
+        {
+          "type": "move",
+          "target": {
+            "element_id": "story-button"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/button-hover.png",
+        "window": "native/button-hover-window.png",
+        "geometry": "native/button-hover.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 59.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "button-focus",
+      "family": "button",
+      "title": "按钮",
+      "state": "focus",
+      "source": "crates/zork-ui/src/controls.rs::button",
+      "reference": "button",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-button",
+      "actions": [
+        {
+          "type": "key",
+          "keystroke": "tab"
+        }
+      ],
+      "native": {
+        "image": "native/button-focus.png",
+        "window": "native/button-focus-window.png",
+        "geometry": "native/button-focus.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 59.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "button-with-icon",
+      "family": "button",
+      "title": "按钮",
+      "state": "with-icon",
+      "source": "crates/zork-ui/src/controls.rs::button",
+      "reference": "button",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-button",
+      "actions": [],
+      "native": {
+        "image": "native/button-with-icon.png",
+        "window": "native/button-with-icon-window.png",
+        "geometry": "native/button-with-icon.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 100.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "button-long",
+      "family": "button",
+      "title": "按钮",
+      "state": "long",
+      "source": "crates/zork-ui/src/controls.rs::button",
+      "reference": "button",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-button",
+      "actions": [],
+      "native": {
+        "image": "native/button-long.png",
+        "window": "native/button-long-window.png",
+        "geometry": "native/button-long.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 143.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "field-empty",
+      "family": "field",
+      "title": "输入框",
+      "state": "empty",
+      "source": "crates/zork-ui/src/controls.rs::field + components/text_input.rs",
+      "reference": "field",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-field",
+      "actions": [],
+      "native": {
+        "image": "native/field-empty.png",
+        "window": "native/field-empty-window.png",
+        "geometry": "native/field-empty.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 51.5,
+          "width": 512.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "field-value",
+      "family": "field",
+      "title": "输入框",
+      "state": "value",
+      "source": "crates/zork-ui/src/controls.rs::field + components/text_input.rs",
+      "reference": "field",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-field",
+      "actions": [],
+      "native": {
+        "image": "native/field-value.png",
+        "window": "native/field-value-window.png",
+        "geometry": "native/field-value.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 51.5,
+          "width": 512.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "field-focus",
+      "family": "field",
+      "title": "输入框",
+      "state": "focus",
+      "source": "crates/zork-ui/src/controls.rs::field + components/text_input.rs",
+      "reference": "field",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-field",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "story-field"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/field-focus.png",
+        "window": "native/field-focus-window.png",
+        "geometry": "native/field-focus.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 51.5,
+          "width": 512.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "field-secret",
+      "family": "field",
+      "title": "输入框",
+      "state": "secret",
+      "source": "crates/zork-ui/src/controls.rs::field + components/text_input.rs",
+      "reference": "field",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-field",
+      "actions": [],
+      "native": {
+        "image": "native/field-secret.png",
+        "window": "native/field-secret-window.png",
+        "geometry": "native/field-secret.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 51.5,
+          "width": 512.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "field-error",
+      "family": "field",
+      "title": "输入框",
+      "state": "error",
+      "source": "crates/zork-ui/src/controls.rs::field + components/text_input.rs",
+      "reference": "field",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-field-surface",
+      "actions": [],
+      "native": {
+        "image": "native/field-error.png",
+        "window": "native/field-error-window.png",
+        "geometry": "native/field-error.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 81.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "choice-selected",
+      "family": "choice",
+      "title": "选项",
+      "state": "selected",
+      "source": "crates/zork-ui/src/controls.rs::choice",
+      "reference": "choice",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/choice-selected.png",
+        "window": "native/choice-selected-window.png",
+        "geometry": "native/choice-selected.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 40.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "choice-disabled",
+      "family": "choice",
+      "title": "选项",
+      "state": "disabled",
+      "source": "crates/zork-ui/src/controls.rs::choice",
+      "reference": "choice",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/choice-disabled.png",
+        "window": "native/choice-disabled-window.png",
+        "geometry": "native/choice-disabled.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 40.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "switch-off",
+      "family": "switch",
+      "title": "开关 Switch",
+      "state": "off",
+      "source": "crates/zork-ui/src/controls.rs::switch",
+      "reference": "switch",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-switch",
+      "actions": [],
+      "native": {
+        "image": "native/switch-off.png",
+        "window": "native/switch-off-window.png",
+        "geometry": "native/switch-off.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 48.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "switch-on",
+      "family": "switch",
+      "title": "开关 Switch",
+      "state": "on",
+      "source": "crates/zork-ui/src/controls.rs::switch",
+      "reference": "switch",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-switch",
+      "actions": [],
+      "native": {
+        "image": "native/switch-on.png",
+        "window": "native/switch-on-window.png",
+        "geometry": "native/switch-on.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 48.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "switch-disabled-off",
+      "family": "switch",
+      "title": "开关 Switch",
+      "state": "disabled-off",
+      "source": "crates/zork-ui/src/controls.rs::switch",
+      "reference": "switch",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-switch",
+      "actions": [],
+      "native": {
+        "image": "native/switch-disabled-off.png",
+        "window": "native/switch-disabled-off-window.png",
+        "geometry": "native/switch-disabled-off.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 48.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "switch-disabled-on",
+      "family": "switch",
+      "title": "开关 Switch",
+      "state": "disabled-on",
+      "source": "crates/zork-ui/src/controls.rs::switch",
+      "reference": "switch",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-switch",
+      "actions": [],
+      "native": {
+        "image": "native/switch-disabled-on.png",
+        "window": "native/switch-disabled-on-window.png",
+        "geometry": "native/switch-disabled-on.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 48.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "switch-focus",
+      "family": "switch",
+      "title": "开关 Switch",
+      "state": "focus",
+      "source": "crates/zork-ui/src/controls.rs::switch",
+      "reference": "switch",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-switch",
+      "actions": [
+        {
+          "type": "key",
+          "keystroke": "tab"
+        }
+      ],
+      "native": {
+        "image": "native/switch-focus.png",
+        "window": "native/switch-focus-window.png",
+        "geometry": "native/switch-focus.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 48.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "dropdown-closed",
+      "family": "dropdown",
+      "title": "下拉菜单",
+      "state": "closed",
+      "source": "crates/zork-ui/src/controls.rs::dropdown",
+      "reference": "dropdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/dropdown-closed.png",
+        "window": "native/dropdown-closed-window.png",
+        "geometry": "native/dropdown-closed.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "dropdown-open",
+      "family": "dropdown",
+      "title": "下拉菜单",
+      "state": "open",
+      "source": "crates/zork-ui/src/controls.rs::dropdown",
+      "reference": "dropdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/dropdown-open.png",
+        "window": "native/dropdown-open-window.png",
+        "geometry": "native/dropdown-open.json",
+        "bounds": {
+          "x": 20.0,
+          "y": 24.0,
+          "width": 520.0,
+          "height": 156.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "dropdown-empty",
+      "family": "dropdown",
+      "title": "下拉菜单",
+      "state": "empty",
+      "source": "crates/zork-ui/src/controls.rs::dropdown",
+      "reference": "dropdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/dropdown-empty.png",
+        "window": "native/dropdown-empty-window.png",
+        "geometry": "native/dropdown-empty.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "dropdown-disabled",
+      "family": "dropdown",
+      "title": "下拉菜单",
+      "state": "disabled",
+      "source": "crates/zork-ui/src/controls.rs::dropdown",
+      "reference": "dropdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/dropdown-disabled.png",
+        "window": "native/dropdown-disabled-window.png",
+        "geometry": "native/dropdown-disabled.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "modal-standard",
+      "family": "modal",
+      "title": "弹窗",
+      "state": "standard",
+      "source": "crates/zork-ui/src/modal.rs",
+      "reference": "modal",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/modal-standard.png",
+        "window": "native/modal-standard-window.png",
+        "geometry": "native/modal-standard.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 260.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "modal-detail",
+      "family": "modal",
+      "title": "弹窗",
+      "state": "detail",
+      "source": "crates/zork-ui/src/modal.rs",
+      "reference": "modal",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/modal-detail.png",
+        "window": "native/modal-detail-window.png",
+        "geometry": "native/modal-detail.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 125.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "modal-scroll",
+      "family": "modal",
+      "title": "弹窗",
+      "state": "scroll",
+      "source": "crates/zork-ui/src/modal.rs",
+      "reference": "modal",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/modal-scroll.png",
+        "window": "native/modal-scroll-window.png",
+        "geometry": "native/modal-scroll.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 312.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "modal-error",
+      "family": "modal",
+      "title": "弹窗",
+      "state": "error",
+      "source": "crates/zork-ui/src/modal.rs",
+      "reference": "modal",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/modal-error.png",
+        "window": "native/modal-error-window.png",
+        "geometry": "native/modal-error.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 308.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "avatar-picker-selected",
+      "family": "avatar-picker",
+      "title": "头像选择",
+      "state": "selected",
+      "source": "crates/zork-ui/src/controls.rs::avatar_picker",
+      "reference": "avatar-picker",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/avatar-picker-selected.png",
+        "window": "native/avatar-picker-selected-window.png",
+        "geometry": "native/avatar-picker-selected.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 99.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "avatar-picker-disabled",
+      "family": "avatar-picker",
+      "title": "头像选择",
+      "state": "disabled",
+      "source": "crates/zork-ui/src/controls.rs::avatar_picker",
+      "reference": "avatar-picker",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/avatar-picker-disabled.png",
+        "window": "native/avatar-picker-disabled-window.png",
+        "geometry": "native/avatar-picker-disabled.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 99.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "history-collapsed",
+      "family": "history",
+      "title": "执行历史",
+      "state": "collapsed",
+      "source": "crates/zork-ui/src/components/history.rs",
+      "reference": "history",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/history-collapsed.png",
+        "window": "native/history-collapsed-window.png",
+        "geometry": "native/history-collapsed.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 312.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "history-expanded",
+      "family": "history",
+      "title": "执行历史",
+      "state": "expanded",
+      "source": "crates/zork-ui/src/components/history.rs",
+      "reference": "history",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/history-expanded.png",
+        "window": "native/history-expanded-window.png",
+        "geometry": "native/history-expanded.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 312.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "history-empty",
+      "family": "history",
+      "title": "执行历史",
+      "state": "empty",
+      "source": "crates/zork-ui/src/components/history.rs",
+      "reference": "history",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/history-empty.png",
+        "window": "native/history-empty-window.png",
+        "geometry": "native/history-empty.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 312.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "history-error",
+      "family": "history",
+      "title": "执行历史",
+      "state": "error",
+      "source": "crates/zork-ui/src/components/history.rs",
+      "reference": "history",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/history-error.png",
+        "window": "native/history-error-window.png",
+        "geometry": "native/history-error.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 312.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "comments-empty",
+      "family": "comments",
+      "title": "文字评论",
+      "state": "empty",
+      "source": "crates/zork-ui/src/components/comments.rs",
+      "reference": "comments",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/comments-empty.png",
+        "window": "native/comments-empty-window.png",
+        "geometry": "native/comments-empty.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "comments-compose",
+      "family": "comments",
+      "title": "文字评论",
+      "state": "compose",
+      "source": "crates/zork-ui/src/components/comments.rs",
+      "reference": "comments",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/comments-compose.png",
+        "window": "native/comments-compose-window.png",
+        "geometry": "native/comments-compose.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 221.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "comments-queued",
+      "family": "comments",
+      "title": "文字评论",
+      "state": "queued",
+      "source": "crates/zork-ui/src/components/comments.rs",
+      "reference": "comments",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/comments-queued.png",
+        "window": "native/comments-queued-window.png",
+        "geometry": "native/comments-queued.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 105.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "comments-editing",
+      "family": "comments",
+      "title": "文字评论",
+      "state": "editing",
+      "source": "crates/zork-ui/src/components/comments.rs",
+      "reference": "comments",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/comments-editing.png",
+        "window": "native/comments-editing-window.png",
+        "geometry": "native/comments-editing.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 295.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "attachment-file",
+      "family": "attachment",
+      "title": "附件",
+      "state": "file",
+      "source": "crates/zork-ui/src/components/attachments.rs",
+      "reference": "attachment",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/attachment-file.png",
+        "window": "native/attachment-file-window.png",
+        "geometry": "native/attachment-file.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 48.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "attachment-image",
+      "family": "attachment",
+      "title": "附件",
+      "state": "image",
+      "source": "crates/zork-ui/src/components/attachments.rs",
+      "reference": "attachment",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/attachment-image.png",
+        "window": "native/attachment-image-window.png",
+        "geometry": "native/attachment-image.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 48.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "attachment-loading",
+      "family": "attachment",
+      "title": "附件",
+      "state": "loading",
+      "source": "crates/zork-ui/src/components/attachments.rs",
+      "reference": "attachment",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/attachment-loading.png",
+        "window": "native/attachment-loading-window.png",
+        "geometry": "native/attachment-loading.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 48.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "attachment-error",
+      "family": "attachment",
+      "title": "附件",
+      "state": "error",
+      "source": "crates/zork-ui/src/components/attachments.rs",
+      "reference": "attachment",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/attachment-error.png",
+        "window": "native/attachment-error-window.png",
+        "geometry": "native/attachment-error.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 48.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "attachment-unavailable",
+      "family": "attachment",
+      "title": "附件",
+      "state": "unavailable",
+      "source": "crates/zork-ui/src/components/attachments.rs",
+      "reference": "attachment",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/attachment-unavailable.png",
+        "window": "native/attachment-unavailable-window.png",
+        "geometry": "native/attachment-unavailable.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 48.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "avatar-24",
+      "family": "avatar",
+      "title": "Agent 头像",
+      "state": "24",
+      "source": "crates/zork-ui/src/controls.rs::agent_avatar",
+      "reference": "avatar",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/avatar-24.png",
+        "window": "native/avatar-24-window.png",
+        "geometry": "native/avatar-24.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 64.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "avatar-32",
+      "family": "avatar",
+      "title": "Agent 头像",
+      "state": "32",
+      "source": "crates/zork-ui/src/controls.rs::agent_avatar",
+      "reference": "avatar",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/avatar-32.png",
+        "window": "native/avatar-32-window.png",
+        "geometry": "native/avatar-32.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 80.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "avatar-40",
+      "family": "avatar",
+      "title": "Agent 头像",
+      "state": "40",
+      "source": "crates/zork-ui/src/controls.rs::agent_avatar",
+      "reference": "avatar",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/avatar-40.png",
+        "window": "native/avatar-40-window.png",
+        "geometry": "native/avatar-40.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 96.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "providers-all",
+      "family": "providers",
+      "title": "供应商图标",
+      "state": "all",
+      "source": "crates/zork-ui/src/controls.rs::provider_icon",
+      "reference": "providers",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/providers-all.png",
+        "window": "native/providers-all-window.png",
+        "geometry": "native/providers-all.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 20.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "icons-all",
+      "family": "icons",
+      "title": "功能图标",
+      "state": "all",
+      "source": "crates/zork-ui/src/controls.rs::icon",
+      "reference": "icons",
+      "width": 560.0,
+      "height": 560.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/icons-all.png",
+        "window": "native/icons-all-window.png",
+        "geometry": "native/icons-all.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 492.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "brand-linked",
+      "family": "brand",
+      "title": "品牌组件",
+      "state": "linked",
+      "source": "crates/zork-ui/src/components/brand.rs",
+      "reference": "brand",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "brand-linked",
+      "actions": [],
+      "native": {
+        "image": "native/brand-linked.png",
+        "window": "native/brand-linked-window.png",
+        "geometry": "native/brand-linked.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 110.0,
+          "height": 28.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "brand-wordmark",
+      "family": "brand",
+      "title": "品牌组件",
+      "state": "wordmark",
+      "source": "crates/zork-ui/src/components/brand.rs",
+      "reference": "brand",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "brand-wordmark",
+      "actions": [],
+      "native": {
+        "image": "native/brand-wordmark.png",
+        "window": "native/brand-wordmark-window.png",
+        "geometry": "native/brand-wordmark.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 82.0,
+          "height": 28.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "brand-icon",
+      "family": "brand",
+      "title": "品牌组件",
+      "state": "icon",
+      "source": "crates/zork-ui/src/components/brand.rs",
+      "reference": "brand",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "brand-icon",
+      "actions": [],
+      "native": {
+        "image": "native/brand-icon.png",
+        "window": "native/brand-icon-window.png",
+        "geometry": "native/brand-icon.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 38.0,
+          "height": 38.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "brand-morph",
+      "family": "brand",
+      "title": "品牌组件",
+      "state": "morph",
+      "source": "crates/zork-ui/src/components/brand.rs",
+      "reference": "brand",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "brand-morph",
+      "actions": [],
+      "native": {
+        "image": "native/brand-morph.png",
+        "window": "native/brand-morph-window.png",
+        "geometry": "native/brand-morph.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 220.0,
+          "height": 88.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "brand-header",
+      "family": "brand",
+      "title": "品牌组件",
+      "state": "header",
+      "source": "crates/zork-ui/src/components/brand.rs",
+      "reference": "brand",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "brand-header",
+      "actions": [],
+      "native": {
+        "image": "native/brand-header.png",
+        "window": "native/brand-header-window.png",
+        "geometry": "native/brand-header.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 120.0,
+          "height": 48.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "tooltip-leader",
+      "family": "tooltip",
+      "title": "悬停详情",
+      "state": "leader",
+      "source": "crates/zork-ui/src/components/tooltip.rs",
+      "reference": "tooltip",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/tooltip-leader.png",
+        "window": "native/tooltip-leader-window.png",
+        "geometry": "native/tooltip-leader.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 152.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "tooltip-task",
+      "family": "tooltip",
+      "title": "悬停详情",
+      "state": "task",
+      "source": "crates/zork-ui/src/components/tooltip.rs",
+      "reference": "tooltip",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/tooltip-task.png",
+        "window": "native/tooltip-task-window.png",
+        "geometry": "native/tooltip-task.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 175.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "tooltip-hover",
+      "family": "tooltip",
+      "title": "悬停详情",
+      "state": "hover",
+      "source": "crates/zork-ui/src/components/tooltip.rs",
+      "reference": "tooltip",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/tooltip-hover.png",
+        "window": "native/tooltip-hover-window.png",
+        "geometry": "native/tooltip-hover.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 98.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "markdown-paragraph",
+      "family": "markdown",
+      "title": "消息正文",
+      "state": "paragraph",
+      "source": "crates/zork-ui/src/components/message.rs::render_markdown",
+      "reference": "markdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/markdown-paragraph.png",
+        "window": "native/markdown-paragraph-window.png",
+        "geometry": "native/markdown-paragraph.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 21.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "markdown-heading",
+      "family": "markdown",
+      "title": "消息正文",
+      "state": "heading",
+      "source": "crates/zork-ui/src/components/message.rs::render_markdown",
+      "reference": "markdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/markdown-heading.png",
+        "window": "native/markdown-heading-window.png",
+        "geometry": "native/markdown-heading.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 59.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "markdown-list",
+      "family": "markdown",
+      "title": "消息正文",
+      "state": "list",
+      "source": "crates/zork-ui/src/components/message.rs::render_markdown",
+      "reference": "markdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/markdown-list.png",
+        "window": "native/markdown-list-window.png",
+        "geometry": "native/markdown-list.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 71.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "markdown-quote",
+      "family": "markdown",
+      "title": "消息正文",
+      "state": "quote",
+      "source": "crates/zork-ui/src/components/message.rs::render_markdown",
+      "reference": "markdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/markdown-quote.png",
+        "window": "native/markdown-quote-window.png",
+        "geometry": "native/markdown-quote.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 21.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "markdown-code",
+      "family": "markdown",
+      "title": "消息正文",
+      "state": "code",
+      "source": "crates/zork-ui/src/components/message.rs::render_markdown",
+      "reference": "markdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/markdown-code.png",
+        "window": "native/markdown-code-window.png",
+        "geometry": "native/markdown-code.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 80.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "markdown-table",
+      "family": "markdown",
+      "title": "消息正文",
+      "state": "table",
+      "source": "crates/zork-ui/src/components/message.rs::render_markdown",
+      "reference": "markdown",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/markdown-table.png",
+        "window": "native/markdown-table-window.png",
+        "geometry": "native/markdown-table.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 91.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "activity-running",
+      "family": "activity",
+      "title": "执行状态",
+      "state": "running",
+      "source": "crates/zork-ui/src/components/activity.rs::render",
+      "reference": "missing",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/activity-running.png",
+        "window": "native/activity-running-window.png",
+        "geometry": "native/activity-running.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 23.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "activity-failed",
+      "family": "activity",
+      "title": "执行状态",
+      "state": "failed",
+      "source": "crates/zork-ui/src/components/activity.rs::render",
+      "reference": "missing",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/activity-failed.png",
+        "window": "native/activity-failed-window.png",
+        "geometry": "native/activity-failed.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 23.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "activity-done",
+      "family": "activity",
+      "title": "执行状态",
+      "state": "done",
+      "source": "crates/zork-ui/src/components/activity.rs::render",
+      "reference": "missing",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/activity-done.png",
+        "window": "native/activity-done-window.png",
+        "geometry": "native/activity-done.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 23.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "feedback-notice",
+      "family": "feedback",
+      "title": "状态提示",
+      "state": "notice",
+      "source": "crates/zork-ui/src/controls.rs::feedback",
+      "reference": "feedback",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/feedback-notice.png",
+        "window": "native/feedback-notice-window.png",
+        "geometry": "native/feedback-notice.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 36.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "feedback-success",
+      "family": "feedback",
+      "title": "状态提示",
+      "state": "success",
+      "source": "crates/zork-ui/src/controls.rs::feedback",
+      "reference": "feedback",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/feedback-success.png",
+        "window": "native/feedback-success-window.png",
+        "geometry": "native/feedback-success.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 36.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "feedback-error",
+      "family": "feedback",
+      "title": "状态提示",
+      "state": "error",
+      "source": "crates/zork-ui/src/controls.rs::feedback",
+      "reference": "feedback",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/feedback-error.png",
+        "window": "native/feedback-error-window.png",
+        "geometry": "native/feedback-error.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 36.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "feedback-loading",
+      "family": "feedback",
+      "title": "状态提示",
+      "state": "loading",
+      "source": "crates/zork-ui/src/controls.rs::feedback",
+      "reference": "feedback",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/feedback-loading.png",
+        "window": "native/feedback-loading-window.png",
+        "geometry": "native/feedback-loading.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 512.0,
+          "height": 36.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "connection-list-compact",
+      "family": "connection",
+      "title": "大模型",
+      "state": "list-compact",
+      "source": "desktop/profiles.rs",
+      "reference": "connection-list",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/connection-list-compact.png",
+        "window": "native/connection-list-compact-window.png",
+        "geometry": "native/connection-list-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 204.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/connection-list-compact.png",
+        "window": "reference/connection-list-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 261.984375
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=connection-list-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "connection-list-wide",
+      "family": "connection",
+      "title": "大模型",
+      "state": "list-wide",
+      "source": "desktop/profiles.rs",
+      "reference": "connection-list",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/connection-list-wide.png",
+        "window": "native/connection-list-wide-window.png",
+        "geometry": "native/connection-list-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 204.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/connection-list-wide.png",
+        "window": "reference/connection-list-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 261.984375
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=connection-list-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "connection-create-compact",
+      "family": "connection",
+      "title": "大模型",
+      "state": "create-compact",
+      "source": "desktop/profiles.rs",
+      "reference": "connection-create",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "profile-create-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-add"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/connection-create-compact.png",
+        "window": "native/connection-create-compact-window.png",
+        "geometry": "native/connection-create-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 92.0,
+          "width": 540.0,
+          "height": 416.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "connection-create-wide",
+      "family": "connection",
+      "title": "大模型",
+      "state": "create-wide",
+      "source": "desktop/profiles.rs",
+      "reference": "connection-create",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "profile-create-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-add"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/connection-create-wide.png",
+        "window": "native/connection-create-wide-window.png",
+        "geometry": "native/connection-create-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 189.5,
+          "width": 540.0,
+          "height": 420.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/connection-create-wide.png",
+        "window": "reference/connection-create-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 190.1875,
+          "width": 540,
+          "height": 419.609375
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=connection-create-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "connection-provider-compact",
+      "family": "connection",
+      "title": "大模型",
+      "state": "provider-compact",
+      "source": "desktop/profiles.rs",
+      "reference": "connection-provider",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "profile-create-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-add"
+          }
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-provider-select"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/connection-provider-compact.png",
+        "window": "native/connection-provider-compact-window.png",
+        "geometry": "native/connection-provider-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 89.5,
+          "width": 540.0,
+          "height": 481.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/connection-provider-compact.png",
+        "window": "reference/connection-provider-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 90.1875,
+          "width": 540,
+          "height": 480.8646240234375
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=connection-provider-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "connection-provider-wide",
+      "family": "connection",
+      "title": "大模型",
+      "state": "provider-wide",
+      "source": "desktop/profiles.rs",
+      "reference": "connection-provider",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "profile-create-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-add"
+          }
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-provider-select"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/connection-provider-wide.png",
+        "window": "native/connection-provider-wide-window.png",
+        "geometry": "native/connection-provider-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 189.5,
+          "width": 540.0,
+          "height": 481.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/connection-provider-wide.png",
+        "window": "reference/connection-provider-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 190.1875,
+          "width": 540,
+          "height": 480.864501953125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=connection-provider-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "model-detail-compact",
+      "family": "model",
+      "title": "模型配置",
+      "state": "detail-compact",
+      "source": "desktop/profiles.rs",
+      "reference": "model-detail",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "profile-detail-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/model-detail-compact.png",
+        "window": "native/model-detail-compact-window.png",
+        "geometry": "native/model-detail-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 107.0,
+          "width": 540.0,
+          "height": 386.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "model-detail-wide",
+      "family": "model",
+      "title": "模型配置",
+      "state": "detail-wide",
+      "source": "desktop/profiles.rs",
+      "reference": "model-detail",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "profile-detail-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/model-detail-wide.png",
+        "window": "native/model-detail-wide-window.png",
+        "geometry": "native/model-detail-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 251.5,
+          "width": 540.0,
+          "height": 296.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/model-detail-wide.png",
+        "window": "reference/model-detail-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 253.109375,
+          "width": 540,
+          "height": 293.78125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=model-detail-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "model-create-compact",
+      "family": "model",
+      "title": "模型配置",
+      "state": "create-compact",
+      "source": "desktop/profiles.rs",
+      "reference": "model-create",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "model-editor-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-model-add"
+          }
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-context-limit"
+          }
+        },
+        {
+          "type": "type_text",
+          "text": "32000"
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-output-limit"
+          }
+        },
+        {
+          "type": "type_text",
+          "text": "4096"
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-model"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/model-create-compact.png",
+        "window": "native/model-create-compact-window.png",
+        "geometry": "native/model-create-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 56.0,
+          "width": 540.0,
+          "height": 488.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/model-create-compact.png",
+        "window": "reference/model-create-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 56.59375,
+          "width": 540,
+          "height": 486.8125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=model-create-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "model-create-wide",
+      "family": "model",
+      "title": "模型配置",
+      "state": "create-wide",
+      "source": "desktop/profiles.rs",
+      "reference": "model-create",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "model-editor-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-model-add"
+          }
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-context-limit"
+          }
+        },
+        {
+          "type": "type_text",
+          "text": "32000"
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-output-limit"
+          }
+        },
+        {
+          "type": "type_text",
+          "text": "4096"
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-model"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/model-create-wide.png",
+        "window": "native/model-create-wide-window.png",
+        "geometry": "native/model-create-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 156.0,
+          "width": 540.0,
+          "height": 488.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/model-create-wide.png",
+        "window": "reference/model-create-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 156.59375,
+          "width": 540,
+          "height": 486.8125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=model-create-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "model-protocol-compact",
+      "family": "model",
+      "title": "模型配置",
+      "state": "protocol-compact",
+      "source": "desktop/profiles.rs",
+      "reference": "model-protocol",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "model-editor-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-model-add"
+          }
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-context-limit"
+          }
+        },
+        {
+          "type": "type_text",
+          "text": "32000"
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-output-limit"
+          }
+        },
+        {
+          "type": "type_text",
+          "text": "4096"
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "model-api-select"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/model-protocol-compact.png",
+        "window": "native/model-protocol-compact-window.png",
+        "geometry": "native/model-protocol-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 56.0,
+          "width": 540.0,
+          "height": 488.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/model-protocol-compact.png",
+        "window": "reference/model-protocol-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 56.59375,
+          "width": 540,
+          "height": 486.8125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=model-protocol-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "model-protocol-wide",
+      "family": "model",
+      "title": "模型配置",
+      "state": "protocol-wide",
+      "source": "desktop/profiles.rs",
+      "reference": "model-protocol",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "model-editor-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-model-add"
+          }
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-context-limit"
+          }
+        },
+        {
+          "type": "type_text",
+          "text": "32000"
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "profile-output-limit"
+          }
+        },
+        {
+          "type": "type_text",
+          "text": "4096"
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "model-api-select"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/model-protocol-wide.png",
+        "window": "native/model-protocol-wide-window.png",
+        "geometry": "native/model-protocol-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 156.0,
+          "width": 540.0,
+          "height": 488.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/model-protocol-wide.png",
+        "window": "reference/model-protocol-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 156.59375,
+          "width": 540,
+          "height": 486.8125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=model-protocol-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "agent-list-compact",
+      "family": "agent",
+      "title": "队员",
+      "state": "list-compact",
+      "source": "desktop/agents.rs",
+      "reference": "agent-list",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/agent-list-compact.png",
+        "window": "native/agent-list-compact-window.png",
+        "geometry": "native/agent-list-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 266.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/agent-list-compact.png",
+        "window": "reference/agent-list-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 309.578125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=agent-list-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "agent-list-wide",
+      "family": "agent",
+      "title": "队员",
+      "state": "list-wide",
+      "source": "desktop/agents.rs",
+      "reference": "agent-list",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/agent-list-wide.png",
+        "window": "native/agent-list-wide-window.png",
+        "geometry": "native/agent-list-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 266.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/agent-list-wide.png",
+        "window": "reference/agent-list-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 309.578125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=agent-list-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "agent-create-compact",
+      "family": "agent",
+      "title": "队员",
+      "state": "create-compact",
+      "source": "desktop/agents.rs",
+      "reference": "agent-create",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "agent-create-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "agent-add"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/agent-create-compact.png",
+        "window": "native/agent-create-compact-window.png",
+        "geometry": "native/agent-create-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 20.0,
+          "width": 540.0,
+          "height": 560.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/agent-create-compact.png",
+        "window": "reference/agent-create-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 24,
+          "width": 540,
+          "height": 552
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=agent-create-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "agent-create-wide",
+      "family": "agent",
+      "title": "队员",
+      "state": "create-wide",
+      "source": "desktop/agents.rs",
+      "reference": "agent-create",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "agent-create-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "agent-add"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/agent-create-wide.png",
+        "window": "native/agent-create-wide-window.png",
+        "geometry": "native/agent-create-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 55.5,
+          "width": 540.0,
+          "height": 688.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/agent-create-wide.png",
+        "window": "reference/agent-create-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 60.59375,
+          "width": 540,
+          "height": 678.796875
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=agent-create-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "agent-edit-compact",
+      "family": "agent",
+      "title": "队员",
+      "state": "edit-compact",
+      "source": "desktop/agents.rs",
+      "reference": "agent-edit",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "agent-editor-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "agent-settings-leader"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/agent-edit-compact.png",
+        "window": "native/agent-edit-compact-window.png",
+        "geometry": "native/agent-edit-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 73.0,
+          "width": 540.0,
+          "height": 454.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/agent-edit-compact.png",
+        "window": "reference/agent-edit-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 73.59375,
+          "width": 540,
+          "height": 452.8125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=agent-edit-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "agent-edit-wide",
+      "family": "agent",
+      "title": "队员",
+      "state": "edit-wide",
+      "source": "desktop/agents.rs",
+      "reference": "agent-edit",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "agent-editor-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "agent-settings-leader"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/agent-edit-wide.png",
+        "window": "native/agent-edit-wide-window.png",
+        "geometry": "native/agent-edit-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 173.0,
+          "width": 540.0,
+          "height": 454.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/agent-edit-wide.png",
+        "window": "reference/agent-edit-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 173.59375,
+          "width": 540,
+          "height": 452.8125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=agent-edit-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "agent-dropdown-compact",
+      "family": "agent",
+      "title": "队员",
+      "state": "dropdown-compact",
+      "source": "desktop/agents.rs",
+      "reference": "agent-dropdown",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "agent-editor-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "agent-settings-leader"
+          }
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "agent-edit-profile-select"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/agent-dropdown-compact.png",
+        "window": "native/agent-dropdown-compact-window.png",
+        "geometry": "native/agent-dropdown-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 73.0,
+          "width": 540.0,
+          "height": 454.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/agent-dropdown-compact.png",
+        "window": "reference/agent-dropdown-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 73.59375,
+          "width": 540,
+          "height": 452.8125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=agent-dropdown-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "agent-dropdown-wide",
+      "family": "agent",
+      "title": "队员",
+      "state": "dropdown-wide",
+      "source": "desktop/agents.rs",
+      "reference": "agent-dropdown",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "agent-editor-dialog",
+      "actions": [
+        {
+          "type": "click",
+          "target": {
+            "element_id": "agent-settings-leader"
+          }
+        },
+        {
+          "type": "click",
+          "target": {
+            "element_id": "agent-edit-profile-select"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/agent-dropdown-wide.png",
+        "window": "native/agent-dropdown-wide-window.png",
+        "geometry": "native/agent-dropdown-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 173.0,
+          "width": 540.0,
+          "height": 454.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/agent-dropdown-wide.png",
+        "window": "reference/agent-dropdown-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 173.59375,
+          "width": 540,
+          "height": 452.8125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=agent-dropdown-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "conversation-messages-compact",
+      "family": "conversation",
+      "title": "会话",
+      "state": "messages-compact",
+      "source": "views.rs (production desktop fixture)",
+      "reference": "conversation",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/conversation-messages-compact.png",
+        "window": "native/conversation-messages-compact-window.png",
+        "geometry": "native/conversation-messages-compact.json",
+        "bounds": {
+          "x": 0.0,
+          "y": 0.0,
+          "width": 900.0,
+          "height": 600.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/conversation-messages-compact.png",
+        "window": "reference/conversation-messages-compact-window.png",
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "width": 900,
+          "height": 600
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=conversation-messages-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "conversation-messages-wide",
+      "family": "conversation",
+      "title": "会话",
+      "state": "messages-wide",
+      "source": "views.rs (production desktop fixture)",
+      "reference": "conversation",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/conversation-messages-wide.png",
+        "window": "native/conversation-messages-wide-window.png",
+        "geometry": "native/conversation-messages-wide.json",
+        "bounds": {
+          "x": 0.0,
+          "y": 0.0,
+          "width": 1280.0,
+          "height": 800.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/conversation-messages-wide.png",
+        "window": "reference/conversation-messages-wide-window.png",
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=conversation-messages-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "conversation-composer-compact",
+      "family": "conversation",
+      "title": "会话",
+      "state": "composer-compact",
+      "source": "views.rs (production desktop fixture)",
+      "reference": "composer",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "composer-surface",
+      "actions": [],
+      "native": {
+        "image": "native/conversation-composer-compact.png",
+        "window": "native/conversation-composer-compact-window.png",
+        "geometry": "native/conversation-composer-compact.json",
+        "bounds": {
+          "x": 264.0,
+          "y": 486.0,
+          "width": 612.0,
+          "height": 98.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/conversation-composer-compact.png",
+        "window": "reference/conversation-composer-compact-window.png",
+        "bounds": {
+          "x": 264,
+          "y": 490,
+          "width": 612,
+          "height": 98
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "1px",
+          "padding": "12px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=conversation-composer-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "conversation-composer-wide",
+      "family": "conversation",
+      "title": "会话",
+      "state": "composer-wide",
+      "source": "views.rs (production desktop fixture)",
+      "reference": "composer",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "composer-surface",
+      "actions": [],
+      "native": {
+        "image": "native/conversation-composer-wide.png",
+        "window": "native/conversation-composer-wide-window.png",
+        "geometry": "native/conversation-composer-wide.json",
+        "bounds": {
+          "x": 286.0,
+          "y": 686.0,
+          "width": 948.0,
+          "height": 98.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/conversation-composer-wide.png",
+        "window": "reference/conversation-composer-wide-window.png",
+        "bounds": {
+          "x": 264,
+          "y": 690,
+          "width": 992,
+          "height": 98
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "1px",
+          "padding": "12px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=conversation-composer-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "conversation-history-compact",
+      "family": "conversation",
+      "title": "会话",
+      "state": "history-compact",
+      "source": "views.rs (production desktop fixture)",
+      "reference": "conversation-history",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/conversation-history-compact.png",
+        "window": "native/conversation-history-compact-window.png",
+        "geometry": "native/conversation-history-compact.json",
+        "bounds": {
+          "x": 0.0,
+          "y": 0.0,
+          "width": 900.0,
+          "height": 600.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/conversation-history-compact.png",
+        "window": "reference/conversation-history-compact-window.png",
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "width": 900,
+          "height": 600
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=conversation-history-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "conversation-history-wide",
+      "family": "conversation",
+      "title": "会话",
+      "state": "history-wide",
+      "source": "views.rs (production desktop fixture)",
+      "reference": "conversation-history",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/conversation-history-wide.png",
+        "window": "native/conversation-history-wide-window.png",
+        "geometry": "native/conversation-history-wide.json",
+        "bounds": {
+          "x": 0.0,
+          "y": 0.0,
+          "width": 1280.0,
+          "height": 800.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/conversation-history-wide.png",
+        "window": "reference/conversation-history-wide-window.png",
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 800
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=conversation-history-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "client-signed-out-compact",
+      "family": "client",
+      "title": "客户端设置",
+      "state": "signed-out-compact",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "client",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/client-signed-out-compact.png",
+        "window": "native/client-signed-out-compact-window.png",
+        "geometry": "native/client-signed-out-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 332.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/client-signed-out-compact.png",
+        "window": "reference/client-signed-out-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 330.5625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=client-signed-out-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "client-signed-out-wide",
+      "family": "client",
+      "title": "客户端设置",
+      "state": "signed-out-wide",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "client",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/client-signed-out-wide.png",
+        "window": "native/client-signed-out-wide-window.png",
+        "geometry": "native/client-signed-out-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 332.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/client-signed-out-wide.png",
+        "window": "reference/client-signed-out-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 330.5625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=client-signed-out-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "client-signed-in-compact",
+      "family": "client",
+      "title": "客户端设置",
+      "state": "signed-in-compact",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "client",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/client-signed-in-compact.png",
+        "window": "native/client-signed-in-compact-window.png",
+        "geometry": "native/client-signed-in-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 332.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/client-signed-in-compact.png",
+        "window": "reference/client-signed-in-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 330.5625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=client-signed-in-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "client-signed-in-wide",
+      "family": "client",
+      "title": "客户端设置",
+      "state": "signed-in-wide",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "client",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/client-signed-in-wide.png",
+        "window": "native/client-signed-in-wide-window.png",
+        "geometry": "native/client-signed-in-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 332.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/client-signed-in-wide.png",
+        "window": "reference/client-signed-in-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 330.5625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=client-signed-in-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "client-loading-compact",
+      "family": "client",
+      "title": "客户端设置",
+      "state": "loading-compact",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "client",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/client-loading-compact.png",
+        "window": "native/client-loading-compact-window.png",
+        "geometry": "native/client-loading-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 332.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/client-loading-compact.png",
+        "window": "reference/client-loading-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 330.5625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=client-loading-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "client-loading-wide",
+      "family": "client",
+      "title": "客户端设置",
+      "state": "loading-wide",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "client",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/client-loading-wide.png",
+        "window": "native/client-loading-wide-window.png",
+        "geometry": "native/client-loading-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 332.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/client-loading-wide.png",
+        "window": "reference/client-loading-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 330.5625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=client-loading-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "client-error-compact",
+      "family": "client",
+      "title": "客户端设置",
+      "state": "error-compact",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "client",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/client-error-compact.png",
+        "window": "native/client-error-compact-window.png",
+        "geometry": "native/client-error-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 384.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/client-error-compact.png",
+        "window": "reference/client-error-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 382.5625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=client-error-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "client-error-wide",
+      "family": "client",
+      "title": "客户端设置",
+      "state": "error-wide",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "client",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/client-error-wide.png",
+        "window": "native/client-error-wide-window.png",
+        "geometry": "native/client-error-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 384.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/client-error-wide.png",
+        "window": "reference/client-error-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 382.5625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=client-error-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "device-running-compact",
+      "family": "device",
+      "title": "设备设置",
+      "state": "running-compact",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "device",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/device-running-compact.png",
+        "window": "native/device-running-compact-window.png",
+        "geometry": "native/device-running-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 382.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/device-running-compact.png",
+        "window": "reference/device-running-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 381.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=device-running-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "device-running-wide",
+      "family": "device",
+      "title": "设备设置",
+      "state": "running-wide",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "device",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/device-running-wide.png",
+        "window": "native/device-running-wide-window.png",
+        "geometry": "native/device-running-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 382.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/device-running-wide.png",
+        "window": "reference/device-running-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 381.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=device-running-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "device-stopped-compact",
+      "family": "device",
+      "title": "设备设置",
+      "state": "stopped-compact",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "device",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/device-stopped-compact.png",
+        "window": "native/device-stopped-compact-window.png",
+        "geometry": "native/device-stopped-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 382.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/device-stopped-compact.png",
+        "window": "reference/device-stopped-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 381.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=device-stopped-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "device-stopped-wide",
+      "family": "device",
+      "title": "设备设置",
+      "state": "stopped-wide",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "device",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/device-stopped-wide.png",
+        "window": "native/device-stopped-wide-window.png",
+        "geometry": "native/device-stopped-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 382.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/device-stopped-wide.png",
+        "window": "reference/device-stopped-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 381.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=device-stopped-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "device-loading-compact",
+      "family": "device",
+      "title": "设备设置",
+      "state": "loading-compact",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "device",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/device-loading-compact.png",
+        "window": "native/device-loading-compact-window.png",
+        "geometry": "native/device-loading-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 382.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/device-loading-compact.png",
+        "window": "reference/device-loading-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 381.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=device-loading-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "device-loading-wide",
+      "family": "device",
+      "title": "设备设置",
+      "state": "loading-wide",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "device",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/device-loading-wide.png",
+        "window": "native/device-loading-wide-window.png",
+        "geometry": "native/device-loading-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 382.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/device-loading-wide.png",
+        "window": "reference/device-loading-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 381.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=device-loading-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "device-error-compact",
+      "family": "device",
+      "title": "设备设置",
+      "state": "error-compact",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "device",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/device-error-compact.png",
+        "window": "native/device-error-compact-window.png",
+        "geometry": "native/device-error-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 430.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/device-error-compact.png",
+        "window": "reference/device-error-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 429.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=device-error-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "device-error-wide",
+      "family": "device",
+      "title": "设备设置",
+      "state": "error-wide",
+      "source": "zork-ui/src/settings.rs",
+      "reference": "device",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/device-error-wide.png",
+        "window": "native/device-error-wide-window.png",
+        "geometry": "native/device-error-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 430.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/device-error-wide.png",
+        "window": "reference/device-error-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 429.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=device-error-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "mesh-connected-compact",
+      "family": "mesh",
+      "title": "设备连接",
+      "state": "connected-compact",
+      "source": "zork-ui/src/network.rs",
+      "reference": "mesh",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/mesh-connected-compact.png",
+        "window": "native/mesh-connected-compact-window.png",
+        "geometry": "native/mesh-connected-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 530.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/mesh-connected-compact.png",
+        "window": "reference/mesh-connected-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 507.78125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=mesh-connected-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "mesh-connected-wide",
+      "family": "mesh",
+      "title": "设备连接",
+      "state": "connected-wide",
+      "source": "zork-ui/src/network.rs",
+      "reference": "mesh",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/mesh-connected-wide.png",
+        "window": "native/mesh-connected-wide-window.png",
+        "geometry": "native/mesh-connected-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 530.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/mesh-connected-wide.png",
+        "window": "reference/mesh-connected-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 507.78125
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=mesh-connected-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "mesh-empty-compact",
+      "family": "mesh",
+      "title": "设备连接",
+      "state": "empty-compact",
+      "source": "zork-ui/src/network.rs",
+      "reference": "mesh",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/mesh-empty-compact.png",
+        "window": "native/mesh-empty-compact-window.png",
+        "geometry": "native/mesh-empty-compact.json",
+        "bounds": {
+          "x": 240.0,
+          "y": 0.0,
+          "width": 660.0,
+          "height": 521.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/mesh-empty-compact.png",
+        "window": "reference/mesh-empty-compact-window.png",
+        "bounds": {
+          "x": 240,
+          "y": 0,
+          "width": 660,
+          "height": 498.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=mesh-empty-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "mesh-empty-wide",
+      "family": "mesh",
+      "title": "设备连接",
+      "state": "empty-wide",
+      "source": "zork-ui/src/network.rs",
+      "reference": "mesh",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "desktop-settings-column",
+      "actions": [],
+      "native": {
+        "image": "native/mesh-empty-wide.png",
+        "window": "native/mesh-empty-wide-window.png",
+        "geometry": "native/mesh-empty-wide.json",
+        "bounds": {
+          "x": 365.0,
+          "y": 0.0,
+          "width": 790.0,
+          "height": 521.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/mesh-empty-wide.png",
+        "window": "reference/mesh-empty-wide-window.png",
+        "bounds": {
+          "x": 365,
+          "y": 0,
+          "width": 790,
+          "height": 498.390625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "borderRadius": "0px",
+          "borderWidth": "0px",
+          "padding": "30px 34px 32px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=mesh-empty-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "mesh-manual-compact",
+      "family": "mesh",
+      "title": "设备连接",
+      "state": "manual-compact",
+      "source": "zork-ui/src/network.rs",
+      "reference": "mesh",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "mesh-peer-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/mesh-manual-compact.png",
+        "window": "native/mesh-manual-compact-window.png",
+        "geometry": "native/mesh-manual-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 68.5,
+          "width": 540.0,
+          "height": 462.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/mesh-manual-compact.png",
+        "window": "reference/mesh-manual-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 69.5,
+          "width": 540,
+          "height": 461
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=mesh-manual-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "mesh-manual-wide",
+      "family": "mesh",
+      "title": "设备连接",
+      "state": "manual-wide",
+      "source": "zork-ui/src/network.rs",
+      "reference": "mesh",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "mesh-peer-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/mesh-manual-wide.png",
+        "window": "native/mesh-manual-wide-window.png",
+        "geometry": "native/mesh-manual-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 168.5,
+          "width": 540.0,
+          "height": 462.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/mesh-manual-wide.png",
+        "window": "reference/mesh-manual-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 169.5,
+          "width": 540,
+          "height": 461
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=mesh-manual-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-start-compact",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "start-compact",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-start-compact.png",
+        "window": "native/enrollment-start-compact-window.png",
+        "geometry": "native/enrollment-start-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 187.0,
+          "width": 540.0,
+          "height": 226.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-start-compact.png",
+        "window": "reference/enrollment-start-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 130.296875,
+          "width": 540,
+          "height": 339.40625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-start-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-start-wide",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "start-wide",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-start-wide.png",
+        "window": "native/enrollment-start-wide-window.png",
+        "geometry": "native/enrollment-start-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 287.0,
+          "width": 540.0,
+          "height": 226.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-start-wide.png",
+        "window": "reference/enrollment-start-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 230.296875,
+          "width": 540,
+          "height": 339.40625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-start-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-command-compact",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "command-compact",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-command-compact.png",
+        "window": "native/enrollment-command-compact-window.png",
+        "geometry": "native/enrollment-command-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 119.0,
+          "width": 540.0,
+          "height": 361.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-command-compact.png",
+        "window": "reference/enrollment-command-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 62.703125,
+          "width": 540,
+          "height": 474.59375
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-command-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-command-wide",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "command-wide",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-command-wide.png",
+        "window": "native/enrollment-command-wide-window.png",
+        "geometry": "native/enrollment-command-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 219.0,
+          "width": 540.0,
+          "height": 361.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-command-wide.png",
+        "window": "reference/enrollment-command-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 162.703125,
+          "width": 540,
+          "height": 474.59375
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-command-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-loading-compact",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "loading-compact",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-loading-compact.png",
+        "window": "native/enrollment-loading-compact-window.png",
+        "geometry": "native/enrollment-loading-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 187.0,
+          "width": 540.0,
+          "height": 226.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-loading-compact.png",
+        "window": "reference/enrollment-loading-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 130.296875,
+          "width": 540,
+          "height": 339.40625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-loading-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-loading-wide",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "loading-wide",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-loading-wide.png",
+        "window": "native/enrollment-loading-wide-window.png",
+        "geometry": "native/enrollment-loading-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 287.0,
+          "width": 540.0,
+          "height": 226.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-loading-wide.png",
+        "window": "reference/enrollment-loading-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 230.296875,
+          "width": 540,
+          "height": 339.40625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-loading-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-error-compact",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "error-compact",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-error-compact.png",
+        "window": "native/enrollment-error-compact-window.png",
+        "geometry": "native/enrollment-error-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 161.0,
+          "width": 540.0,
+          "height": 278.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-error-compact.png",
+        "window": "reference/enrollment-error-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 104.296875,
+          "width": 540,
+          "height": 391.40625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-error-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-error-wide",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "error-wide",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-error-wide.png",
+        "window": "native/enrollment-error-wide-window.png",
+        "geometry": "native/enrollment-error-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 261.0,
+          "width": 540.0,
+          "height": 278.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-error-wide.png",
+        "window": "reference/enrollment-error-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 204.296875,
+          "width": 540,
+          "height": 391.40625
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-error-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-expired-compact",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "expired-compact",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 900.0,
+      "height": 600.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-expired-compact.png",
+        "window": "native/enrollment-expired-compact-window.png",
+        "geometry": "native/enrollment-expired-compact.json",
+        "bounds": {
+          "x": 180.0,
+          "y": 169.0,
+          "width": 540.0,
+          "height": 261.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-expired-compact.png",
+        "window": "reference/enrollment-expired-compact-window.png",
+        "bounds": {
+          "x": 180,
+          "y": 112.703125,
+          "width": 540,
+          "height": 374.59375
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-expired-compact",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "enrollment-expired-wide",
+      "family": "enrollment",
+      "title": "连接设备",
+      "state": "expired-wide",
+      "source": "zork-ui/src/network.rs",
+      "reference": "enrollment",
+      "width": 1280.0,
+      "height": 800.0,
+      "target": "add-device-dialog",
+      "actions": [],
+      "native": {
+        "image": "native/enrollment-expired-wide.png",
+        "window": "native/enrollment-expired-wide-window.png",
+        "geometry": "native/enrollment-expired-wide.json",
+        "bounds": {
+          "x": 370.0,
+          "y": 269.0,
+          "width": 540.0,
+          "height": 261.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "captured",
+        "image": "reference/enrollment-expired-wide.png",
+        "window": "reference/enrollment-expired-wide-window.png",
+        "bounds": {
+          "x": 370,
+          "y": 212.703125,
+          "width": 540,
+          "height": 374.59375
+        },
+        "styles": {
+          "fontSize": "13px",
+          "fontFamily": "ZorkReferenceInter, ZorkReferenceCJK, sans-serif",
+          "fontWeight": "400",
+          "lineHeight": "20.8px",
+          "color": "rgb(36, 39, 43)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "borderRadius": "32px",
+          "borderWidth": "0px",
+          "padding": "0px",
+          "gap": "normal"
+        },
+        "source": "http://127.0.0.1:49174/design/reference.html?isolate=1&story=enrollment-expired-wide",
+        "fixture": "zork-ui/assets/stories/page-fixture.json; same viewport, fonts, identities and model values"
+      }
+    },
+    {
+      "id": "interaction-overview",
+      "family": "interaction",
+      "title": "交互反馈",
+      "state": "overview",
+      "source": "crates/zork-ui/src/interaction_story.rs",
+      "reference": "button",
+      "width": 800.0,
+      "height": 620.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/interaction-overview.png",
+        "window": "native/interaction-overview-window.png",
+        "geometry": "native/interaction-overview.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 752.0,
+          "height": 484.5
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "interaction-form",
+      "family": "interaction",
+      "title": "交互反馈",
+      "state": "form",
+      "source": "crates/zork-ui/src/interaction_story.rs",
+      "reference": "button",
+      "width": 800.0,
+      "height": 760.0,
+      "target": "story-component",
+      "actions": [],
+      "native": {
+        "image": "native/interaction-form.png",
+        "window": "native/interaction-form-window.png",
+        "geometry": "native/interaction-form.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 752.0,
+          "height": 541.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      }
+    },
+    {
+      "id": "navigation-default",
+      "family": "navigation",
+      "title": "导航行",
+      "state": "default",
+      "source": "crates/zork-ui/src/navigation.rs::row",
+      "reference": "navigation",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-nav",
+      "actions": [],
+      "native": {
+        "image": "native/navigation-default.png",
+        "window": "native/navigation-default-window.png",
+        "geometry": "native/navigation-default.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 240.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      },
+      "checks": [
+        "Native geometry and input",
+        "Web keyboard and pointer input"
+      ]
+    },
+    {
+      "id": "navigation-selected",
+      "family": "navigation",
+      "title": "导航行",
+      "state": "selected",
+      "source": "crates/zork-ui/src/navigation.rs::row",
+      "reference": "navigation",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-nav",
+      "actions": [],
+      "native": {
+        "image": "native/navigation-selected.png",
+        "window": "native/navigation-selected-window.png",
+        "geometry": "native/navigation-selected.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 240.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      },
+      "checks": [
+        "Native geometry and input",
+        "Web keyboard and pointer input"
+      ]
+    },
+    {
+      "id": "navigation-hover",
+      "family": "navigation",
+      "title": "导航行",
+      "state": "hover",
+      "source": "crates/zork-ui/src/navigation.rs::row",
+      "reference": "navigation",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-nav",
+      "actions": [
+        {
+          "type": "move",
+          "target": {
+            "element_id": "story-nav"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/navigation-hover.png",
+        "window": "native/navigation-hover-window.png",
+        "geometry": "native/navigation-hover.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 240.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "not_applicable"
+      },
+      "checks": [
+        "Native geometry and input",
+        "Web keyboard and pointer input"
+      ]
+    },
+    {
+      "id": "navigation-selected-hover",
+      "family": "navigation",
+      "title": "导航行",
+      "state": "selected-hover",
+      "source": "crates/zork-ui/src/navigation.rs::row",
+      "reference": "navigation",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-nav",
+      "actions": [
+        {
+          "type": "move",
+          "target": {
+            "element_id": "story-nav"
+          }
+        }
+      ],
+      "native": {
+        "image": "native/navigation-selected-hover.png",
+        "window": "native/navigation-selected-hover-window.png",
+        "geometry": "native/navigation-selected-hover.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 240.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "missing",
+        "reason": "Shared interaction state; no separate historical HTML reference"
+      },
+      "checks": [
+        "Native geometry and input",
+        "Web keyboard and pointer input"
+      ]
+    },
+    {
+      "id": "navigation-focus",
+      "family": "navigation",
+      "title": "导航行",
+      "state": "focus",
+      "source": "crates/zork-ui/src/navigation.rs::row",
+      "reference": "navigation",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-nav",
+      "actions": [
+        {
+          "type": "key",
+          "keystroke": "tab"
+        }
+      ],
+      "native": {
+        "image": "native/navigation-focus.png",
+        "window": "native/navigation-focus-window.png",
+        "geometry": "native/navigation-focus.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 240.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "missing",
+        "reason": "Shared interaction state; no separate historical HTML reference"
+      },
+      "checks": [
+        "Native geometry and input",
+        "Web keyboard and pointer input"
+      ]
+    },
+    {
+      "id": "navigation-selected-focus",
+      "family": "navigation",
+      "title": "导航行",
+      "state": "selected-focus",
+      "source": "crates/zork-ui/src/navigation.rs::row",
+      "reference": "navigation",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-nav",
+      "actions": [
+        {
+          "type": "key",
+          "keystroke": "tab"
+        }
+      ],
+      "native": {
+        "image": "native/navigation-selected-focus.png",
+        "window": "native/navigation-selected-focus-window.png",
+        "geometry": "native/navigation-selected-focus.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 240.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "missing",
+        "reason": "Shared interaction state; no separate historical HTML reference"
+      },
+      "checks": [
+        "Native geometry and input",
+        "Web keyboard and pointer input"
+      ]
+    },
+    {
+      "id": "navigation-long",
+      "family": "navigation",
+      "title": "导航行",
+      "state": "long",
+      "source": "crates/zork-ui/src/navigation.rs::row",
+      "reference": "navigation",
+      "width": 560.0,
+      "height": 360.0,
+      "target": "story-nav",
+      "actions": [],
+      "native": {
+        "image": "native/navigation-long.png",
+        "window": "native/navigation-long-window.png",
+        "geometry": "native/navigation-long.json",
+        "bounds": {
+          "x": 24.0,
+          "y": 24.0,
+          "width": 240.0,
+          "height": 32.0
+        },
+        "scale": 2.0,
+        "renderer": "production GPUI + offscreen Metal"
+      },
+      "design": {
+        "status": "missing",
+        "reason": "Shared interaction state; no separate historical HTML reference"
+      },
+      "checks": [
+        "Native geometry and input",
+        "Web keyboard and pointer input"
+      ]
+    }
+  ],
+  "isolated": true,
+  "network": "none",
+  "reference_status": "provided by the design capture step",
+  "design_source": {
+    "url": "http://127.0.0.1:49174/design/reference.html",
+    "version": "2026-09-07 approved desktop controls",
+    "fixture_sha256": "42fb8090af6204e08c2ea0b9abda2faf83a2aac7f2830895b0c48df90fb287de",
+    "files": {
+      "Settings.tsx": "6e451f45d5cb9553a963854a050952e8753d03e4f329e8f04234821c8164aa36",
+      "main.tsx": "64df163ab6b4875388a7d6263d9e408c75ce80945145ccdfb72e9a4068b3037a",
+      "reference.css": "2fa61f653a40e9a53a9b2de40881756d563bca892fc1fbe962b0964b3d03a52e",
+      "HeaderBrand.tsx": "95b23612e7218afbe474248ce04bc8d25d93d4e0162f1066d32a467ddddc5a94",
+      "Agents.tsx": "fbab40a9411d9636d2319afebfff9c4b3424179460ba8f0e00b9b2670c13408e",
+      "approved.css": "d5f713dc86f43bc75c0e8d30dc5b57b0907dce743bb6f365972d64b18f981aac",
+      "HoverDetails.tsx": "d9beb7f590ee10adb48fc90ba1a3efa863a0a4ae9d37c7c80eca26349c8b3915",
+      "ReferenceApp.tsx": "afc2e33589303d7de5f3dd111f56fbb3830b0b3834114ac5e1d37079a7cc9970",
+      "Conversation.tsx": "08efd86d5e4dbc68a13c334036258e58e832ac1afe5fff15386b830e1501f602",
+      "modalScrim.ts": "f0bb6afb60a9901bdf1229d300e1afdc1c486b45516ca0cab19c863eec2d19ae",
+      "Profiles.tsx": "5e3f1dc351fb959254e3a3f588554b7c81109c0ee1283abf9aabbff88c387d58",
+      "controls.tsx": "aba9c68faa28c66f670895201de1eef5caae24a60b3908c2275685eb5a9f4cfb"
+    }
+  },
+  "production_source_hashes": {
+    "crates/zork-gui/src/design.rs": "d01fb4a5b0a514a31cb6d112ff73ace84237e28f6d98fb3d821348e28187eede",
+    "crates/zork-gui/src/session_history.rs": "9ff284001f1165308c372a17a492b2e27f0c3c6555d92eff8cf5bad8bba17d6f",
+    "crates/zork-gui/src/shell.rs": "1e0c50e8aa312efc60b4d5dbca0d66caa05cef9f7b5ca3311a403515d63c1948",
+    "crates/zork-gui/src/lib.rs": "e71efb9e5dfab9740747022288a7739ea645264768a6691f722fa118cca7e932",
+    "crates/zork-gui/src/transcript.rs": "5731c8d5a48605e42985ff01f58074f07eda05290c62eaf38fcf4b563283abfe",
+    "crates/zork-gui/src/views.rs": "62236166a048376186c0bfa6aca2e9785e6a2ea97c22b7741d7145cf0014a38e",
+    "crates/zork-gui/src/comments.rs": "8e77d5a56a55870fdd5feeb3cba1961e18df624b6349bf83895464530abcc871",
+    "crates/zork-gui/src/task_overview.rs": "a096b9a3ae1e9b8c713515de25125a6c3bf6697a26983cd7f0e741a732d1abc5",
+    "crates/zork-gui/src/main.rs": "b5b8e395c150fdd6b0020a44372dbe2df838a4a8329b345e07ee9b9efe038f8e",
+    "crates/zork-gui/src/window_chrome.rs": "0e1c5760e5009ba961253976e82992bb82202164d2c26ec6e53316ce5c811dbd",
+    "crates/zork-gui/src/assets.rs": "b524a41ecc725e4addd391142e13df26acd2fff24b20d3eb4891c5355a6a9765",
+    "crates/zork-gui/src/i18n.rs": "212b0c71e04112894147ec66f1fc730c93f37c6637836fa6bc7665a013684295",
+    "crates/zork-gui/src/api.rs": "9f97cd3943cf54accdf1966544cde93079c886251ca1d26749f3b7ef003ecd9e",
+    "crates/zork-gui/src/bin/render-bench.rs": "affdde0af889496c7b4c9d9783e6250ad6be995436751aaca3ae35d0c308ba7e",
+    "crates/zork-gui/src/desktop/agents.rs": "6cd87dffac0fdd7c89a436c69b49a9bc722f5784024c1695d76d342bbb029566",
+    "crates/zork-gui/src/desktop/ui.rs": "3227733f4da62642c40b042d24514ee80a439aa26b71154813e66b366126f23e",
+    "crates/zork-gui/src/desktop/transport.rs": "34ac813e2347648af6cb74c23224a2ad7acba9d40e59789a08f692ffb6d8a444",
+    "crates/zork-gui/src/desktop/store.rs": "3c0deb905f1c5fe9d140921d7bffe91f5a5bd8a3f7c5033beea9170b1048dca6",
+    "crates/zork-gui/src/desktop/mesh_settings.rs": "670e930a2a75185c0f56c5690ce4fc56ada3bc2e62e911cb7523247c4fe0281f",
+    "crates/zork-gui/src/desktop/profiles.rs": "d66fe44f3175a31727d30b6a89cc9755cb403d0ee3034173291cbe640b1415de",
+    "crates/zork-gui/src/desktop/mod.rs": "84f7e861e0a854641900874618dc896fb8a71da97ad89eed9bf8fb5634f888c6",
+    "crates/zork-gui/src/desktop/account.rs": "d504dbda8de846f9d58dacb9b30d92e20b69fed18045aeda8a4ba5666bd3d6b2",
+    "crates/zork-gui/src/desktop/node.rs": "f7079aca736610136dec573e1505576481cee972aa55eb62e8f212a3e443326c",
+    "crates/zork-gui/src/desktop/navigation.rs": "c3b562acbb8134b324374186a8dcec2106442787cf5c0ee2cf781de83d06776a",
+    "crates/zork-gui/src/desktop/modal.rs": "3a3afaa5156cd686726381e0a1f0a0ba2d2fef2c6dab0d527f2e4ebd1dd38b21",
+    "crates/zork-gui/src/components/message.rs": "cea17f11affef2bb1431b58757afde161b1a97673e70243547a11cdf78300f19",
+    "crates/zork-gui/src/components/activity.rs": "c3edc1f98d44418253f46a097b1b427fd9d2e9c832ecf8cbc89eb3ec8de72dad",
+    "crates/zork-gui/src/components/selector_menu.rs": "d3bb6631bf3afda032b77102af1037043140d016a408c9306b9478e836632b31",
+    "crates/zork-gui/src/components/text_input.rs": "69fde0c90b3a4f46df5f7da57c815456ce736fe368c873a8b6ff2760a2e8aced",
+    "crates/zork-gui/src/components/brand.rs": "e0a4d653a312f03e516791047a0b8e2ffbf34f454e80e8bb446cb1abcd4d7598",
+    "crates/zork-gui/src/components/mod.rs": "49101d323ad8f304c92026b9d5193e669234f8987cbfe918a84e579118945791",
+    "crates/zork-gui/src/components/transcript_cache.rs": "8f37bab7543346ab2343dee4fd61022c8419ba47c1073946cf8a24bb7079a2aa",
+    "crates/zork-gui/src/components/selection.rs": "0063245c90191eb347b1eb6f2faa2b23d0ec904ee85d22d854e7edb968b89fee",
+    "crates/zork-gui/src/automation/element.rs": "a7504d577914163cd3d5e854a10fd01c785037ee169dca363374bed662397402",
+    "crates/zork-gui/src/automation/protocol.rs": "72ff6498145e6e5272c8516c991cb1bfe284e87c36294709721e013641904529",
+    "crates/zork-gui/src/automation/server.rs": "cd5051886b2df561b7e8b8acef7bdafcab13215686238b85be329df523bde30e",
+    "crates/zork-gui/src/automation/mod.rs": "042c0ec79cbed7627ff55c12377966b43f498e1bd8a4b1092f72d7278f0921bf",
+    "crates/zork-gui/src/automation/driver.rs": "6e5c9184f3abaa3eb445040fd2472570274d4934b4fd33c9aed7cd0d17e6aaa0",
+    "crates/zork-gui/src/views/cache.rs": "d05215d713813a612b6b2d1deebd813079ac794b45a6440c3a82008c93b2bbf8",
+    "crates/zork-gui/src/views/agents.rs": "921cb62f6df0f3d3fd5ce648eeb9692d0a0b04a2699fa2617de13fe90f9489f4",
+    "crates/zork-gui/src/views/mesh.rs": "1b184baac0e935a116116b77ee549fac202cbdd213f6c2819f16466be1cbd42d",
+    "crates/zork-gui/src/views/task_controls.rs": "95d3324b37cf666c2094744fb806a80740c4ff232360a1565ef677fc8333110d",
+    "crates/zork-gui/src/views/benchmark.rs": "c0ca9d6c3a5ba86a72943f4c028f67d94fe7a7bf4f1cd836f41996c3f1db82ba",
+    "crates/zork-gui/src/views/drive.rs": "28e10a9b2fb22217880bfc10e19dd96d6c5bd26889fe07ca8b335905cd2c7f61",
+    "crates/zork-gui/src/views/history.rs": "4f173cde1fcdc912f9702730b34a3935030021e76492ee31080de7b999cbef82",
+    "crates/zork-gui/src/views/comments.rs": "0aebb946a933775bb3b93a8a0430231408b56b338bc8612799c761b2fbd12779",
+    "crates/zork-gui/src/views/inbox.rs": "f21939e3d537df094f564bdbf1e21b587f5aa394260f9363afab3d3106697d02",
+    "crates/zork-gui/src/desktop/navigation/row.rs": "564fc122fbcda12051c468ebbe33de7a55a7e22f9f9ae2a6f7b9f660b996569e",
+    "crates/zork-ui/src/design.rs": "159fbb889a89ec4d94cea11d3c3573ed27b3a80fdaa0ea12f6567a750aa502e5",
+    "crates/zork-ui/src/lib.rs": "6ab506b22089e50e69b46bc309b152bdc23592e0cf2a8d3b71b892abc12f6aee",
+    "crates/zork-ui/src/controls.rs": "14e6143e4a17855cc3d4c5c938b2c213b467ddce9ffc1564aa9322bcece9c515",
+    "crates/zork-ui/src/history.rs": "e04d84937633b900c0e47a261162defc2c93514807c75c305e7adfdb9c6078d2",
+    "crates/zork-ui/src/comments.rs": "34627da423c3c868338250795858ccfc835c42c76100eb01f0cb6836ce5d6ea8",
+    "crates/zork-ui/src/navigation.rs": "f89aa8a12798ec296bd9eb1baf9f903f1ea442f522ebfca2656fd94bfb750d45",
+    "crates/zork-ui/src/assets.rs": "f3d0a0670be96876213ef6d99d4842ca3e7489737c062eae8633da24886b9433",
+    "crates/zork-ui/src/modal.rs": "c8e5ef2c77b803a876be72c8b97410a3cd3dfda47194ae147f420df223f2bfdf",
+    "crates/zork-ui/src/settings.rs": "8bab76e27f44da0bfa4c9f6ecd18af6cca9f52bec2ad8a31881dd01711d2634a",
+    "crates/zork-ui/src/network.rs": "5f3d4fe222fde805b4048d08c9839fcbf74ff0932bff4c783d00a55470eb937b",
+    "crates/zork-ui/src/components/message.rs": "2aad8fd1f5c3966d9987c05d85f3cf0027a571f8c90f1dae8dbfe9e9cb328249",
+    "crates/zork-ui/src/components/activity.rs": "3ecb898a71da34fb2f72d4683f250dce314244987c0c0e67d6997f2638d6ca49",
+    "crates/zork-ui/src/components/tooltip.rs": "74a78c468e06cebfae41b71be768e03764295729e5ea21ed0e3f37693a82cc4b",
+    "crates/zork-ui/src/components/selector_menu.rs": "0cad819df64bdc890b9c020f91de6b9f747e5ece8cf5bc3baada25cacc06ee45",
+    "crates/zork-ui/src/components/modal_backdrop.rs": "71c145a84804398cda048af6bf9af925a03a72d4c2d25e5e53f2d92455fe7656",
+    "crates/zork-ui/src/components/text_input.rs": "e3c91dc1821a5ad7f53525618de3d6b55411140f0219b5d8c7081c522e88cfca",
+    "crates/zork-ui/src/components/brand.rs": "099205677df688a600bb30fc5f204789ff3a91f600a0cd5e20b1081cca17caf8",
+    "crates/zork-ui/src/components/mod.rs": "31f56682c45b17ad4795ac820581a4c5d460968b7d6e1ff8558f3f72750e4a0f",
+    "crates/zork-ui/src/components/history.rs": "a0cdfc5f74ffdbff42429a80658ee4c9facc8f0d5ca8c0edb8127b7758cff166",
+    "crates/zork-ui/src/components/comments.rs": "a1122ef1f1f80cbe74a16ccc0a36a37ded5da2d401827357746e304755d90aa2",
+    "crates/zork-ui/src/components/selection.rs": "ae2234a36e8efacf2bb442b5e28021303768a540ee0b39e809a446bed48e4e46",
+    "crates/zork-ui/src/components/attachments.rs": "601ba07e4a3b7fd4fb4bdc27973868836623d3fe32a5cac3cb9e4d1eb7daa51d",
+    "crates/zork-ui/src/components/motion.rs": "40107ff269caa4418cfbb32dd062a5ed86d5f1959bc7165632dc07cde641b77b",
+    "crates/zork-ui/src/automation/element.rs": "e0dff186da65c970f246396a55f67f116a6e995f0d522e411895874ff58259b1",
+    "crates/zork-ui/src/automation/protocol.rs": "9e3d4293f04b4d11b23d7bef11d066f4db300de1bd75adf69c77559a2fb51bc3",
+    "crates/zork-ui/src/automation/mod.rs": "fb808fe4516b3920a7e301f23c15d76efb23352f3cdac7db47d9af4f0cf23f89",
+    "crates/zork-ui/src/automation/driver.rs": "e3a316901dac8e31160bdc1369a7235869e66878e540fc6b197039727f8844c4"
+  },
+  "native_compositor_sources": {
+    "crates/zork-ui/native/modal-blur.m": "b9fca97b7a392f576653d5419037561adffed74e2c70deaa852f3f25b5d198b9",
+    "crates/zork-ui/build.rs": "2067816507725832913ce228f9ba310224bb93e6be283f9c34c32ab27a03d537"
+  },
+  "fixture": {
+    "device": {
+      "id": "mini1",
+      "name": "mini1",
+      "sidebar_width": 240,
+      "version": "0.1.30",
+      "online": true,
+      "background": true,
+      "start_at_login": false
+    },
+    "profile": {
+      "profile_id": "fixture",
+      "provider": "openai",
+      "billing": "subscription",
+      "verified": false,
+      "models": [
+        {
+          "id": "fixture-model",
+          "api": "openai-responses",
+          "context_window": 32000,
+          "max_output_tokens": 4096,
+          "limits": {
+            "context_window_tokens": 32000,
+            "max_output_tokens": 4096
+          },
+          "default_thinking": "off",
+          "thinking": [
+            "off"
+          ]
+        }
+      ]
+    },
+    "agents": [
+      {
+        "id": "leader",
+        "prototype_id": "product",
+        "name": "产品 Leader",
+        "role": "leader",
+        "avatar": "fox",
+        "profile_id": "fixture",
+        "model": "fixture-model",
+        "allowed_leaders": []
+      }
+    ],
+    "model_form": {
+      "id": "",
+      "api": "openai-codex-responses",
+      "context_window": 32000,
+      "max_output_tokens": 4096,
+      "thinking": "low, medium, high, xhigh, max",
+      "default_thinking": "medium"
+    },
+    "fonts": {
+      "latin": "Inter Variable",
+      "cjk": "Noto Sans SC",
+      "weights": [
+        400,
+        500,
+        600,
+        700
+      ]
+    },
+    "conversation": {
+      "id": "product",
+      "placeholder": "告诉 Leader 你想做什么…",
+      "messages": [
+        {
+          "id": "story-message-1",
+          "role": "assistant",
+          "who": "product",
+          "content": "请先统一图标与头像，并保留原生界面的紧凑感。",
+          "time": "09:42",
+          "created_at": "2026-09-06T09:42:00Z"
+        },
+        {
+          "id": "story-message-2",
+          "role": "user",
+          "who": "me",
+          "content": "收到，先把共同组件统一。",
+          "time": "09:43",
+          "created_at": "2026-09-06T09:43:00Z"
+        }
+      ]
+    },
+    "history": {
+      "now": 1788687730000,
+      "records": [
+        {
+          "event_id": "history-0",
+          "event": {
+            "kind": "session_created",
+            "selection": {
+              "model": "fixture-model"
+            }
+          }
+        },
+        {
+          "event_id": "history-1",
+          "event": {
+            "kind": "input_appended",
+            "input": {
+              "content": "检查项目配置并运行测试。",
+              "received_at_ms": 1788687720000
+            }
+          }
+        },
+        {
+          "event_id": "history-2",
+          "event": {
+            "kind": "step_started",
+            "step_id": "step-1",
+            "purpose": "conversation",
+            "started_at_ms": 1788687721000
+          }
+        },
+        {
+          "event_id": "history-3",
+          "event": {
+            "kind": "step_completed",
+            "step_id": "step-1",
+            "purpose": "conversation",
+            "completed_at_ms": 1788687723000,
+            "assistant_text": "先检查配置，再运行测试。",
+            "usage": {
+              "input_tokens": 1200,
+              "output_tokens": 180,
+              "cached_input_tokens": 600
+            },
+            "invocations": [
+              {
+                "invocation_id": "read-1",
+                "tool": "read_file",
+                "arguments": {
+                  "path": "package.json"
+                },
+                "started_at_ms": 1788687723000
+              },
+              {
+                "invocation_id": "test-1",
+                "tool": "shell",
+                "arguments": {
+                  "command": "pnpm test"
+                },
+                "started_at_ms": 1788687724000
+              }
+            ]
+          }
+        },
+        {
+          "event_id": "history-4",
+          "event": {
+            "kind": "tool_result",
+            "result": {
+              "invocation_id": "read-1",
+              "tool": "read_file",
+              "outcome": "succeeded",
+              "finished_at_ms": 1788687723500,
+              "data": {
+                "content": "配置文件读取成功。"
+              }
+            }
+          }
+        },
+        {
+          "event_id": "history-5",
+          "event": {
+            "kind": "tool_result",
+            "result": {
+              "invocation_id": "test-1",
+              "tool": "shell",
+              "outcome": "failed",
+              "finished_at_ms": 1788687727000,
+              "data": {
+                "error": "一个用例未通过，正在检查断言。"
+              }
+            }
+          }
+        },
+        {
+          "event_id": "history-6",
+          "event": {
+            "kind": "step_started",
+            "step_id": "step-2",
+            "purpose": "conversation",
+            "started_at_ms": 1788687727500
+          }
+        }
+      ]
+    },
+    "account": {
+      "name": "Zork 用户",
+      "email": "design@example.test",
+      "device_name": "mini1",
+      "identity": "device-demo-01"
+    },
+    "mesh": {
+      "peers": [
+        {
+          "id": "mini2",
+          "name": "mini2",
+          "online": true,
+          "can_manage": true
+        }
+      ],
+      "invitation": "zork mesh join <一次性加入码>",
+      "expires": "10 分钟后过期"
+    }
+  }
+}

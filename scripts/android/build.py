@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Build the real Rust/Compose Android client on the development host.
+
+Pinned SDK packages: platforms;android-36, build-tools;36.0.0,
+ndk;28.2.13676358. Uses a normal installed Android Rust target, or build-std
+with the host compiler's matching rust-src (Homebrew Rust on mini1).
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+
+sys.path.insert(0, str(ROOT / 'scripts/lib'))
+from build_env import build_environment
+APP = ROOT / "apps/android"
+TARGET = "aarch64-linux-android"
+NDK_VERSION = "28.2.13676358"
+
+
+def run(command, env, **kwargs):
+    print("+", " ".join(str(x) for x in command), flush=True)
+    return subprocess.run(command, cwd=ROOT, env=env, check=True, **kwargs)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--skip-native", action="store_true")
+    parser.add_argument("--native-only", action="store_true")
+    parser.add_argument("--tests", action="store_true", help="also package instrumentation tests")
+    parser.add_argument("--profile", action="store_true", help="build a non-debuggable APK with profiling enabled, retaining the debug app ID/signature")
+    args = parser.parse_args()
+    env = build_environment(variant='android')
+    sdk = Path(env.get("ANDROID_HOME", Path.home() / "Library/Android/sdk"))
+    ndk = sdk / "ndk" / NDK_VERSION
+    host = "darwin-x86_64" if sys.platform == "darwin" else "linux-x86_64"
+    llvm = ndk / "toolchains/llvm/prebuilt" / host / "bin"
+    compiler = llvm / "aarch64-linux-android29-clang"
+    if not compiler.exists():
+        raise SystemExit(f"Missing NDK: install ndk;{NDK_VERSION} in {sdk}")
+    env.update(ANDROID_HOME=str(sdk), ANDROID_NDK_HOME=str(ndk),
+               CARGO_INCREMENTAL="0", CARGO_PROFILE_DEV_DEBUG="0", CARGO_BUILD_JOBS="4",
+               CC_aarch64_linux_android=str(compiler),
+               CXX_aarch64_linux_android=str(compiler) + "++",
+               AR_aarch64_linux_android=str(llvm / "llvm-ar"),
+               CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=str(compiler),
+               CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS="-C link-arg=-Wl,-z,max-page-size=16384")
+    # Do not contend with desktop Cargo's build lock or change its feature graph.
+    env.setdefault("CARGO_TARGET_DIR", str(ROOT / "target/android"))
+    if not env.get("JAVA_HOME"):
+        jdk = Path("/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home")
+        if jdk.exists():
+            env["JAVA_HOME"] = str(jdk)
+    if env.get("JAVA_HOME"):
+        env["PATH"] = str(Path(env["JAVA_HOME"]) / "bin") + os.pathsep + env["PATH"]
+
+    if not args.skip_native:
+        target_lib = Path(subprocess.check_output(
+            ["rustc", "--print", "target-libdir", "--target", TARGET], env=env, text=True).strip())
+        command = ["cargo", "build", "--locked", "-p", "zork-android", "--target", TARGET]
+        if not any(target_lib.glob("libstd-*.rlib")):
+            sysroot = Path(subprocess.check_output(["rustc", "--print", "sysroot"], env=env, text=True).strip())
+            if not (sysroot / "lib/rustlib/src/rust/library/Cargo.toml").exists():
+                raise SystemExit(f"Install Rust target {TARGET} or the matching rust-src component")
+            env["RUSTC_BOOTSTRAP"] = "1"
+            command.append("-Zbuild-std=std,panic_abort")
+        run(command, env)
+
+    build = APP / "app/build/generated"
+    native = build / "jniLibs/arm64-v8a"
+    native.mkdir(parents=True, exist_ok=True)
+    cargo_target = Path(env.get("CARGO_TARGET_DIR", ROOT / "target"))
+    shutil.copy2(cargo_target / TARGET / "debug/libzork_android.so", native)
+    # Strip only the staged APK copy; retain build symbols for diagnosis.
+    run([str(llvm / "llvm-strip"), "--strip-unneeded", str(native / "libzork_android.so")], env)
+    metadata = json.loads(subprocess.check_output(
+        ["cargo", "metadata", "--locked", "--format-version", "1", "--filter-platform", TARGET],
+        cwd=ROOT, env=env, text=True))
+    # The vendored compatibility patch preserves the exact upstream JNI ABI.
+    versions = {p["name"]: p["version"] for p in metadata["packages"]
+                if p["name"] in ("rustls-platform-verifier", "rustls-platform-verifier-android")}
+    if versions != {"rustls-platform-verifier": "0.7.0", "rustls-platform-verifier-android": "0.1.1"}:
+        raise SystemExit("Review the vendored Android certificate verifier before changing its JNI ABI")
+    if not args.native_only:
+        tasks = ["assembleDebug"] + (["assembleDebugAndroidTest"] if args.tests else [])
+        if args.profile:
+            tasks.append("-PzorkProfile=true")
+        run([str(APP / "gradlew"), "-p", str(APP), "--no-daemon", *tasks], env)
+        print(APP / "app/build/outputs/apk/debug/app-debug.apk")
+
+
+if __name__ == "__main__":
+    main()

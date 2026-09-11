@@ -1,0 +1,6 @@
+# Benchmark fixture hashes describe exact bytes, including CRLF and truncation.
+/benchmarks/gpu-lexer/fixtures/** -text
+/benchmarks/gpu-lexer/vendor/** -text
+
+# Keep the Windows wrapper executable on Windows checkouts.
+/apps/android/gradlew.bat text eol=crlf
