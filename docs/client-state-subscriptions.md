@@ -28,6 +28,10 @@ merge messages, restore an optimistic outbox copy or determine unread state.
 
 Conversation content indices contain separate page/file groups built by core, with stable ordering and conversation membership. Search reads only the selected group and shares the original index for an empty query. Native content tabs reuse the existing RootView subscription and artifacts-domain invalidation; they retain only input, scroll and read-only filtered indices. No per-tab network connection or subscription is added.
 
+`Device.content_indices` is the shared conversation index for both files and pages.
+The former file-only `artifact_indices` projection and its unused desktop mirror
+have been removed; artifact-domain versions and consumer acknowledgements are unchanged.
+
 Page references and applications use the existing catalog Resource records and the Device artifacts domain. They are durable membership data, separate from on-demand resource inspections and execution history. The shared directory aggregates application publications across its currently connected device identities. Resource inspections use the value subscription with explicit prepare/apply/acknowledge and urgent invalidation on revoked access; no periodic inspection task is installed. See [page and resource contracts](mesh-resources.md).
 
 Session execution history remains authoritative on the execution node. The

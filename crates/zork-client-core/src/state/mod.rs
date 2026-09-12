@@ -8,17 +8,15 @@ mod device;
 mod upgrade;
 #[cfg(not(target_family = "wasm"))]
 pub(crate) use upgrade::upgrade_status;
+mod agent_catalog;
+#[cfg(not(target_family = "wasm"))]
+mod agents;
 #[cfg(not(target_family = "wasm"))]
 mod drafts;
 #[cfg(not(target_family = "wasm"))]
 mod outbox;
 #[cfg(not(target_family = "wasm"))]
 mod replication;
-#[cfg(not(target_family = "wasm"))]
-pub use artifacts::artifact_indices;
-mod agent_catalog;
-#[cfg(not(target_family = "wasm"))]
-mod agents;
 pub use agent_catalog::{AgentData, AgentSubscription, AgentUpdate, Agents};
 #[cfg(not(target_family = "wasm"))]
 pub use outbox::Outbox;

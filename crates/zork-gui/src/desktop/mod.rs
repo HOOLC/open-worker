@@ -428,7 +428,7 @@ impl DesktopRoot {
         let Some(node) = self.source.node(&node.id) else {
             return;
         };
-        let Ok((binding, client)) = self.source.connection(&node.id) else {
+        let Ok((binding, _)) = self.source.connection(&node.id) else {
             return;
         };
         if let Err(error) = self.source.select(&node.id) {
@@ -453,7 +453,6 @@ impl DesktopRoot {
         } else {
             let agents = cx.new(|cx| {
                 let mut view = agents::AgentsView::new_with_source(
-                    client.clone(),
                     retained.read(cx).core_device().agents(),
                     cx,
                 );
@@ -466,11 +465,7 @@ impl DesktopRoot {
                 view
             });
             let profiles = cx.new(|cx| {
-                let mut view = profiles::ProfilesView::new_with_source(
-                    client.clone(),
-                    profile_source.clone(),
-                    cx,
-                );
+                let mut view = profiles::ProfilesView::new_with_source(profile_source.clone(), cx);
                 view.set_device_name(node.name.clone());
                 view
             });

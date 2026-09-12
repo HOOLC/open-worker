@@ -10,7 +10,6 @@ mod preview;
 #[derive(Default)]
 pub(super) struct DriveState {
     pub(super) items: Arc<Vec<Artifact>>,
-    pub(super) indices: Arc<std::collections::HashMap<Option<String>, Arc<Vec<usize>>>>,
     pub(super) pages: Arc<zork_client_core::pages::PageCatalog>,
     pub(super) contents: Arc<ContentCatalog>,
     tabs: HashMap<(String, ContentKind), content::ContentTabState>,
@@ -91,10 +90,6 @@ impl RootView {
     }
 }
 
-fn preview_image_format(media_type: &str, name: &str) -> Option<gpui::ImageFormat> {
-    super::files::content::image_format(name, media_type)
-}
-
 pub(super) fn file_size(bytes: i64) -> String {
     if bytes < 1024 {
         format!("{bytes} B")
@@ -114,7 +109,8 @@ mod tests {
     fn svg_snapshots_render_as_images_including_legacy_media_types() {
         let bytes = br##"<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16"><rect width="32" height="16" fill="#ff0000"/></svg>"##;
         for media_type in ["image/svg+xml", "text/plain", "application/octet-stream"] {
-            let format = preview_image_format(media_type, "drawing.SVG").unwrap();
+            let format =
+                super::super::files::content::image_format("drawing.SVG", media_type).unwrap();
             let image = gpui::Image::from_bytes(format, bytes.to_vec())
                 .to_image_data(gpui::SvgRenderer::new(Arc::new(
                     crate::assets::EmbeddedAssets,
@@ -126,7 +122,7 @@ mod tests {
             );
             assert_eq!(&image.as_bytes(0).unwrap()[..4], &[0, 0, 255, 255]);
         }
-        assert!(preview_image_format("text/plain", "drawing.txt").is_none());
+        assert!(super::super::files::content::image_format("drawing.txt", "text/plain").is_none());
     }
 
     #[test]
@@ -147,13 +143,6 @@ mod tests {
 }
 
 impl RootView {
-    fn conversation_artifact_indices(&self) -> Arc<Vec<usize>> {
-        self.drive
-            .indices
-            .get(&self.selected_session)
-            .cloned()
-            .unwrap_or_default()
-    }
     fn conversation_contents(&self) -> Arc<ConversationContents> {
         self.drive
             .contents
@@ -419,7 +408,6 @@ impl RootView {
             })
             .collect();
         self.drive.items = Arc::new(items);
-        self.drive.indices = Arc::new(zork_client_core::state::artifact_indices(&self.drive.items));
         self.drive.contents = Arc::new(zork_client_core::pages::content_indices(
             &self.drive.items,
             &self.drive.pages,

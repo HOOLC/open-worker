@@ -63,7 +63,6 @@ pub struct DeviceData {
     pub inbox_loaded: bool,
     pub inbox_error: Option<String>,
     pub artifacts: Arc<Vec<Artifact>>,
-    pub artifact_indices: Arc<HashMap<Option<String>, Arc<Vec<usize>>>>,
     pub pages: Arc<crate::pages::PageCatalog>,
     pub content_indices: Arc<crate::pages::ContentCatalog>,
     pub artifacts_loaded: bool,
@@ -287,7 +286,6 @@ impl Device {
             read_markers: Arc::new(cached(&cache, "read-markers")),
             ..Default::default()
         };
-        data.artifact_indices = Arc::new(super::artifact_indices(&data.artifacts));
         data.content_indices =
             Arc::new(crate::pages::content_indices(&data.artifacts, &data.pages));
         let owned = Owned {
@@ -617,9 +615,6 @@ impl Device {
         ];
         if !changed.iter().any(|v| *v) {
             return;
-        }
-        if before.artifacts != after.artifacts {
-            after.artifact_indices = Arc::new(super::artifact_indices(&after.artifacts));
         }
         if before.artifacts != after.artifacts
             || before.pages.references != after.pages.references

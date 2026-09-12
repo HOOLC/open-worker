@@ -13,7 +13,9 @@ use gpui::{
     FontWeight, KeyDownEvent, ListAlignment, ListState, Render, Styled, Task, Window,
 };
 
-use crate::api::{AgentStatus, GatewayClient, ProductTask, Role, SessionStatus, SessionSummary};
+#[cfg(feature = "headless-bench")]
+use crate::api::SessionStatus;
+use crate::api::{AgentStatus, GatewayClient, ProductTask, Role, SessionSummary};
 use crate::automation::{AutomationElementExt, AutomationRole};
 use crate::components::text_input::{
     ComposerEdited, ComposerFilesPasted, ComposerInput, ComposerLayoutChanged, ComposerSubmit,
@@ -37,7 +39,6 @@ mod interactions;
 mod message_presentation;
 mod panel_layout;
 mod presence;
-mod task_controls;
 
 const BG: u32 = CUE_UI.palette.canvas;
 const PROMPT: u32 = CUE_UI.palette.prompt;
@@ -508,7 +509,6 @@ impl RootView {
         }
         if changed.contains(Domains::ARTIFACTS) {
             self.drive.items = state.artifacts.clone();
-            self.drive.indices = state.artifact_indices.clone();
             self.drive.pages = state.pages.clone();
             self.drive.contents = state.content_indices.clone();
         }
@@ -812,16 +812,6 @@ impl RootView {
     fn focus_composer(&self, window: &mut Window, cx: &mut Context<Self>) {
         let focus_handle = self.composer_input.read(cx).focus_handle();
         window.focus(&focus_handle, cx);
-    }
-
-    // ------------------------------------------------------------ input
-
-    fn selected_status(&self) -> Option<SessionStatus> {
-        let id = self.selected_session.as_deref()?;
-        self.sessions
-            .iter()
-            .find(|session| session.session_id == id)
-            .map(|session| session.status)
     }
 }
 

@@ -1,15 +1,4 @@
 use super::Device;
-use std::{collections::HashMap, sync::Arc};
-
-pub fn artifact_indices(
-    items: &[crate::api::Artifact],
-) -> HashMap<Option<String>, Arc<Vec<usize>>> {
-    let mut index: HashMap<Option<String>, Arc<Vec<usize>>> = HashMap::new();
-    for (position, artifact) in items.iter().enumerate() {
-        Arc::make_mut(index.entry(artifact.session_id.clone()).or_default()).push(position);
-    }
-    index
-}
 
 impl Device {
     /// Immutable artifact bytes and offline fallback share the same core cache

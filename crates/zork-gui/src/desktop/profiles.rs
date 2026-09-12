@@ -1,8 +1,10 @@
 use super::{profile_quota::QuotaPresentation, ui};
+#[cfg(feature = "headless-bench")]
+use crate::api::GatewayClient;
 use crate::api::{compact_tokens, ConnectionInput, ModelInput, MODEL_APIS};
 use crate::i18n::Locale;
 use crate::{
-    api::{GatewayClient, ProfileInfo},
+    api::ProfileInfo,
     automation::{AutomationElementExt, AutomationRole},
     components::text_input::ComposerInput,
     design::CUE_UI,
@@ -68,30 +70,12 @@ impl ProfilesView {
     pub fn set_device_name(&mut self, name: String) {
         self.device_name = name;
     }
-    pub fn new(client: Arc<GatewayClient>, cx: &mut Context<Self>) -> Self {
-        Self::new_inner(client, cx, true)
+    pub fn new_with_source(source: Arc<crate::api::Profiles>, cx: &mut Context<Self>) -> Self {
+        let mut view = Self::new_source(source, cx);
+        view.refresh(cx);
+        view
     }
-    pub fn new_with_source(
-        client: Arc<GatewayClient>,
-        source: Arc<crate::api::Profiles>,
-        cx: &mut Context<Self>,
-    ) -> Self {
-        Self::new_source(client, source, cx, true)
-    }
-    fn new_inner(client: Arc<GatewayClient>, cx: &mut Context<Self>, refresh: bool) -> Self {
-        Self::new_source(
-            client.clone(),
-            crate::api::Profiles::new(client),
-            cx,
-            refresh,
-        )
-    }
-    fn new_source(
-        _client: Arc<GatewayClient>,
-        source: Arc<crate::api::Profiles>,
-        cx: &mut Context<Self>,
-        refresh: bool,
-    ) -> Self {
+    fn new_source(source: Arc<crate::api::Profiles>, cx: &mut Context<Self>) -> Self {
         let mut field = |label| {
             let input = cx.new(|cx| ComposerInput::new(label, cx));
             cx.subscribe(
@@ -133,7 +117,7 @@ impl ProfilesView {
         output_limit.update(cx, |v, cx| v.set_value("4.096K", cx));
         key.update(cx, |input, cx| input.set_secret(true, cx));
         callback.update(cx, |input, cx| input.set_secret(true, cx));
-        let mut view = Self {
+        Self {
             modal: ui::ModalState::new(cx),
             source,
             source_updates: None,
@@ -183,19 +167,12 @@ impl ProfilesView {
             discovering: false,
             message: None,
             attempt: None,
-        };
-        if refresh {
-            view.refresh(cx);
         }
-        view
     }
     #[cfg(feature = "headless-bench")]
     pub fn headless_fixture(detail: bool, cx: &mut Context<Self>) -> Self {
-        let mut view = Self::new_inner(
-            Arc::new(GatewayClient::new("http://127.0.0.1:9", None)),
-            cx,
-            false,
-        );
+        let client = Arc::new(GatewayClient::new("http://127.0.0.1:9", None));
+        let mut view = Self::new_source(crate::api::Profiles::new(client), cx);
         view.catalog = serde_json::from_str::<Value>(include_str!(
             "../../tests/fixtures/provider_catalog.json"
         ))
@@ -365,12 +342,6 @@ impl ProfilesView {
         self.source = crate::api::Profiles::new(client);
         self.source_updates = None;
         self.accept_profiles(self.profiles.clone());
-    }
-    fn refresh_statuses(&mut self, cx: &mut Context<Self>) {
-        self.watch_source(cx);
-        let source = self.source.clone();
-        cx.spawn(async move |_, _| source.refresh_statuses().await)
-            .detach();
     }
     fn refresh_quota(&mut self, id: String, cx: &mut Context<Self>) {
         self.watch_source(cx);
@@ -653,6 +624,7 @@ impl ProfilesView {
                 zork_ui::components::region::invalidate_all(cx);
             },
             move |view, index, cx| {
+                view.copy_model_open = false;
                 if let Some(source) = sources.get(index) {
                     view.copy_model_configuration(source.clone(), cx);
                 }

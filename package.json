@@ -53,10 +53,6 @@
   "devDependencies": {
     "@types/ws": "^8.18.1",
     "lefthook": "^2.1.9",
-    "oxfmt": "^0.52.0",
-    "oxlint": "^1.67.0",
-    "oxlint-tsgolint": "^0.22.1",
-    "tsx": "^4.20.5",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
     "ws": "^8.18.3"

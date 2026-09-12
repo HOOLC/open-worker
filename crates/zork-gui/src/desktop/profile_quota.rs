@@ -113,12 +113,6 @@ impl QuotaPresentation {
             checked,
         }
     }
-    pub fn stale(profile: &ProfileInfo) -> bool {
-        Self::stale_at(profile, chrono::Utc::now().timestamp())
-    }
-    pub fn stale_at(profile: &ProfileInfo, now: i64) -> bool {
-        profile.quota_stale_at(now)
-    }
     pub fn failure(locale: Locale) -> Self {
         Self {
             summary: locale.text("quota_query_failed").into(),
@@ -154,9 +148,9 @@ mod tests {
         assert_eq!(display.windows[0].value, "剩余 72%");
         assert_eq!(display.windows[0].reset.as_deref(), Some("1小时后重置"));
         assert_eq!(display.checked.as_deref(), Some("额度更新于 5分钟前"));
-        assert!(!QuotaPresentation::stale_at(&profile, 1788822000));
-        assert!(!QuotaPresentation::stale_at(&profile, 1788823500));
-        assert!(QuotaPresentation::stale_at(&profile, 1788823501));
+        assert!(!profile.quota_stale_at(1788822000));
+        assert!(!profile.quota_stale_at(1788823500));
+        assert!(profile.quota_stale_at(1788823501));
         assert_eq!(display.balance.as_deref(), Some("余额 0.00 USD"));
         profile.rate_limits = json!({"ok":true,"reported":false});
         assert!(!QuotaPresentation::new(&profile, Locale::En).visible());

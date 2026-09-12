@@ -83,7 +83,6 @@ mod tests {
         assert!(zh.values().chain(en.values()).all(|s| !s.trim().is_empty()));
         for source in [
             include_str!("views.rs"),
-            include_str!("views/task_controls.rs"),
             include_str!("views/drive.rs"),
             include_str!("shell.rs"),
         ] {

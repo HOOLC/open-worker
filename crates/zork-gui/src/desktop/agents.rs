@@ -1,6 +1,8 @@
 use super::ui;
+#[cfg(feature = "headless-bench")]
+use crate::api::GatewayClient;
 use crate::{
-    api::{GatewayClient, ProfileInfo},
+    api::ProfileInfo,
     automation::{AutomationElementExt, AutomationRole},
     components::text_input::ComposerInput,
     design::CUE_UI,
@@ -108,18 +110,8 @@ impl AgentsView {
     pub fn set_device_name(&mut self, name: String) {
         self.device_name = name;
     }
-    pub fn new(client: Arc<GatewayClient>, cx: &mut Context<Self>) -> Self {
-        let source =
-            crate::api::Agents::new(client.clone(), crate::api::Profiles::new(client.clone()));
-        Self::new_with_source(client, source, cx)
-    }
-    pub fn new_with_source(
-        client: Arc<GatewayClient>,
-        source: Arc<crate::api::Agents>,
-        cx: &mut Context<Self>,
-    ) -> Self {
-        let mut view = Self::new_inner(client, cx, false);
-        view.source = source;
+    pub fn new_with_source(source: Arc<crate::api::Agents>, cx: &mut Context<Self>) -> Self {
+        let mut view = Self::new_inner(source, cx);
         view.watch_source(cx);
         view.refresh(cx);
         view
@@ -183,7 +175,7 @@ impl AgentsView {
         }
         zork_ui::components::region::invalidate(cx, &regions);
     }
-    fn new_inner(client: Arc<GatewayClient>, cx: &mut Context<Self>, refresh: bool) -> Self {
+    fn new_inner(source: Arc<crate::api::Agents>, cx: &mut Context<Self>) -> Self {
         let mut field = |label| {
             let e = cx.new(|cx| ComposerInput::new(label, cx));
             cx.observe(&e, |_, _, cx| {
@@ -195,16 +187,13 @@ impl AgentsView {
         let name = field("小伙伴名称");
         let instructions = field("职责和偏好（可选）");
         let remote_grants = field("粘贴远端领队引用，多个以空格分隔");
-        let mut view = Self {
+        Self {
             #[cfg(not(target_family = "wasm"))]
             resources: None,
             #[cfg(not(target_family = "wasm"))]
             skills: None,
             modal: ui::ModalState::new(cx),
-            source: crate::api::Agents::new(
-                client.clone(),
-                crate::api::Profiles::new(client.clone()),
-            ),
+            source,
             source_updates: None,
             regions: Default::default(),
             device_name: String::new(),
@@ -229,19 +218,13 @@ impl AgentsView {
             form_open: false,
             busy: false,
             message: None,
-        };
-        if refresh {
-            view.refresh(cx);
         }
-        view
     }
     #[cfg(feature = "headless-bench")]
     pub fn headless_fixture(cx: &mut Context<Self>) -> Self {
-        let mut view = Self::new_inner(
-            Arc::new(GatewayClient::new("http://127.0.0.1:9", None)),
-            cx,
-            false,
-        );
+        let client = Arc::new(GatewayClient::new("http://127.0.0.1:9", None));
+        let source = crate::api::Agents::new(client.clone(), crate::api::Profiles::new(client));
+        let mut view = Self::new_inner(source, cx);
         let fixture = zork_ui::stories::page_fixture();
         view.device_name = fixture["device"]["name"].as_str().unwrap().into();
         view.agents = fixture["agents"].as_array().unwrap().clone();

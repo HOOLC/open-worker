@@ -51,6 +51,12 @@ def main():
   assert ('后重置' in reset_label or '即将重置' in reset_label) and 'UTC' not in reset_label
   assert abs(element('profile-quota-updated')['center']['y']-element('profile-quota-refresh')['center']['y'])<12
   assert '上下文 32K / 输出 4.096K' in wait_element('model-limits-fixture-model')['label']
+  click('profile-model-add');wait_element('model-editor-dialog');click('profile-model');type_ime('copied-model')
+  click('model-copy-select');click('model-copy-0')
+  page.wait_for_function('!JSON.parse(window.zorkStory.snapshot()).elements.some(e=>e.id==="model-copy-select-menu")')
+  copied=state();assert copied['model_id']=='copied-model' and copied['context_window']=='32K' and copied['max_output_tokens']=='4.096K',copied
+  page.screenshot(path=str(args.output/'model-copy-menu-closed.png'))
+  click('model-editor-dialog-close');wait_element('profile-detail-dialog')
   click('profile-quota-refresh');page.wait_for_function('JSON.parse(window.zorkStory.snapshot()).elements.some(e=>e.id==="profile-quota"&&e.label.includes("71%"))')
   assert '刚刚' in wait_element('profile-quota-updated')['label']
   assert wait_element('profile-quota-refresh')['bounds']['width']==32
